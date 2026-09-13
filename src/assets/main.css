@@ -1,0 +1,122 @@
+@import './base.css';
+
+/* ========== 通用卡片 ========== */
+.card {
+  background: #ffffff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 26px 28px;
+}
+
+.card-head h2 {
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 6px;
+}
+
+.muted {
+  color: var(--text-sub);
+  font-size: 14px;
+}
+
+.small {
+  font-size: 13px;
+}
+
+/* ========== 空状态 ========== */
+.empty {
+  text-align: center;
+  padding: 48px 20px;
+}
+
+.empty-icon {
+  font-size: 56px;
+  margin-bottom: 14px;
+}
+
+.empty h2,
+.empty h3 {
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+
+.empty .muted {
+  margin-bottom: 20px;
+}
+
+/* ========== 按钮 ========== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  border-radius: 10px;
+  padding: 11px 22px;
+  font-size: 15px;
+  font-weight: 600;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn.primary {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.btn.primary:hover {
+  background: var(--primary-dark);
+}
+
+.btn.primary:disabled {
+  background: #b9cfe8;
+  cursor: not-allowed;
+}
+
+.btn.ghost {
+  background: #ffffff;
+  color: var(--text-sub);
+  border: 1.5px solid var(--border);
+}
+
+.btn.ghost:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.btn.danger {
+  background: var(--danger);
+  color: #ffffff;
+}
+
+.btn.danger:hover {
+  background: #c04844;
+}
+
+.btn.danger-ghost {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1.5px solid #f2b8b1;
+}
+
+.btn.danger-ghost:hover {
+  background: #fbdedb;
+}
+
+.btn.mini {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 560px) {
+  .card {
+    padding: 20px 16px;
+  }
+}

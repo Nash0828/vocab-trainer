@@ -1,0 +1,800 @@
+<script setup>
+import { ref, computed, nextTick, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
+import { useWords } from '../composables/useWords'
+import { useHistory } from '../composables/useHistory'
+import { useWrongBook } from '../composables/useWrongBook'
+
+const router = useRouter()
+const { words, settings, incrementCount, isMastered } = useWords()
+const { getTodayStats, getTodayRecords, addRecord } = useHistory()
+const { addWrong, removeWrong, getValidWrongWords } = useWrongBook()
+
+// 出题来源：'all' = 全部未背熟词库；'wrong' = 仅错题本
+const sourceMode = ref('all')
+
+const current = ref(null)
+const answer = ref('')
+const result = ref(null) // null | 'correct' | 'wrong'
+const lastIndex = ref(-1)
+const answerInput = ref(null)
+let autoTimer = null // 作答后自动切换下一题的定时器
+
+// 今日统计与记录弹窗
+const todayStats = ref(getTodayStats())
+const todayRecords = ref([])
+const showRecordsModal = ref(false)
+const modalTab = ref('correct') // 'correct' | 'wrong'
+const todayTick = ref(0) // 用于跨零点时刷新今日统计
+let todayInterval = null
+
+const threshold = computed(() => settings.value.masteryThreshold)
+const hasWords = computed(() => words.value.length > 0)
+// 错题本中仍有效的单词（自动清理词库中已删除的）
+const wrongValid = computed(() => getValidWrongWords(words.value))
+// 将错题本快照解析为词库中的单词对象
+function resolveWord(item) {
+  if (!item) return null
+  if (item.id) {
+    const byId = words.value.find((x) => String(x.id) === String(item.id))
+    if (byId) return byId
+  }
+  return (
+    words.value.find((x) => x.english.trim().toLowerCase() === item.english.trim().toLowerCase()) || null
+  )
+}
+// 出题池：全部模式 = 未背熟单词；错题本模式 = 错题本中且未背熟的单词（保持"已背熟不出题"规则）
+const available = computed(() => {
+  if (sourceMode.value === 'wrong') {
+    return wrongValid.value
+      .map((item) => resolveWord(item))
+      .filter((w) => w && !isMastered(w))
+  }
+  return words.value.filter((w) => !isMastered(w))
+})
+const allMastered = computed(() => hasWords.value && available.value.length === 0)
+// 错题本模式空状态：'empty'=错题本为空；'all-mastered'=错题本单词已全部背熟；null=正常
+const wrongState = computed(() => {
+  if (sourceMode.value !== 'wrong') return null
+  if (!wrongValid.value.length) return 'empty'
+  if (!available.value.length) return 'all-mastered'
+  return null
+})
+const totalMastered = computed(() => words.value.filter((w) => isMastered(w)).length)
+// 今日正确率（与"今日背诵"统计条同口径）
+const accuracy = computed(() =>
+  todayStats.value.total ? Math.round((todayStats.value.correct / todayStats.value.total) * 100) : 0
+)
+// 今日新背熟：今天答对过、且当前已背熟的去重单词数
+const todayNewMastered = computed(() => {
+  const seen = new Set()
+  let count = 0
+  for (const r of getTodayRecords()) {
+    if (!r.correct) continue
+    const key = r.english.trim().toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    const w = words.value.find((x) => x.english.trim().toLowerCase() === key)
+    if (w && isMastered(w)) count++
+  }
+  return count
+})
+
+function refreshToday() {
+  todayStats.value = getTodayStats()
+  todayRecords.value = getTodayRecords()
+}
+
+function pickIndex() {
+  const n = available.value.length
+  if (n <= 1) return 0
+  let idx = Math.floor(Math.random() * n)
+  if (idx === lastIndex.value) {
+    idx = (idx + 1) % n
+  }
+  return idx
+}
+
+function clearAutoTimer() {
+  if (autoTimer) {
+    clearTimeout(autoTimer)
+    autoTimer = null
+  }
+}
+
+function focusInput() {
+  nextTick(() => {
+    answerInput.value?.focus()
+  })
+}
+
+function next() {
+  clearAutoTimer()
+  if (!available.value.length) {
+    current.value = null
+    return
+  }
+  const idx = pickIndex()
+  lastIndex.value = idx
+  current.value = available.value[idx]
+  answer.value = ''
+  result.value = null
+  focusInput()
+}
+
+function submit() {
+  if (!current.value || result.value || !answer.value.trim()) return
+  const isCorrect =
+    answer.value.trim().toLowerCase() === current.value.english.trim().toLowerCase()
+  if (isCorrect) {
+    incrementCount(current.value.id)
+    // 答对：从错题本中移除
+    removeWrong(current.value)
+  } else {
+    // 答错：记入错题本（同一单词只记一次）
+    addWrong(current.value)
+  }
+  result.value = isCorrect ? 'correct' : 'wrong'
+  // 答题后自动朗读正确单词（无论对错）
+  speak(current.value.english)
+
+  // 写入当日背诵记录并刷新今日统计
+  addRecord({
+    chinese: current.value.chinese,
+    english: current.value.english,
+    pos: current.value.pos || '',
+    correct: isCorrect,
+  })
+  refreshToday()
+
+  // 作答后：答对自动切换下一题；答错停留在当前题，由用户点击"下一题"按钮继续
+  clearAutoTimer()
+  if (isCorrect) {
+    autoTimer = setTimeout(next, 1000)
+  }
+}
+
+function skip() {
+  clearAutoTimer()
+  next()
+}
+
+// 播放单词发音（有道词典美音接口：type=0 美音 / type=1 英音）
+function speak(word) {
+  if (!word) return
+  try {
+    const url = `https://dict.youdao.com/dictvoice?type=0&audio=${encodeURIComponent(String(word).trim())}`
+    const audio = new Audio(url)
+    audio.play().catch(() => {
+      // 网络异常或浏览器拦截时静默处理
+    })
+  } catch (e) {
+    // 静默处理
+  }
+}
+
+// 答错后重做当前题：清空答案与判定，重新聚焦输入框
+function redo() {
+  if (!current.value) return
+  clearAutoTimer()
+  answer.value = ''
+  result.value = null
+  focusInput()
+}
+
+// 切换出题来源
+function setSource(mode) {
+  if (mode === sourceMode.value) return
+  sourceMode.value = mode
+  lastIndex.value = -1
+  clearAutoTimer()
+  next()
+}
+
+// 打开今日记录弹窗（正确/错误）
+function openRecords(tab) {
+  refreshToday()
+  modalTab.value = tab
+  showRecordsModal.value = true
+}
+
+function closeRecords() {
+  showRecordsModal.value = false
+}
+
+const modalRecords = computed(() => {
+  const recs = todayRecords.value
+  return modalTab.value === 'correct'
+    ? recs.filter((r) => r.correct)
+    : recs.filter((r) => !r.correct)
+})
+
+// 跨零点自动刷新"今日"统计（本地日期维度）
+todayInterval = setInterval(() => {
+  refreshToday()
+  todayTick.value += 1
+}, 30000)
+
+onBeforeUnmount(() => {
+  clearAutoTimer()
+  if (todayInterval) clearInterval(todayInterval)
+})
+
+// 首次进入时准备第一题并刷新今日统计
+refreshToday()
+next()
+</script>
+
+<template>
+  <section class="card">
+    <!-- 空词库 -->
+    <div v-if="!hasWords" class="empty">
+      <div class="empty-icon">📭</div>
+      <h2>词库还是空的</h2>
+      <p class="muted">先去「单词录入」添加一些单词，再来这里练习吧！</p>
+      <button class="btn primary" @click="router.push('/')">去录入单词 →</button>
+    </div>
+
+    <!-- 错题本模式：错题本为空 -->
+    <div v-else-if="wrongState === 'empty'" class="empty">
+      <div class="empty-icon">📕</div>
+      <h2>错题本还是空的</h2>
+      <p class="muted">在「背单词」中答错的单词会自动记入错题本，答对后自动移出</p>
+      <div class="empty-actions">
+        <button class="btn primary" @click="setSource('all')">切换到全部词库练习</button>
+        <button class="btn ghost" @click="router.push('/wrongbook')">查看错题本</button>
+      </div>
+    </div>
+
+    <!-- 错题本模式：错题本单词已全部背熟 -->
+    <div v-else-if="wrongState === 'all-mastered'" class="empty">
+      <div class="empty-icon">🎉</div>
+      <h2>错题本中的单词都已背熟！</h2>
+      <p class="muted">
+        错题本里的 {{ wrongValid.length }} 个单词都已达到背熟阈值（{{ threshold }} 次），不再出现在出题中
+      </p>
+      <div class="empty-actions">
+        <button class="btn primary" @click="setSource('all')">切换到全部词库</button>
+        <button class="btn ghost" @click="router.push('/wrongbook')">查看错题本</button>
+      </div>
+    </div>
+
+    <!-- 全部背熟 -->
+    <div v-else-if="allMastered" class="empty">
+      <div class="empty-icon">🏆</div>
+      <h2>太棒了，全部背熟！</h2>
+      <p class="muted">
+        词库中 {{ totalMastered }} 个单词都已达到背熟阈值（{{ threshold }} 次），不再出现在随机出题中。
+      </p>
+      <div class="empty-actions">
+        <button class="btn primary" @click="router.push('/settings')">去设置调整阈值 / 重置</button>
+        <button class="btn ghost" @click="router.push('/library')">去词库看看</button>
+      </div>
+    </div>
+
+    <!-- 有可练习单词 -->
+    <template v-else>
+      <div class="card-head">
+        <h2>🎯 背单词</h2>
+        <p class="muted">根据中文释义输入英文；答对 {{ threshold }} 次视为背熟，作答后自动切下一题</p>
+      </div>
+
+      <!-- 出题来源切换 -->
+      <div class="source-bar">
+        <span class="source-label">出题来源</span>
+        <button
+          class="source-btn"
+          :class="{ active: sourceMode === 'all' }"
+          @click="setSource('all')"
+        >
+          📚 全部未背熟
+        </button>
+        <button
+          class="source-btn"
+          :class="{ active: sourceMode === 'wrong' }"
+          @click="setSource('wrong')"
+        >
+          📕 仅错题本
+        </button>
+        <span v-if="sourceMode === 'wrong'" class="muted small">错题本 {{ wrongValid.length }} 词</span>
+      </div>
+
+      <!-- 今日统计（可点击查看记录） -->
+      <div class="today-bar">
+        <span class="today-label">📅 今日背诵</span>
+        <button class="today-stat today-correct" @click="openRecords('correct')">
+          ✅ 正确 <strong>{{ todayStats.correct }}</strong>
+        </button>
+        <button class="today-stat today-wrong" @click="openRecords('wrong')">
+          ❌ 错误 <strong>{{ todayStats.wrong }}</strong>
+        </button>
+        <span class="muted small">点击数字查看当天记录</span>
+      </div>
+
+      <!-- 答题区 -->
+      <div class="quiz-area">
+        <div class="quiz-stats">
+          <span v-if="sourceMode === 'wrong'">错题本共 {{ wrongValid.length }} 词</span>
+          <span v-else>词库共 {{ words.length }} 词</span>
+          <span>已背熟 {{ totalMastered }}/{{ words.length }}</span>
+          <span>今日已答 {{ todayStats.total }} 题</span>
+          <span class="stat-acc">正确率 {{ accuracy }}%</span>
+          <span v-if="todayNewMastered" class="stat-mastered">今日新背熟 {{ todayNewMastered }} 个 🎉</span>
+        </div>
+
+        <div v-if="current" class="quiz-card" :class="result || ''">
+          <p class="quiz-label">中文释义</p>
+          <p class="quiz-word">{{ current.chinese }}</p>
+          <p v-if="current.pos" class="quiz-pos">词性：{{ current.pos }}</p>
+
+          <!-- 手动播放发音按钮 -->
+          <div class="quiz-sound">
+            <button class="btn ghost mini" title="播放当前单词发音" @click="speak(current.english)">
+              🔊 播放发音
+            </button>
+          </div>
+
+          <div class="quiz-progress">
+            <span class="progress-text">背诵进度 {{ current.count }}/{{ threshold }}</span>
+            <div class="progress-bar">
+              <div
+                class="progress-fill"
+                :style="{ width: Math.min(100, Math.round(((current.count || 0) / threshold) * 100)) + '%' }"
+              ></div>
+            </div>
+          </div>
+
+          <div class="quiz-input">
+            <input
+              ref="answerInput"
+              v-model="answer"
+              type="text"
+              :placeholder="result ? '看结果了，即将自动切下一题…' : '请输入英文单词…'"
+              :disabled="!!result"
+              @keyup.enter="submit"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+            />
+          </div>
+
+          <!-- 判定反馈 -->
+          <div v-if="result" class="feedback" :class="result">
+            <template v-if="result === 'correct'">
+              <span class="fb-icon">🎉</span> 回答正确！很棒！
+              <span v-if="current.count >= threshold" class="fb-mastered">（达成阈值，已背熟 🏆）</span>
+              <button class="speak-btn" title="重听发音" @click="speak(current.english)">🔊 重听</button>
+            </template>
+            <template v-else>
+              <span class="fb-icon">😅</span>
+              不对哦，正确答案是 <strong class="correct-word">{{ current.english }}</strong>
+              <button class="speak-btn" title="重听发音" @click="speak(current.english)">🔊 重听</button>
+            </template>
+          </div>
+          <p v-if="result" class="auto-hint">
+            {{
+              result === 'correct'
+                ? '⏳ 即将自动切换到下一题…'
+                : '可点「重做这一题」重新作答，或点「下一题」继续'
+            }}
+          </p>
+
+          <div class="quiz-actions">
+            <button v-if="!result" class="btn ghost" @click="skip">换一题</button>
+            <button v-if="!result" class="btn primary" :disabled="!answer.trim()" @click="submit">
+              提交答案
+            </button>
+            <button
+              v-else-if="result === 'correct'"
+              class="btn ghost"
+              @click="skip"
+            >
+              跳过等待，下一题 →
+            </button>
+            <template v-else>
+              <button class="btn primary" @click="redo">🔁 重做这一题</button>
+              <button class="btn ghost" @click="skip">下一题 →</button>
+            </template>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- 今日记录弹窗 -->
+    <div v-if="showRecordsModal" class="modal-mask" @click.self="closeRecords">
+      <div class="modal">
+        <div class="modal-head">
+          <h3>📊 今日背诵记录</h3>
+          <button class="btn ghost mini" @click="closeRecords">✕ 关闭</button>
+        </div>
+        <div class="modal-tabs">
+          <button class="tab-btn" :class="{ active: modalTab === 'correct' }" @click="modalTab = 'correct'">
+            ✅ 正确 ({{ todayStats.correct }})
+          </button>
+          <button class="tab-btn" :class="{ active: modalTab === 'wrong' }" @click="modalTab = 'wrong'">
+            ❌ 错误 ({{ todayStats.wrong }})
+          </button>
+        </div>
+        <div class="modal-body">
+          <p v-if="!modalRecords.length" class="muted empty-tip">
+            今天还没有{{ modalTab === 'correct' ? '答对' : '答错' }}的单词记录
+          </p>
+          <ul v-else class="modal-list">
+            <li v-for="(r, i) in modalRecords" :key="r.id" class="modal-item">
+              <span class="m-num">{{ i + 1 }}</span>
+              <span class="m-en">{{ r.english }}</span>
+              <span class="m-pos">{{ r.pos || '—' }}</span>
+              <span class="m-zh">{{ r.chinese }}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+</template>
+
+<style scoped>
+/* 出题来源切换 */
+.source-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 16px 0 0;
+}
+
+.source-label {
+  font-weight: 700;
+  color: var(--text-main);
+  font-size: 14px;
+}
+
+.source-btn {
+  border: 1.5px solid var(--border);
+  background: #ffffff;
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-sub);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.source-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.source-btn.active {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.today-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 16px 0 4px;
+  padding: 12px 16px;
+  background: var(--bg-soft);
+  border-radius: 12px;
+}
+
+.today-label {
+  font-weight: 700;
+  color: var(--text-main);
+  font-size: 15px;
+}
+
+.today-stat {
+  border: 1px solid var(--border);
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 6px 14px;
+  font-size: 14px;
+  color: var(--text-sub);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.today-stat strong {
+  font-size: 17px;
+  margin-left: 4px;
+}
+
+.today-stat.today-correct:hover {
+  border-color: var(--success);
+  color: var(--success);
+  background: #eefaf3;
+}
+
+.today-stat.today-wrong:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: #fdf1ef;
+}
+
+.quiz-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  font-size: 14px;
+  color: var(--text-sub);
+  margin: 14px 0 18px;
+}
+
+.stat-acc {
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.stat-mastered {
+  font-weight: 700;
+  color: var(--success);
+}
+
+.quiz-card {
+  background: linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 24px;
+  text-align: center;
+}
+
+.quiz-label {
+  font-size: 14px;
+  color: var(--text-sub);
+  margin-bottom: 8px;
+}
+
+.quiz-word {
+  font-size: 34px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0 0 6px;
+  word-break: break-all;
+}
+
+.quiz-pos {
+  font-size: 14px;
+  color: var(--primary);
+  margin-bottom: 16px;
+}
+
+.quiz-sound {
+  margin-bottom: 16px;
+}
+
+.quiz-progress {
+  max-width: 420px;
+  margin: 0 auto 18px;
+}
+
+.progress-text {
+  display: block;
+  font-size: 13px;
+  color: var(--text-sub);
+  margin-bottom: 5px;
+}
+
+.progress-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: #e3ebf4;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+  transition: width 0.3s ease;
+}
+
+.quiz-input input {
+  width: 100%;
+  max-width: 420px;
+  padding: 13px 16px;
+  font-size: 18px;
+  text-align: center;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.quiz-input input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.15);
+}
+
+.quiz-input input:disabled {
+  background: #f2f4f7;
+  color: var(--text-sub);
+}
+
+.feedback {
+  margin: 16px auto 0;
+  max-width: 480px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 15px;
+}
+
+.feedback.correct {
+  background: #e8f7ee;
+  color: #1f7a4d;
+  border: 1px solid #a8dcc0;
+}
+
+.feedback.wrong {
+  background: #fdecea;
+  color: #b3402f;
+  border: 1px solid #f2b8b1;
+}
+
+.fb-mastered {
+  font-weight: 700;
+}
+
+.correct-word {
+  font-size: 17px;
+  letter-spacing: 0.5px;
+}
+
+.speak-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  vertical-align: middle;
+  transition: all 0.2s;
+}
+
+.speak-btn:hover {
+  background: rgba(74, 144, 217, 0.12);
+  transform: scale(1.12);
+}
+
+.auto-hint {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+.quiz-actions {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.empty-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.small {
+  font-size: 13px;
+}
+
+/* ===== 记录弹窗 ===== */
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 30, 45, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+
+.modal {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(20, 30, 45, 0.25);
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.modal-head h3 {
+  font-size: 17px;
+}
+
+.modal-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 12px 20px 0;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-sub);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-btn.active {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.modal-body {
+  padding: 12px 20px 20px;
+  overflow-y: auto;
+}
+
+.empty-tip {
+  text-align: center;
+  padding: 24px 0;
+}
+
+.modal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: var(--bg-soft);
+  font-size: 15px;
+}
+
+.m-num {
+  color: var(--text-faint);
+  font-size: 13px;
+  width: 20px;
+}
+
+.m-en {
+  font-weight: 700;
+  color: var(--primary);
+  min-width: 90px;
+}
+
+.m-pos {
+  color: var(--text-sub);
+  font-size: 13px;
+  min-width: 40px;
+}
+
+.m-zh {
+  flex: 1;
+  color: var(--text-main);
+}
+</style>

@@ -1,0 +1,56 @@
+/* ========== 基础样式与设计变量 ========== */
+:root {
+  /* 主色：清爽的蓝色（避免刺眼深色） */
+  --primary: #4a90d9;
+  --primary-dark: #3a76b8;
+  --primary-light: #eaf2fb;
+
+  /* 语义色 */
+  --success: #2f9e6e;
+  --danger: #d9534f;
+  --danger-soft: #fdecea;
+  --warning: #f0a02e;
+
+  /* 文字 */
+  --text-main: #2b3a4a;
+  --text-sub: #5b6b7c;
+  --text-faint: #93a1b1;
+
+  /* 背景与边框 */
+  --bg-page: #f4f7fb;
+  --bg-soft: #f0f4f9;
+  --border: #d9e2ec;
+  --border-light: #e8eef5;
+
+  --radius: 14px;
+  --shadow-card: 0 2px 12px rgba(43, 58, 74, 0.06);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg-page);
+  color: var(--text-main);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
