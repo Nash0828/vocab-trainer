@@ -1,8 +1,8 @@
-<script setup>
+﻿<script setup>
 import { RouterLink, RouterView } from 'vue-router'
 
 const navItems = [
-  { to: '/', label: '录入', icon: '✍️' },
+  { to: '/input', label: '录入', icon: '✍️' },
   { to: '/practice', label: '背单词', icon: '🎯' },
   { to: '/wrongbook', label: '错题本', icon: '📕' },
   { to: '/library', label: '词库', icon: '🗂️' },

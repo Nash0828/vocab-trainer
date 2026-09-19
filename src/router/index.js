@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+﻿import { createRouter, createWebHistory } from 'vue-router'
 import InputView from '../views/InputView.vue'
 
 const router = createRouter({
@@ -7,6 +7,12 @@ const router = createRouter({
     {
       path: '/',
       name: 'input',
+      component: InputView,
+      meta: { title: '单词录入' },
+    },
+    {
+      path: '/input',
+      name: 'input-page',
       component: InputView,
       meta: { title: '单词录入' },
     },
@@ -41,6 +47,17 @@ const router = createRouter({
       meta: { title: '设置' },
     },
   ],
+})
+
+// 手机端访问首页时默认跳到背单词页
+function isMobile() {
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth <= 768
+}
+
+router.beforeEach((to) => {
+  if (to.path === '/' && isMobile()) {
+    return '/practice'
+  }
 })
 
 router.afterEach((to) => {

@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWords, weightedPickIndex } from '../composables/useWords'
@@ -105,9 +105,22 @@ function clearAutoTimer() {
 }
 
 function focusInput() {
-  nextTick(() => {
-    answerInput.value?.focus()
-  })
+  // 多次尝试 focus，兼容手机端浏览器时序
+  const tryFocus = (retries = 3) => {
+    nextTick(() => {
+      const el = answerInput.value
+      if (!el) return
+      el.focus()
+      // 手机上可能需要第二次 focus 才弹出键盘
+      if (retries > 0) {
+        setTimeout(() => {
+          el.focus()
+          tryFocus(retries - 1)
+        }, 80)
+      }
+    })
+  }
+  tryFocus()
 }
 
 function next() {
@@ -389,6 +402,10 @@ next()
               ref="answerInput"
               v-model="answer"
               type="text"
+              lang="en"
+              inputmode="text"
+              enterkeyhint="go"
+              autocorrect="off"
               :placeholder="result ? '看结果了，即将自动切下一题…' : '请输入英文单词…'"
               :disabled="!!result"
               @keyup.enter="submit"

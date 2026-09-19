@@ -63,24 +63,28 @@ function doResetAll() {
 }
 
 // ---- 导出：下载 JSON 备份文件 ----
-function exportDataFile() {
-  const data = exportData()
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  const d = new Date()
-  const pad = (n) => String(n).padStart(2, '0')
-  const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`
-  a.download = `背单词助手备份_${stamp}.json`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
-  showTip(
-    `✅ 已导出 ${data.words.length} 个单词（含背诵次数）与背熟阈值，文件名：背单词助手备份_${stamp}.json`,
-    'ok'
-  )
+async function exportDataFile() {
+  try {
+    const data = await exportData()
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    const d = new Date()
+    const pad = (n) => String(n).padStart(2, '0')
+    const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`
+    a.download = `背单词助手备份_${stamp}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    showTip(
+      `✅ 已导出 ${data.words.length} 个单词（含背诵次数）与背熟阈值，文件名：背单词助手备份_${stamp}.json`,
+      'ok'
+    )
+  } catch (err) {
+    showTip(`⛔ 导出失败：${err.message}`, 'err')
+  }
 }
 
 // ---- 导入：选择文件 ----

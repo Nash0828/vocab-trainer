@@ -178,7 +178,8 @@ export function useWords() {
   async function importData(data, mode = 'merge') {
     const result = await api.importData(data, mode)
     if (result.ok) {
-      await loadState()
+      const state = await api.getState()
+      loadState(state)
     }
     return result
   }
