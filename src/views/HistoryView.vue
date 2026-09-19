@@ -15,11 +15,27 @@ const days = computed(() => getHistoryByDay())
 const totals = computed(() => {
   let correct = 0
   let wrong = 0
+  const allCorrect = new Set()
+  const allWrong = new Set()
   for (const d of days.value) {
     correct += d.correct
     wrong += d.wrong
+    for (const r of d.records) {
+      const key = r.english.trim().toLowerCase()
+      if (!key) continue
+      if (r.correct) allCorrect.add(key)
+      else allWrong.add(key)
+    }
   }
-  return { days: days.value.length, correct, wrong, total: correct + wrong }
+  return {
+    days: days.value.length,
+    correct,
+    wrong,
+    total: correct + wrong,
+    correctWords: allCorrect.size,
+    wrongWords: allWrong.size,
+    totalWords: new Set([...allCorrect, ...allWrong]).size,
+  }
 })
 
 function showTip(text, kind = 'ok') {
@@ -94,15 +110,15 @@ function formatDate(dateStr) {
         </div>
         <div class="summary-item">
           <span class="sum-num">{{ totals.correct }}</span>
-          <span class="sum-label">累计正确</span>
+          <span class="sum-label">累计正确（{{ totals.correctWords }} 个单词）</span>
         </div>
         <div class="summary-item">
           <span class="sum-num wrong">{{ totals.wrong }}</span>
-          <span class="sum-label">累计错误</span>
+          <span class="sum-label">累计错误（{{ totals.wrongWords }} 个单词）</span>
         </div>
         <div class="summary-item">
           <span class="sum-num">{{ totals.total }}</span>
-          <span class="sum-label">累计作答</span>
+          <span class="sum-label">累计作答（已背 {{ totals.totalWords }} 词）</span>
         </div>
       </div>
 
@@ -122,9 +138,9 @@ function formatDate(dateStr) {
           <div class="day-head" @click="toggle(day.date)">
             <span class="day-date">📅 {{ formatDate(day.date) }}</span>
             <span class="day-badges">
-              <span class="badge ok">✅ 正确 {{ day.correct }}</span>
-              <span class="badge bad">❌ 错误 {{ day.wrong }}</span>
-              <span class="badge total">共 {{ day.records.length }} 题</span>
+              <span class="badge ok">✅ 正确 {{ day.correct }} 次 · {{ day.correctWords }} 词</span>
+              <span class="badge bad">❌ 错误 {{ day.wrong }} 次 · {{ day.wrongWords }} 词</span>
+              <span class="badge total">已背 {{ day.totalWords }} 词</span>
             </span>
             <span class="expand-icon">{{ expanded === day.date ? '▲' : '▼' }}</span>
           </div>

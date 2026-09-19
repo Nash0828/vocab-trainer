@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWords } from '../composables/useWords'
 
@@ -84,6 +84,47 @@ const filteredWords = computed(() => {
 })
 
 const noMatch = computed(() => totalCount.value > 0 && filteredWords.value.length === 0)
+
+// ---- 分页 ----
+const pageSize = ref(20)
+const currentPage = ref(1)
+
+const pageCount = computed(() =>
+  Math.max(1, Math.ceil(filteredWords.value.length / pageSize.value))
+)
+
+const pagedWords = computed(() => {
+  // 删除/筛选导致当前页超出范围时自动回退到最后一页
+  if (currentPage.value > pageCount.value) currentPage.value = pageCount.value
+  const start = (currentPage.value - 1) * pageSize.value
+  return filteredWords.value.slice(start, start + pageSize.value)
+})
+
+// 页码窗口：首页/末页 + 当前页附近，间隔用省略号
+const pageNumbers = computed(() => {
+  const pages = pageCount.value
+  const cur = currentPage.value
+  const set = new Set([1, pages, cur - 1, cur, cur + 1])
+  const list = [...set].filter((p) => p >= 1 && p <= pages).sort((a, b) => a - b)
+  const out = []
+  let prev = 0
+  for (const p of list) {
+    if (prev && p - prev > 1) out.push('…')
+    out.push(p)
+    prev = p
+  }
+  return out
+})
+
+// 筛选/排序条件变化时回到第 1 页
+watch([keyword, statusFilter, sortField, sortDir], () => {
+  currentPage.value = 1
+})
+
+function changePageSize(v) {
+  pageSize.value = Number(v)
+  currentPage.value = 1
+}
 
 const filterOptions = [
   { value: 'all', label: '全部' },
@@ -339,9 +380,9 @@ function formatTime(ts) {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(word, index) in filteredWords" :key="word.id">
+          <tr v-for="(word, index) in pagedWords" :key="word.id">
             <template v-if="editingId === word.id">
-              <td class="idx">{{ index + 1 }}</td>
+              <td class="idx">{{ (currentPage - 1) * pageSize + index + 1 }}</td>
               <td><input v-model="editForm.chinese" class="cell-input" placeholder="中文" /></td>
               <td><input v-model="editForm.english" class="cell-input" placeholder="英文" /></td>
               <td><input v-model="editForm.pos" class="cell-input pos" placeholder="词性" /></td>
@@ -356,7 +397,7 @@ function formatTime(ts) {
             </template>
 
             <template v-else>
-              <td class="idx">{{ index + 1 }}</td>
+              <td class="idx">{{ (currentPage - 1) * pageSize + index + 1 }}</td>
               <td>{{ word.chinese }}</td>
               <td class="en">{{ word.english }}</td>
               <td>
@@ -399,6 +440,63 @@ function formatTime(ts) {
           </tr>
         </tbody>
       </table>
+
+      <!-- 分页控件 -->
+      <div v-if="filteredWords.length" class="pagination">
+        <span class="page-info">
+          共 {{ filteredWords.length }} 条 · 第 {{ currentPage }}/{{ pageCount }} 页
+        </span>
+        <div class="page-btns">
+          <button
+            class="page-btn"
+            :disabled="currentPage <= 1"
+            title="第一页"
+            @click="currentPage = 1"
+          >
+            «
+          </button>
+          <button
+            class="page-btn"
+            :disabled="currentPage <= 1"
+            title="上一页"
+            @click="currentPage > 1 && currentPage--"
+          >
+            ‹
+          </button>
+          <template v-for="(p, i) in pageNumbers" :key="i">
+            <span v-if="p === '…'" class="page-ellipsis">…</span>
+            <button
+              v-else
+              class="page-btn"
+              :class="{ active: p === currentPage }"
+              @click="currentPage = p"
+            >
+              {{ p }}
+            </button>
+          </template>
+          <button
+            class="page-btn"
+            :disabled="currentPage >= pageCount"
+            title="下一页"
+            @click="currentPage < pageCount && currentPage++"
+          >
+            ›
+          </button>
+          <button
+            class="page-btn"
+            :disabled="currentPage >= pageCount"
+            title="最后一页"
+            @click="currentPage = pageCount"
+          >
+            »
+          </button>
+        </div>
+        <select class="page-size" :value="pageSize" @change="changePageSize($event.target.value)">
+          <option :value="20">20 条/页</option>
+          <option :value="50">50 条/页</option>
+          <option :value="100">100 条/页</option>
+        </select>
+      </div>
     </div>
   </section>
 </template>
@@ -659,6 +757,77 @@ function formatTime(ts) {
 .th-op {
   width: 150px;
   white-space: nowrap;
+}
+
+/* ===== 分页控件 ===== */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-light);
+}
+
+.page-info {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+.page-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.page-btn {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  border-radius: 7px;
+  font-size: 14px;
+  color: var(--text-sub);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.page-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
+.page-btn.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-ellipsis {
+  padding: 0 3px;
+  color: var(--text-faint);
+  font-size: 13px;
+}
+
+.page-size {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-sub);
+  background: #ffffff;
+  cursor: pointer;
 }
 
 /* 操作列 td 保持表格单元格布局，内层 flex 容器承载按钮，

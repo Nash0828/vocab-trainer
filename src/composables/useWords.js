@@ -69,6 +69,38 @@ let idSeed = words.value.reduce((max, w) => {
   return Number.isFinite(n) && n > max ? n : max
 }, 0)
 
+/**
+ * 加权随机抽题：熟练程度低的单词优先出现（背诵次数越少，权重越大）。
+ * 权重 = threshold - count（未背熟的词 count < threshold，权重至少为 1）。
+ * 采用"排除式"：直接从除上一题外的候选词中按权重抽取，既保证不立即重复，又不扭曲加权分布。
+ * @param {number[]} counts 各单词当前背诵次数（顺序与出题池一致）
+ * @param {number} threshold 背熟阈值
+ * @param {number} [lastIndex=-1] 上一题索引，避免连续重复
+ * @returns {number} 选中的索引；池为空返回 -1
+ */
+export function weightedPickIndex(counts, threshold, lastIndex = -1) {
+  const n = counts.length
+  if (n <= 0) return -1
+  if (n <= 1) return 0
+  // 候选索引：排除上一题（保证不立即重复）
+  const candidates = []
+  for (let i = 0; i < n; i++) {
+    if (i !== lastIndex) candidates.push(i)
+  }
+  const weights = candidates.map((i) => Math.max(1, threshold - (counts[i] || 0)))
+  const total = weights.reduce((a, b) => a + b, 0)
+  let r = Math.random() * total
+  let chosen = 0
+  for (let k = 0; k < candidates.length; k++) {
+    r -= weights[k]
+    if (r <= 0) {
+      chosen = k
+      break
+    }
+  }
+  return candidates[chosen]
+}
+
 export function useWords() {
   function addWord({ chinese, english, pos }) {
     const word = {

@@ -1,13 +1,13 @@
 <script setup>
-import { ref, computed, nextTick, onBeforeUnmount } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import { useWords } from '../composables/useWords'
+import { useWords, weightedPickIndex } from '../composables/useWords'
 import { useHistory } from '../composables/useHistory'
 import { useWrongBook } from '../composables/useWrongBook'
 
 const router = useRouter()
 const { words, settings, incrementCount, isMastered } = useWords()
-const { getTodayStats, getTodayRecords, addRecord } = useHistory()
+const { getTodayStats, getTodayRecords, getTodayUniqueStats, addRecord } = useHistory()
 const { addWrong, removeWrong, getValidWrongWords } = useWrongBook()
 
 // 出题来源：'all' = 全部未背熟词库；'wrong' = 仅错题本
@@ -16,12 +16,14 @@ const sourceMode = ref('all')
 const current = ref(null)
 const answer = ref('')
 const result = ref(null) // null | 'correct' | 'wrong'
+const revealed = ref(false) // 是否通过"显示答案"按钮作答（用于反馈文案区分）
 const lastIndex = ref(-1)
 const answerInput = ref(null)
 let autoTimer = null // 作答后自动切换下一题的定时器
 
 // 今日统计与记录弹窗
 const todayStats = ref(getTodayStats())
+const todayUnique = ref(getTodayUniqueStats()) // 今日去重单词统计（重复单词只算一次）
 const todayRecords = ref([])
 const showRecordsModal = ref(false)
 const modalTab = ref('correct') // 'correct' | 'wrong'
@@ -82,17 +84,17 @@ const todayNewMastered = computed(() => {
 
 function refreshToday() {
   todayStats.value = getTodayStats()
+  todayUnique.value = getTodayUniqueStats()
   todayRecords.value = getTodayRecords()
 }
 
 function pickIndex() {
-  const n = available.value.length
-  if (n <= 1) return 0
-  let idx = Math.floor(Math.random() * n)
-  if (idx === lastIndex.value) {
-    idx = (idx + 1) % n
-  }
-  return idx
+  // 加权随机：熟练程度低的单词（背诵次数少）优先出现，且不立即重复上一题
+  return weightedPickIndex(
+    available.value.map((w) => w.count || 0),
+    threshold.value,
+    lastIndex.value
+  )
 }
 
 function clearAutoTimer() {
@@ -119,6 +121,7 @@ function next() {
   current.value = available.value[idx]
   answer.value = ''
   result.value = null
+  revealed.value = false
   focusInput()
 }
 
@@ -135,6 +138,7 @@ function submit() {
     addWrong(current.value)
   }
   result.value = isCorrect ? 'correct' : 'wrong'
+  revealed.value = false
   // 答题后自动朗读正确单词（无论对错）
   speak(current.value.english)
 
@@ -179,7 +183,24 @@ function redo() {
   clearAutoTimer()
   answer.value = ''
   result.value = null
+  revealed.value = false
   focusInput()
+}
+
+// 显示正确答案：该题按答错处理（计入错题本与当日错误记录、不累计背诵次数）
+function revealAnswer() {
+  if (!current.value || result.value) return
+  result.value = 'wrong'
+  revealed.value = true
+  addWrong(current.value)
+  addRecord({
+    chinese: current.value.chinese,
+    english: current.value.english,
+    pos: current.value.pos || '',
+    correct: false,
+  })
+  refreshToday()
+  speak(current.value.english)
 }
 
 // 切换出题来源
@@ -209,13 +230,28 @@ const modalRecords = computed(() => {
     : recs.filter((r) => !r.correct)
 })
 
+// 答错后按回车键直接进入下一题（焦点在输入框/页面空白处时生效；聚焦按钮时不拦截，避免与按钮回车激活冲突）
+function onGlobalKeydown(e) {
+  if (e.key !== 'Enter') return
+  if (result.value !== 'wrong') return
+  const tag = e.target && e.target.tagName
+  if (tag === 'BUTTON' || tag === 'A' || tag === 'INPUT' || tag === 'TEXTAREA') return
+  e.preventDefault()
+  next()
+}
+
 // 跨零点自动刷新"今日"统计（本地日期维度）
 todayInterval = setInterval(() => {
   refreshToday()
   todayTick.value += 1
 }, 30000)
 
+onMounted(() => {
+  document.addEventListener('keydown', onGlobalKeydown)
+})
+
 onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onGlobalKeydown)
   clearAutoTimer()
   if (todayInterval) clearInterval(todayInterval)
 })
@@ -303,11 +339,15 @@ next()
       <div class="today-bar">
         <span class="today-label">📅 今日背诵</span>
         <button class="today-stat today-correct" @click="openRecords('correct')">
-          ✅ 正确 <strong>{{ todayStats.correct }}</strong>
+          ✅ 正确 <strong>{{ todayStats.correct }}</strong> 次
         </button>
         <button class="today-stat today-wrong" @click="openRecords('wrong')">
-          ❌ 错误 <strong>{{ todayStats.wrong }}</strong>
+          ❌ 错误 <strong>{{ todayStats.wrong }}</strong> 次
         </button>
+        <span class="today-unique">
+          已背 <strong>{{ todayUnique.totalWords }}</strong> 个单词
+          <span class="unique-sub">（✅ {{ todayUnique.correctWords }} · ❌ {{ todayUnique.wrongWords }}，去重）</span>
+        </span>
         <span class="muted small">点击数字查看当天记录</span>
       </div>
 
@@ -367,7 +407,8 @@ next()
             </template>
             <template v-else>
               <span class="fb-icon">😅</span>
-              不对哦，正确答案是 <strong class="correct-word">{{ current.english }}</strong>
+              {{ revealed ? '已显示答案，正确答案是' : '不对哦，正确答案是' }}
+              <strong class="correct-word">{{ current.english }}</strong>
               <button class="speak-btn" title="重听发音" @click="speak(current.english)">🔊 重听</button>
             </template>
           </div>
@@ -375,12 +416,13 @@ next()
             {{
               result === 'correct'
                 ? '⏳ 即将自动切换到下一题…'
-                : '可点「重做这一题」重新作答，或点「下一题」继续'
+                : '可点「重做这一题」重新作答，按回车或点「下一题」继续'
             }}
           </p>
 
           <div class="quiz-actions">
             <button v-if="!result" class="btn ghost" @click="skip">换一题</button>
+            <button v-if="!result" class="btn ghost" @click="revealAnswer">👁️ 显示答案</button>
             <button v-if="!result" class="btn primary" :disabled="!answer.trim()" @click="submit">
               提交答案
             </button>
@@ -515,6 +557,26 @@ next()
   border-color: var(--danger);
   color: var(--danger);
   background: #fdf1ef;
+}
+
+.today-unique {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 14px;
+  font-size: 14px;
+  color: var(--text-main);
+}
+
+.today-unique strong {
+  color: var(--primary);
+  font-size: 17px;
+  margin: 0 2px;
+}
+
+.today-unique .unique-sub {
+  color: var(--text-sub);
+  font-size: 13px;
 }
 
 .quiz-stats {
