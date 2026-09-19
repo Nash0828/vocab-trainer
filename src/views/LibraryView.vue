@@ -907,4 +907,104 @@ function formatTime(ts) {
 .fade-leave-to {
   opacity: 0;
 }
+
+/* ===== 移动端适配：表格 → 卡片列表 ===== */
+@media (max-width: 768px) {
+  .table-wrap {
+    overflow-x: visible;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .search-box {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .status-filters {
+    justify-content: center;
+  }
+
+  .filter-btn {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  /* 表格整体转为卡片流 */
+  .word-table,
+  .word-table thead,
+  .word-table tbody,
+  .word-table tr,
+  .word-table td {
+    display: block;
+  }
+
+  .word-table thead {
+    display: none; /* 隐藏表头 */
+  }
+
+  .word-table tr {
+    margin-bottom: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #ffffff;
+  }
+
+  .word-table tbody tr:hover {
+    background: #ffffff;
+  }
+
+  .word-table td {
+    border: none;
+    padding: 5px 0;
+    vertical-align: top;
+  }
+
+  /* 序号手机上不显示 */
+  .word-table .idx {
+    display: none;
+  }
+
+  /* 英文单词放大突出 */
+  .word-table td.en {
+    font-size: 18px;
+    margin-bottom: 2px;
+  }
+
+  .word-table td.progress-cell {
+    min-width: 0;
+  }
+
+  .word-table .time-cell {
+    font-size: 12px;
+  }
+
+  /* 操作列：加顶部分隔线，按钮全宽 */
+  .word-table td.op {
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border-light);
+  }
+
+  .op-actions {
+    justify-content: center;
+  }
+
+  /* 分页控件 */
+  .pagination {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .page-btn {
+    min-width: 34px;
+    height: 34px;
+  }
+}
 </style>

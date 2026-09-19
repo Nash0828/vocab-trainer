@@ -393,9 +393,45 @@ function formatDate(dateStr) {
   opacity: 0;
 }
 
-@media (max-width: 560px) {
+@media (max-width: 768px) {
   .summary-row {
     grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .summary-item {
+    padding: 12px 6px;
+  }
+
+  .sum-num {
+    font-size: 22px;
+  }
+
+  .sum-label {
+    font-size: 12px;
+  }
+
+  .day-head {
+    padding: 12px 12px;
+    gap: 8px;
+  }
+
+  .day-badges .badge {
+    font-size: 12px;
+    padding: 2px 8px;
+  }
+
+  .record-item {
+    gap: 8px;
+    font-size: 14px;
+  }
+
+  .rec-en {
+    min-width: 70px;
+  }
+
+  .rec-time {
+    width: 100%;
   }
 }
 </style>

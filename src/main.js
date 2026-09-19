@@ -19,6 +19,13 @@ async function bootstrap() {
     console.error('加载初始数据失败', err)
   }
   const app = createApp(App)
+
+  // 移动端禁用 Vue DevTools 集成，减少不必要开销
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+  if (isMobile) {
+    app.config.devtools = false
+  }
+
   app.use(router)
   app.mount('#app')
 }

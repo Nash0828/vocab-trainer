@@ -253,4 +253,25 @@ function formatTime(ts) {
 .fade-leave-to {
   opacity: 0;
 }
+
+@media (max-width: 768px) {
+  .wrong-item {
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .w-en {
+    min-width: auto;
+    font-size: 15px;
+  }
+
+  .w-pos {
+    min-width: auto;
+  }
+
+  .w-time {
+    width: 100%;
+    font-size: 12px;
+  }
+}
 </style>

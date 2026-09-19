@@ -859,4 +859,66 @@ next()
   flex: 1;
   color: var(--text-main);
 }
+
+/* ===== 移动端适配 ===== */
+@media (max-width: 768px) {
+  .source-bar {
+    gap: 8px;
+  }
+
+  .today-bar {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .today-stat {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  .today-stat strong {
+    font-size: 15px;
+  }
+
+  .quiz-stats {
+    gap: 6px 12px;
+    font-size: 13px;
+  }
+
+  .quiz-card {
+    padding: 22px 16px;
+  }
+
+  .quiz-word {
+    font-size: 28px;
+  }
+
+  .quiz-input input {
+    font-size: 18px;
+    padding: 14px 12px;
+  }
+
+  .quiz-actions {
+    gap: 10px;
+  }
+
+  .quiz-actions .btn {
+    flex: 1;
+    min-width: 100px;
+  }
+
+  .modal-mask {
+    padding: 8px;
+    align-items: flex-end;
+  }
+
+  .modal {
+    max-height: 85vh;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .m-en {
+    min-width: 70px;
+  }
+}
 </style>

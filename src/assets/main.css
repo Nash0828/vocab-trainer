@@ -58,6 +58,7 @@
   font-weight: 600;
   transition: all 0.18s ease;
   user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .btn:active {
@@ -114,9 +115,24 @@
   border-radius: 8px;
 }
 
-/* ========== 响应式 ========== */
-@media (max-width: 560px) {
+/* ========== 移动端适配 ========== */
+@media (max-width: 768px) {
   .card {
-    padding: 20px 16px;
+    padding: 18px 14px;
+    border-radius: 12px;
+  }
+
+  .card-head h2 {
+    font-size: 19px;
+  }
+
+  .btn {
+    padding: 12px 18px;
+    font-size: 15px;
+  }
+
+  .btn.mini {
+    padding: 8px 12px;
+    font-size: 13px;
   }
 }

@@ -1,6 +1,6 @@
 /* ========== 基础样式与设计变量 ========== */
 :root {
-  /* 主色：清爽的蓝色（避免刺眼深色） */
+  /* 主色：清爽的蓝色 */
   --primary: #4a90d9;
   --primary-dark: #3a76b8;
   --primary-light: #eaf2fb;
@@ -44,6 +44,7 @@ body {
   font-size: 15px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
 }
 
 #app {
@@ -53,4 +54,11 @@ body {
 button {
   font-family: inherit;
   cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 16px; /* 防止 iOS 聚焦时自动缩放 */
 }

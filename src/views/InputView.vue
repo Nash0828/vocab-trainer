@@ -223,4 +223,19 @@ function clearAllFields() {
 .fade-leave-to {
   opacity: 0;
 }
+
+@media (max-width: 768px) {
+  .word-form {
+    gap: 14px;
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+    gap: 10px;
+  }
+
+  .form-actions .btn {
+    width: 100%;
+  }
+}
 </style>

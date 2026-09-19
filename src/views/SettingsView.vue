@@ -547,9 +547,36 @@ function cancelMigrate() {
   opacity: 0;
 }
 
-@media (max-width: 560px) {
+@media (max-width: 768px) {
   .stats-row {
     grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .stat-item {
+    padding: 12px 6px;
+  }
+
+  .stat-num {
+    font-size: 22px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+  }
+
+  .threshold-form {
+    flex-wrap: wrap;
+  }
+
+  .io-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .io-label {
+    width: auto;
   }
 }
 </style>

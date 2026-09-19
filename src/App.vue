@@ -1,22 +1,33 @@
 <script setup>
 import { RouterLink, RouterView } from 'vue-router'
+
+const navItems = [
+  { to: '/', label: '录入', icon: '✍️' },
+  { to: '/practice', label: '背单词', icon: '🎯' },
+  { to: '/wrongbook', label: '错题本', icon: '📕' },
+  { to: '/library', label: '词库', icon: '🗂️' },
+  { to: '/history', label: '历史', icon: '📜' },
+  { to: '/settings', label: '设置', icon: '⚙️' },
+]
 </script>
 
 <template>
   <div class="app-shell">
-    <!-- 左侧边栏导航 -->
+    <!-- 左侧边栏导航（PC 端） -->
     <aside class="app-sidebar">
       <div class="brand">
         <span class="brand-logo">📚</span>
         <span class="brand-name">背单词助手</span>
       </div>
       <nav class="side-nav">
-        <RouterLink to="/">✍️ 单词录入</RouterLink>
-        <RouterLink to="/practice">🎯 背单词</RouterLink>
-        <RouterLink to="/wrongbook">📕 错题本</RouterLink>
-        <RouterLink to="/library">🗂️ 词库管理</RouterLink>
-        <RouterLink to="/history">📜 历史</RouterLink>
-        <RouterLink to="/settings">⚙️ 设置</RouterLink>
+        <RouterLink
+          v-for="item in navItems"
+          :key="item.to"
+          :to="item.to"
+        >
+          <span class="nav-icon">{{ item.icon }}</span>
+          <span class="nav-label">{{ item.label }}</span>
+        </RouterLink>
       </nav>
     </aside>
 
@@ -26,11 +37,23 @@ import { RouterLink, RouterView } from 'vue-router'
         <RouterView />
       </main>
     </div>
+
+    <!-- 手机端底部导航 -->
+    <nav class="mobile-nav">
+      <RouterLink
+        v-for="item in navItems"
+        :key="item.to"
+        :to="item.to"
+        class="mobile-nav-item"
+      >
+        <span class="mobile-nav-icon">{{ item.icon }}</span>
+        <span class="mobile-nav-label">{{ item.label }}</span>
+      </RouterLink>
+    </nav>
   </div>
 </template>
 
 <style scoped>
-/* 整体居中容器：侧边栏紧挨主体内容，两侧留白 */
 .app-shell {
   min-height: 100vh;
   display: flex;
@@ -40,7 +63,7 @@ import { RouterLink, RouterView } from 'vue-router'
   box-shadow: 0 4px 34px rgba(43, 58, 74, 0.08);
 }
 
-/* 左侧边栏 */
+/* 左侧边栏（PC） */
 .app-sidebar {
   width: 216px;
   flex-shrink: 0;
@@ -80,7 +103,9 @@ import { RouterLink, RouterView } from 'vue-router'
 }
 
 .side-nav a {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 12px 16px;
   border-radius: 10px;
   color: var(--text-sub);
@@ -117,33 +142,63 @@ import { RouterLink, RouterView } from 'vue-router'
   box-sizing: border-box;
 }
 
-/* 窄屏：侧边栏改为顶部横排，容器全宽 */
-@media (max-width: 720px) {
+/* 手机端底部导航（默认隐藏，窄屏显示） */
+.mobile-nav {
+  display: none;
+}
+
+/* ===== 窄屏适配（≤768px） ===== */
+@media (max-width: 768px) {
   .app-shell {
     flex-direction: column;
     max-width: 100%;
     box-shadow: none;
   }
+
   .app-sidebar {
-    width: 100%;
-    height: auto;
-    position: static;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    padding: 12px 14px;
-    gap: 10px;
+    display: none; /* PC 侧边栏隐藏 */
   }
-  .brand {
-    padding: 0;
+
+  .app-main {
+    max-width: 100%;
+    padding: 16px 14px 90px; /* 底部留空给导航栏 */
   }
-  .side-nav {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 6px;
+
+  /* 底部固定导航 */
+  .mobile-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border-top: 1px solid var(--border);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    z-index: 99;
+    justify-content: space-around;
   }
-  .side-nav a {
-    padding: 8px 12px;
-    font-size: 14px;
+
+  .mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 6px;
+    text-decoration: none;
+    color: var(--text-faint);
+    font-size: 11px;
+    font-weight: 600;
+    min-width: 48px;
+    transition: color 0.2s;
+  }
+
+  .mobile-nav-item .mobile-nav-icon {
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  .mobile-nav-item.router-link-exact-active {
+    color: var(--primary);
   }
 }
 </style>
