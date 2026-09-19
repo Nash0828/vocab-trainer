@@ -1,36 +1,17 @@
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
+import { api } from '../api/index.js'
 
 /**
- * 错题本数据源（localStorage 持久化）
- * key: vocab-wrongbook
+ * 错题本数据源（后端 API 持久化）
  * 每条记录：{ id: 单词id, chinese, english, pos, addedAt }
  * 规则：答错记入（同词只记一次）、答对移除；单词从词库删除后自动清理（惰性）
  */
-const WRONG_KEY = 'vocab-wrongbook'
+const wrongWords = ref([])
 
-function load() {
-  try {
-    const raw = localStorage.getItem(WRONG_KEY)
-    const data = raw ? JSON.parse(raw) : []
-    return Array.isArray(data) ? data : []
-  } catch (e) {
-    return []
-  }
+/** 从后端数据初始化（main.js 中调用） */
+export function initWrongbook(wrongbook) {
+  wrongWords.value = Array.isArray(wrongbook) ? wrongbook : []
 }
-
-const wrongWords = ref(load())
-
-watch(
-  wrongWords,
-  (val) => {
-    try {
-      localStorage.setItem(WRONG_KEY, JSON.stringify(val))
-    } catch (e) {
-      // 存储失败时静默处理
-    }
-  },
-  { deep: true }
-)
 
 export function useWrongBook() {
   /** 答错时记入错题本（同一单词只记一次：优先按 id 去重，无 id 时按英文去重） */
@@ -42,20 +23,28 @@ export function useWrongBook() {
       return false
     })
     if (exists) return false
-    wrongWords.value.push({
+    const entry = {
       id: word.id ? String(word.id) : '',
       chinese: (word.chinese || '').trim(),
       english: (word.english || '').trim(),
       pos: (word.pos || '').trim(),
       addedAt: Date.now(),
+    }
+    wrongWords.value.push(entry)
+    api.addWrong({
+      wordId: entry.id,
+      chinese: entry.chinese,
+      english: entry.english,
+      pos: entry.pos,
+    }).catch((err) => {
+      console.error('addWrong 同步失败', err)
+      const idx = wrongWords.value.findIndex((w) => w.id === entry.id && w.english === entry.english)
+      if (idx !== -1) wrongWords.value.splice(idx, 1)
     })
     return true
   }
 
-  /**
-   * 答对时从错题本移除。
-   * @param {string|object} idOrWord 单词 id，或单词对象（按 id 匹配，无 id 时按英文忽略大小写匹配）
-   */
+  /** 答对时从错题本移除 */
   function removeWrong(idOrWord) {
     const id = idOrWord && typeof idOrWord === 'object' ? idOrWord.id : idOrWord
     const english =
@@ -66,10 +55,14 @@ export function useWrongBook() {
       if (english && w.english.trim().toLowerCase() === english) return false
       return true
     })
-    return wrongWords.value.length !== before
+    const removed = wrongWords.value.length !== before
+    if (removed && id) {
+      api.removeWrong(id).catch((err) => console.error('removeWrong 同步失败', err))
+    }
+    return removed
   }
 
-  /** 判断单词是否在错题本中（优先按 id，其次按英文忽略大小写） */
+  /** 判断单词是否在错题本中 */
   function isWrong(word) {
     if (!word) return false
     if (word.id && wrongWords.value.some((w) => String(w.id) === String(word.id))) return true
@@ -77,10 +70,7 @@ export function useWrongBook() {
     return e ? wrongWords.value.some((w) => w.english.trim().toLowerCase() === e) : false
   }
 
-  /**
-   * 获取有效错题本列表：自动清理词库中已不存在的单词（惰性），按加入时间倒序。
-   * @param {Array} words 当前词库
-   */
+  /** 获取有效错题本列表：自动清理词库中已不存在的单词（惰性），按加入时间倒序 */
   function getValidWrongWords(words) {
     const valid = []
     for (const w of wrongWords.value) {
@@ -100,6 +90,7 @@ export function useWrongBook() {
   /** 清空错题本 */
   function clearWrong() {
     wrongWords.value = []
+    api.clearWrongbook().catch((err) => console.error('clearWrong 同步失败', err))
     return true
   }
 

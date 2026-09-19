@@ -1,48 +1,28 @@
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
+import { api } from '../api/index.js'
 
 /**
- * 背诵历史数据源（localStorage 持久化）
- * key: vocab-history
+ * 背诵历史数据源（后端 API 持久化）
  * 每条记录：{ id, date: 'YYYY-MM-DD', chinese, english, pos, correct, ts }
  * 按天维度统计：记录自带日期字段，展示时只取当天 ⇒ 隔天自动清零
  */
-const HISTORY_KEY = 'vocab-history'
-
 function todayStr() {
   const d = new Date()
   const pad = (n) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-function load() {
-  try {
-    const raw = localStorage.getItem(HISTORY_KEY)
-    const data = raw ? JSON.parse(raw) : []
-    return Array.isArray(data) ? data : []
-  } catch (e) {
-    return []
-  }
-}
-
-const history = ref(load())
-// "今天"标记：跨零点自动刷新，供组件 computed 依赖以触发隔天清零
+const history = ref([])
 const today = ref(todayStr())
 setInterval(() => {
   const t = todayStr()
   if (t !== today.value) today.value = t
 }, 30000)
 
-watch(
-  history,
-  (val) => {
-    try {
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(val))
-    } catch (e) {
-      // 存储失败时静默处理
-    }
-  },
-  { deep: true }
-)
+/** 从后端数据初始化（main.js 中调用） */
+export function initRecords(records) {
+  history.value = Array.isArray(records) ? records : []
+}
 
 function uid() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -51,7 +31,7 @@ function uid() {
 export function useHistory() {
   /** 写入一条当天背诵记录 */
   function addRecord({ chinese, english, pos, correct }) {
-    history.value.push({
+    const rec = {
       id: uid(),
       date: todayStr(),
       chinese: (chinese || '').trim(),
@@ -59,7 +39,14 @@ export function useHistory() {
       pos: (pos || '').trim(),
       correct: !!correct,
       ts: Date.now(),
-    })
+    }
+    history.value.push(rec)
+    api.addRecord({ chinese: rec.chinese, english: rec.english, pos: rec.pos, correct: rec.correct })
+      .catch((err) => {
+        console.error('addRecord 同步失败', err)
+        const idx = history.value.findIndex((r) => r.id === rec.id)
+        if (idx !== -1) history.value.splice(idx, 1)
+      })
     return true
   }
 
@@ -81,10 +68,7 @@ export function useHistory() {
     }
   }
 
-  /**
-   * 当天去重单词统计：重复的单词只统计一次，正确/错误分别统计。
-   * 注：同一单词当天既答对过又答错过时，会同时计入 correctWords 与 wrongWords。
-   */
+  /** 当天去重单词统计 */
   function getTodayUniqueStats() {
     const correctSet = new Set()
     const wrongSet = new Set()
@@ -101,9 +85,7 @@ export function useHistory() {
     }
   }
 
-  /**
-   * 按天维度的历史汇总（日期倒序，每天含 correct/wrong 次数与 correctWords/wrongWords/totalWords 去重单词数）
-   */
+  /** 按天维度的历史汇总 */
   function getHistoryByDay() {
     const map = new Map()
     for (const r of history.value) {
@@ -145,12 +127,14 @@ export function useHistory() {
   /** 清空某天的记录 */
   function clearDay(date) {
     history.value = history.value.filter((r) => r.date !== date)
+    api.clearDay(date).catch((err) => console.error('clearDay 同步失败', err))
     return true
   }
 
   /** 清空全部历史 */
   function clearAll() {
     history.value = []
+    api.clearAllRecords().catch((err) => console.error('clearAll 同步失败', err))
     return true
   }
 

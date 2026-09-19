@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useWords } from '../composables/useWords'
+import { api } from '../api/index.js'
 
 const {
   words,
@@ -141,6 +142,60 @@ function cancelOverwrite() {
   pendingImport.value = null
   confirmOverwrite.value = false
 }
+
+// ---- 从 localStorage 迁移旧数据 ----
+const confirmMigrate = ref(false)
+const migrating = ref(false)
+
+function readLocal(key) {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function askMigrate() {
+  // 先检查 localStorage 里有没有旧数据
+  const oldWords = readLocal('vocab-words')
+  if (!Array.isArray(oldWords) || !oldWords.length) {
+    showTip('ℹ️ 浏览器本地没有找到旧数据（vocab-words 为空）', 'warn')
+    return
+  }
+  confirmMigrate.value = true
+}
+
+async function doMigrate() {
+  migrating.value = true
+  try {
+    const payload = {
+      words: readLocal('vocab-words') || [],
+      settings: readLocal('vocab-settings') || {},
+      records: readLocal('vocab-history') || [],
+      wrongbook: readLocal('vocab-wrongbook') || [],
+    }
+    const res = await api.migrateData(payload)
+    if (res.ok) {
+      showTip(
+        `✅ 迁移成功：${res.words} 个单词、${res.records} 条记录、${res.wrongbook} 个错题${res.threshold ? `、阈值 ${res.threshold}` : ''}，即将刷新页面…`,
+        'ok'
+      )
+      setTimeout(() => window.location.reload(), 1500)
+    } else {
+      showTip(`⛔ 迁移失败：${res.reason || '未知错误'}`, 'err')
+    }
+  } catch (err) {
+    showTip(`⛔ 迁移失败：${err.message}`, 'err')
+  } finally {
+    migrating.value = false
+    confirmMigrate.value = false
+  }
+}
+
+function cancelMigrate() {
+  confirmMigrate.value = false
+}
 </script>
 
 <template>
@@ -262,6 +317,27 @@ function cancelOverwrite() {
             <button class="btn ghost mini" @click="cancelOverwrite">取消</button>
           </div>
         </div>
+      </div>
+
+      <!-- 从 localStorage 迁移旧数据 -->
+      <div class="setting-block">
+        <h3>🔄 从浏览器本地迁移旧数据</h3>
+        <p class="muted">
+          如果之前使用旧版本（数据存在浏览器 localStorage），点击下方按钮可将旧数据一次性导入到新的数据库。<b>迁移会清空当前数据库并替换为旧数据</b>。
+        </p>
+
+        <template v-if="confirmMigrate">
+          <div class="confirm-box">
+            <span class="confirm-text">⚠️ 迁移将清空当前数据库中的所有数据，替换为浏览器 localStorage 中的旧数据。确定继续吗？</span>
+            <div class="confirm-actions">
+              <button class="btn danger mini" :disabled="migrating" @click="doMigrate">
+                {{ migrating ? '迁移中…' : '是，开始迁移' }}
+              </button>
+              <button class="btn ghost mini" :disabled="migrating" @click="cancelMigrate">取消</button>
+            </div>
+          </div>
+        </template>
+        <button v-else class="btn ghost" @click="askMigrate">从浏览器本地迁移</button>
       </div>
     </section>
   </div>

@@ -25,9 +25,6 @@ import { RouterLink, RouterView } from 'vue-router'
       <main class="app-main">
         <RouterView />
       </main>
-      <footer class="app-footer">
-        <p>数据保存在本浏览器中（localStorage），刷新页面不丢失</p>
-      </footer>
     </div>
   </div>
 </template>
@@ -118,15 +115,6 @@ import { RouterLink, RouterView } from 'vue-router'
   margin: 0 auto;
   padding: 28px 24px 40px;
   box-sizing: border-box;
-}
-
-.app-footer {
-  text-align: center;
-  padding: 16px;
-  color: var(--text-faint);
-  font-size: 13px;
-  background: #ffffff;
-  border-top: 1px solid var(--border);
 }
 
 /* 窄屏：侧边栏改为顶部横排，容器全宽 */

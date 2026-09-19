@@ -37,3 +37,8 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+# SQLite 数据库（运行时自动生成）
+vocab.db
+vocab.db-shm
+vocab.db-wal
