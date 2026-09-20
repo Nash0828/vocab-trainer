@@ -376,23 +376,23 @@ next()
           :class="{ active: sourceMode === 'wrong' }"
           @click="setSource('wrong')"
         >
-          📕 仅错题本
+          仅错题本
         </button>
         <span v-if="sourceMode === 'wrong'" class="muted small">错题本 {{ wrongValid.length }} 词</span>
       </div>
 
       <!-- 今日统计（可点击查看记录） -->
       <div class="today-bar">
-        <span class="today-label">📅 今日背诵</span>
+        <span class="today-label">今日背诵</span>
         <button class="today-stat today-correct" @click="openRecords('correct')">
-          ✅ 正确 <strong>{{ todayStats.correct }}</strong> 次
+          正确 <strong>{{ todayStats.correct }}</strong> 次
         </button>
         <button class="today-stat today-wrong" @click="openRecords('wrong')">
-          ❌ 错误 <strong>{{ todayStats.wrong }}</strong> 次
+          错误 <strong>{{ todayStats.wrong }}</strong> 次
         </button>
         <span class="today-unique">
           已背 <strong>{{ todayUnique.totalWords }}</strong> 个单词
-          <span class="unique-sub">（✅ {{ todayUnique.correctWords }} · ❌ {{ todayUnique.wrongWords }}，去重）</span>
+          <span class="unique-sub">（正确 {{ todayUnique.correctWords }} · 错误 {{ todayUnique.wrongWords }}，去重）</span>
         </span>
         <span class="muted small">点击数字查看当天记录</span>
       </div>
@@ -416,10 +416,12 @@ next()
           <!-- 手动播放发音 + 查词典按钮 -->
           <div class="quiz-sound">
             <button class="btn ghost mini" title="播放当前单词发音" @click="speak(current.english)">
-              🔊 播放发音
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+              播放发音
             </button>
             <button class="btn ghost mini" title="查询词典释义" @click="lookupWord(current.english)">
-              📖 查词典
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              查词典
             </button>
           </div>
 
@@ -456,13 +458,19 @@ next()
             <template v-if="result === 'correct'">
               <span class="fb-icon">🎉</span> 回答正确！很棒！
               <span v-if="current.count >= threshold" class="fb-mastered">（达成阈值，已背熟 🏆）</span>
-              <button class="speak-btn" title="重听发音" @click="speak(current.english)">🔊 重听</button>
+              <button class="speak-btn" title="重听发音" @click="speak(current.english)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                重听
+              </button>
             </template>
             <template v-else>
               <span class="fb-icon">😅</span>
               {{ revealed ? '已显示答案，正确答案是' : '不对哦，正确答案是' }}
               <strong class="correct-word">{{ current.english }}</strong>
-              <button class="speak-btn" title="重听发音" @click="speak(current.english)">🔊 重听</button>
+              <button class="speak-btn" title="重听发音" @click="speak(current.english)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                重听
+              </button>
             </template>
           </div>
           <p v-if="result" class="auto-hint">
@@ -499,7 +507,7 @@ next()
     <div v-if="showRecordsModal" class="modal-mask" @click.self="closeRecords">
       <div class="modal">
         <div class="modal-head">
-          <h3>📊 今日背诵记录</h3>
+          <h3>今日背诵记录</h3>
           <button class="btn ghost mini" @click="closeRecords">✕ 关闭</button>
         </div>
         <div class="modal-tabs">
@@ -533,28 +541,32 @@ next()
     <div v-if="dictModal" class="dict-mask" @click.self="closeDict">
       <div class="dict-modal">
         <div class="dict-head">
-          <h3>📖 {{ dictModal.word }}</h3>
+          <h3>{{ dictModal.word }}</h3>
           <button class="dict-close" @click="closeDict">✕</button>
         </div>
         <div class="dict-body">
           <div v-if="dictModal.loading" class="dict-loading">查询中…</div>
-          <div v-else-if="dictModal.error" class="dict-error">⚠️ {{ dictModal.error }}</div>
+          <div v-else-if="dictModal.error" class="dict-error">{{ dictModal.error }}</div>
           <div v-else-if="dictModal.data">
             <div v-if="dictModal.data.usphone || dictModal.data.ukphone" class="dict-phonetic">
               <span v-if="dictModal.data.ukphone" class="phonetic-item">
                 英 [{{ dictModal.data.ukphone }}]
-                <button class="speak-mini" @click="speak(dictModal.word, 1)" title="英式发音">🔊</button>
+                <button class="speak-mini" @click="speak(dictModal.word, 1)" title="英式发音">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                </button>
               </span>
               <span v-if="dictModal.data.usphone" class="phonetic-item" style="margin-left:12px">
                 美 [{{ dictModal.data.usphone }}]
-                <button class="speak-mini" @click="speak(dictModal.word, 0)" title="美式发音">🔊</button>
+                <button class="speak-mini" @click="speak(dictModal.word, 0)" title="美式发音">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                </button>
               </span>
             </div>
             <div v-if="dictModal.data.examType && dictModal.data.examType.length" class="dict-exam">
               考试类型：{{ dictModal.data.examType.join(' / ') }}
             </div>
             <div v-if="dictModal.data.trs && dictModal.data.trs.length" class="dict-meaning">
-              <p class="dict-label">📝 释义</p>
+              <p class="dict-label">释义</p>
               <ul>
                 <li v-for="(tr, i) in dictModal.data.trs" :key="i">{{ tr }}</li>
               </ul>
@@ -725,6 +737,8 @@ next()
 
 .quiz-sound {
   margin-bottom: 16px;
+  display: flex;
+  gap: 10px;
 }
 
 .quiz-progress {
