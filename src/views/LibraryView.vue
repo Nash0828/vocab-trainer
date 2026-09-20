@@ -417,7 +417,7 @@ function formatTime(ts) {
             <span class="word-time">{{ formatTime(word.createdAt) }}</span>
           </div>
 
-          <div v-if="!isMastered(word)" class="progress-bar">
+          <div v-if="!isMastered(word) && (word.count || 0) > 0" class="progress-bar">
             <div class="progress-fill" :style="{ width: pct(word) + '%' }"></div>
           </div>
 
@@ -619,9 +619,9 @@ function formatTime(ts) {
 
 .progress-bar {
   width: 100%;
-  height: 3px;
+  height: 4px;
   border-radius: 999px;
-  background: #f0f0f0;
+  background: #e8e8e8;
   overflow: hidden;
   margin-top: 8px;
 }
