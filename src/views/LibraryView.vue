@@ -466,10 +466,18 @@ function formatTime(ts) {
                     <button class="btn ghost mini" @click="cancelReset">取消</button>
                   </template>
                   <template v-else>
-                    <button class="icon-btn edit" title="编辑单词" @click="startEdit(word)">✏️</button>
-                    <button class="icon-btn dict" title="查询词典释义" @click="lookupWord(word.english)">📖</button>
-                    <button class="icon-btn reset" title="重置背诵次数" @click="askReset(word)">↺</button>
-                    <button class="icon-btn del" title="删除单词" @click="askDelete(word)">🗑️</button>
+                    <button class="icon-btn edit" title="编辑单词" @click="startEdit(word)">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button class="icon-btn dict" title="查询词典释义" @click="lookupWord(word.english)">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                    </button>
+                    <button class="icon-btn reset" title="重置背诵次数" @click="askReset(word)">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                    </button>
+                    <button class="icon-btn del" title="删除单词" @click="askDelete(word)">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    </button>
                   </template>
                 </div>
               </td>
