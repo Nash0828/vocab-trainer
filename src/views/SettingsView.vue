@@ -253,7 +253,6 @@ function cancelMigrate() {
     <section class="card">
       <div class="card-head">
         <h2>⚙️ 设置</h2>
-        <p class="muted">调整背单词的"背熟"规则与背诵数据</p>
       </div>
 
       <!-- 用户登录区 -->
@@ -275,47 +274,6 @@ function cancelMigrate() {
       <transition name="fade">
         <p v-if="tip" class="tip" :class="tip.kind">{{ tip.text }}</p>
       </transition>
-
-      <!-- 数据概览 -->
-      <div class="stats-row">
-        <div class="stat-item">
-          <span class="stat-num">{{ totalCount }}</span>
-          <span class="stat-label">单词总数</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-num mastered">{{ masteredCount }}</span>
-          <span class="stat-label">已背熟</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-num">{{ notMasteredCount }}</span>
-          <span class="stat-label">未背熟</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-num">{{ settings.masteryThreshold }}</span>
-          <span class="stat-label">背熟阈值</span>
-        </div>
-      </div>
-
-      <!-- 背熟阈值设置 -->
-      <div class="setting-block">
-        <h3>🎯 背熟阈值（单词出现次数上限）</h3>
-        <p class="muted">
-          每个单词在「背单词」中每答对一次，背诵次数 +1；当次数达到该阈值时视为"已背熟"，不再出现在随机出题中。
-        </p>
-        <div class="threshold-form">
-          <input
-            v-model="thresholdInput"
-            type="number"
-            min="1"
-            max="999"
-            step="1"
-            inputmode="numeric"
-            class="threshold-input"
-          />
-          <span class="muted">次</span>
-          <button class="btn primary" @click="saveThreshold">保存阈值</button>
-        </div>
-      </div>
 
       <!-- 一键重置 -->
       <div class="setting-block danger-block">
@@ -383,27 +341,6 @@ function cancelMigrate() {
             <button class="btn ghost mini" @click="cancelOverwrite">取消</button>
           </div>
         </div>
-      </div>
-
-      <!-- 从 localStorage 迁移旧数据 -->
-      <div class="setting-block">
-        <h3>🔄 从浏览器本地迁移旧数据</h3>
-        <p class="muted">
-          如果之前使用旧版本（数据存在浏览器 localStorage），点击下方按钮可将旧数据一次性导入到新的数据库。<b>迁移会清空当前数据库并替换为旧数据</b>。
-        </p>
-
-        <template v-if="confirmMigrate">
-          <div class="confirm-box">
-            <span class="confirm-text">⚠️ 迁移将清空当前数据库中的所有数据，替换为浏览器 localStorage 中的旧数据。确定继续吗？</span>
-            <div class="confirm-actions">
-              <button class="btn danger mini" :disabled="migrating" @click="doMigrate">
-                {{ migrating ? '迁移中…' : '是，开始迁移' }}
-              </button>
-              <button class="btn ghost mini" :disabled="migrating" @click="cancelMigrate">取消</button>
-            </div>
-          </div>
-        </template>
-        <button v-else class="btn ghost" @click="askMigrate">从浏览器本地迁移</button>
       </div>
 
       <!-- 登录/注册弹窗 -->
