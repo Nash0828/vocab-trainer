@@ -486,24 +486,28 @@ function formatTime(ts) {
             <div v-if="dictModal.data.usphone || dictModal.data.ukphone" class="dict-phonetic">
               <span v-if="dictModal.data.ukphone" class="phonetic-item">
                 英 [{{ dictModal.data.ukphone }}]
-                <button class="speak-mini" @click="speak(dictModal.word, 1)" title="英式发音">🔊</button>
+                <button class="speak-mini" @click="speak(dictModal.word, 1)" title="英式发音">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                </button>
               </span>
               <span v-if="dictModal.data.usphone" class="phonetic-item" style="margin-left:12px">
                 美 [{{ dictModal.data.usphone }}]
-                <button class="speak-mini" @click="speak(dictModal.word, 0)" title="美式发音">🔊</button>
+                <button class="speak-mini" @click="speak(dictModal.word, 0)" title="美式发音">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                </button>
               </span>
             </div>
             <div v-if="dictModal.data.examType && dictModal.data.examType.length" class="dict-exam">
               考试类型：{{ dictModal.data.examType.join(' / ') }}
             </div>
             <div v-if="dictModal.data.trs && dictModal.data.trs.length" class="dict-meaning">
-              <p class="dict-label">📝 释义</p>
+              <p class="dict-label">释义</p>
               <ul>
                 <li v-for="(tr, i) in dictModal.data.trs" :key="i">{{ tr }}</li>
               </ul>
             </div>
             <div v-if="dictModal.data.wfs && dictModal.data.wfs.length" class="dict-meaning">
-              <p class="dict-label">📌 词形变化</p>
+              <p class="dict-label">词形变化</p>
               <ul>
                 <li v-for="(wf, i) in dictModal.data.wfs" :key="i">{{ wf }}</li>
               </ul>

@@ -466,10 +466,10 @@ next()
         </div>
         <div class="modal-tabs">
           <button class="tab-btn" :class="{ active: modalTab === 'correct' }" @click="modalTab = 'correct'">
-            ✅ 正确 ({{ todayStats.correct }})
+            正确 ({{ todayStats.correct }})
           </button>
           <button class="tab-btn" :class="{ active: modalTab === 'wrong' }" @click="modalTab = 'wrong'">
-            ❌ 错误 ({{ todayStats.wrong }})
+            错误 ({{ todayStats.wrong }})
           </button>
         </div>
         <div class="modal-body">
@@ -526,7 +526,7 @@ next()
               </ul>
             </div>
             <div v-if="dictModal.data.wfs && dictModal.data.wfs.length" class="dict-meaning">
-              <p class="dict-label">📌 词形变化</p>
+              <p class="dict-label">词形变化</p>
               <ul>
                 <li v-for="(wf, i) in dictModal.data.wfs" :key="i">{{ wf }}</li>
               </ul>
