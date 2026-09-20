@@ -258,7 +258,7 @@ function cancelEdit() {
 
 function saveEdit(word) {
   if (!editForm.chinese.trim() || !editForm.english.trim()) {
-    showTip('⚠️ 中文和英文不能为空', 'warn')
+    showTip('中文和英文不能为空', 'warn')
     return
   }
   // 重复校验：排除当前编辑的单词自身，避免把自己的旧值误判为重复
@@ -372,7 +372,7 @@ function formatTime(ts) {
 
     <!-- 空状态：词库为空 -->
     <div v-if="!totalCount" class="empty">
-      <div class="empty-icon">📭</div>
+      
       <h3>暂无单词</h3>
       <p class="muted">去「单词录入」添加你的第一个单词吧！</p>
       <button class="btn primary" @click="router.push('/')">去录入 →</button>
@@ -380,163 +380,89 @@ function formatTime(ts) {
 
     <!-- 无匹配结果 -->
     <div v-else-if="noMatch" class="empty">
-      <div class="empty-icon">🔎</div>
+      
       <h3>没有符合条件的单词</h3>
       <p class="muted">试试换一个关键词或切换筛选条件</p>
       <button class="btn ghost" @click="resetFilters">清除筛选</button>
     </div>
 
     <!-- 列表 -->
-    <div v-else class="table-wrap">
-      <table class="word-table">
-        <colgroup>
-          <col
-            v-for="(h, i) in headerList"
-            :key="'col-' + i"
-            :style="colWidths[i] ? { width: colWidths[i] + 'px' } : {}"
-          />
-        </colgroup>
-        <thead>
-          <tr>
-            <th v-for="(h, i) in headerList" :key="h" :class="{ 'th-op': h === '操作' }">
-              {{ h }}
-              <button
-                v-if="sortKey(h)"
-                class="sort-btn"
-                :class="{ active: sortField === sortKey(h) }"
-                :title="sortField === sortKey(h) ? '点击切换升序/降序，再点取消' : '点击排序'"
-                @click="toggleSort(sortKey(h))"
-              >
-                {{ sortArrow(sortKey(h)) }}
-              </button>
-              <span
-                class="resize-handle"
-                title="拖拽调整列宽"
-                @mousedown.prevent="startResize($event, i)"
-              ></span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(word, index) in pagedWords" :key="word.id">
-            <template v-if="editingId === word.id">
-              <td class="idx">{{ (currentPage - 1) * pageSize + index + 1 }}</td>
-              <td><input v-model="editForm.chinese" class="cell-input" placeholder="中文" /></td>
-              <td><input v-model="editForm.english" class="cell-input" placeholder="英文" /></td>
-              <td><input v-model="editForm.pos" class="cell-input pos" placeholder="词性" /></td>
-              <td class="muted small">次数 {{ word.count || 0 }}</td>
-              <td class="muted small time-cell">{{ formatTime(word.createdAt) }}</td>
-              <td class="op">
-                <div class="op-actions">
-                  <button class="btn primary mini" @click="saveEdit(word)">保存</button>
-                  <button class="btn ghost mini" @click="cancelEdit">取消</button>
-                </div>
-              </td>
-            </template>
+    <div v-else class="word-list">
+      <div v-for="(word, index) in pagedWords" :key="word.id" class="word-item">
+        <!-- 编辑态 -->
+        <div v-if="editingId === word.id" class="edit-row">
+          <input v-model="editForm.chinese" class="cell-input" placeholder="中文" />
+          <input v-model="editForm.english" class="cell-input" placeholder="英文" />
+          <input v-model="editForm.pos" class="cell-input pos" placeholder="词性" />
+          <div class="edit-btns">
+            <button class="btn primary mini" @click="saveEdit(word)">保存</button>
+            <button class="btn ghost mini" @click="cancelEdit">取消</button>
+          </div>
+        </div>
 
-            <template v-else>
-              <td class="idx">{{ (currentPage - 1) * pageSize + index + 1 }}</td>
-              <td>{{ word.chinese }}</td>
-              <td class="en">{{ word.english }}</td>
-              <td>
-                <span v-if="word.pos" class="pos-tag">{{ word.pos }}</span>
-                <span v-else class="muted">—</span>
-              </td>
-              <td class="progress-cell">
-                <template v-if="isMastered(word)">
-                  <span class="mastered-badge">✓ 已背熟</span>
-                  <span class="progress-text">{{ word.count || 0 }}/{{ threshold }}</span>
-                </template>
-                <template v-else>
-                  <span class="progress-text">{{ word.count || 0 }}/{{ threshold }}</span>
-                  <div class="progress-bar">
-                    <div class="progress-fill" :style="{ width: pct(word) + '%' }"></div>
-                  </div>
-                </template>
-              </td>
-              <td class="muted small time-cell">{{ formatTime(word.createdAt) }}</td>
-              <td class="op">
-                <div class="op-actions">
-                  <template v-if="confirmDeleteId === word.id">
-                    <span class="confirm-hint">确认删除？</span>
-                    <button class="btn danger mini" @click="doDelete(word)">是，删除</button>
-                    <button class="btn ghost mini" @click="cancelDelete">取消</button>
-                  </template>
-                  <template v-else-if="confirmResetId === word.id">
-                    <span class="confirm-hint">确认重置次数？</span>
-                    <button class="btn danger mini" @click="doReset(word)">是，重置</button>
-                    <button class="btn ghost mini" @click="cancelReset">取消</button>
-                  </template>
-                  <template v-else>
-                    <button class="icon-btn edit" title="编辑单词" @click="startEdit(word)">
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    </button>
-                    <button class="icon-btn dict" title="查询词典释义" @click="lookupWord(word.english)">
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-                    </button>
-                    <button class="icon-btn reset" title="重置背诵次数" @click="askReset(word)">
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-                    </button>
-                    <button class="icon-btn del" title="删除单词" @click="askDelete(word)">
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                    </button>
-                  </template>
-                </div>
-              </td>
+        <!-- 正常态 -->
+        <template v-else>
+          <div class="word-main">
+            <div class="word-left">
+              <span class="word-en">{{ word.english }}</span>
+              <span v-if="word.pos" class="pos-tag">{{ word.pos }}</span>
+            </div>
+            <span class="word-count" :class="{ mastered: isMastered(word) }">
+              <template v-if="isMastered(word)">✓ {{ word.count || 0 }}/{{ threshold }}</template>
+              <template v-else>{{ word.count || 0 }}/{{ threshold }}</template>
+            </span>
+          </div>
+          <div class="word-sub">
+            <span class="word-zh">{{ word.chinese }}</span>
+            <span class="word-time">{{ formatTime(word.createdAt) }}</span>
+          </div>
+
+          <div v-if="!isMastered(word)" class="progress-bar">
+            <div class="progress-fill" :style="{ width: pct(word) + '%' }"></div>
+          </div>
+
+          <!-- 操作按钮 -->
+          <div class="word-ops">
+            <template v-if="confirmDeleteId === word.id">
+              <span class="confirm-hint">删除？</span>
+              <button class="btn danger mini" @click="doDelete(word)">是</button>
+              <button class="btn ghost mini" @click="cancelDelete">取消</button>
             </template>
-          </tr>
-        </tbody>
-      </table>
+            <template v-else-if="confirmResetId === word.id">
+              <span class="confirm-hint">重置次数？</span>
+              <button class="btn danger mini" @click="doReset(word)">是</button>
+              <button class="btn ghost mini" @click="cancelReset">取消</button>
+            </template>
+            <template v-else>
+              <button class="op-btn" title="编辑" @click="startEdit(word)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <button class="op-btn" title="查词典" @click="lookupWord(word.english)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              </button>
+              <button class="op-btn" title="重置次数" @click="askReset(word)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+              </button>
+              <button class="op-btn del" title="删除" @click="askDelete(word)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            </template>
+          </div>
+        </template>
+      </div>
 
       <!-- 分页控件 -->
       <div v-if="filteredWords.length" class="pagination">
-        <span class="page-info">
-          共 {{ filteredWords.length }} 条 · 第 {{ currentPage }}/{{ pageCount }} 页
-        </span>
+        <span class="page-info">共 {{ filteredWords.length }} 条 · {{ currentPage }}/{{ pageCount }} 页</span>
         <div class="page-btns">
-          <button
-            class="page-btn"
-            :disabled="currentPage <= 1"
-            title="第一页"
-            @click="currentPage = 1"
-          >
-            «
-          </button>
-          <button
-            class="page-btn"
-            :disabled="currentPage <= 1"
-            title="上一页"
-            @click="currentPage > 1 && currentPage--"
-          >
-            ‹
-          </button>
+          <button class="page-btn" :disabled="currentPage <= 1" @click="currentPage = 1">«</button>
+          <button class="page-btn" :disabled="currentPage <= 1" @click="currentPage > 1 && currentPage--">‹</button>
           <template v-for="(p, i) in pageNumbers" :key="i">
             <span v-if="p === '…'" class="page-ellipsis">…</span>
-            <button
-              v-else
-              class="page-btn"
-              :class="{ active: p === currentPage }"
-              @click="currentPage = p"
-            >
-              {{ p }}
-            </button>
+            <button v-else class="page-btn" :class="{ active: p === currentPage }" @click="currentPage = p">{{ p }}</button>
           </template>
-          <button
-            class="page-btn"
-            :disabled="currentPage >= pageCount"
-            title="下一页"
-            @click="currentPage < pageCount && currentPage++"
-          >
-            ›
-          </button>
-          <button
-            class="page-btn"
-            :disabled="currentPage >= pageCount"
-            title="最后一页"
-            @click="currentPage = pageCount"
-          >
-            »
-          </button>
+          <button class="page-btn" :disabled="currentPage >= pageCount" @click="currentPage < pageCount && currentPage++">›</button>
+          <button class="page-btn" :disabled="currentPage >= pageCount" @click="currentPage = pageCount">»</button>
         </div>
         <select class="page-size" :value="pageSize" @change="changePageSize($event.target.value)">
           <option :value="20">20 条/页</option>
@@ -550,12 +476,12 @@ function formatTime(ts) {
     <div v-if="dictModal" class="dict-mask" @click.self="closeDict">
       <div class="dict-modal">
         <div class="dict-head">
-          <h3>📖 {{ dictModal.word }}</h3>
+          <h3>{{ dictModal.word }}</h3>
           <button class="dict-close" @click="closeDict">✕</button>
         </div>
         <div class="dict-body">
           <div v-if="dictModal.loading" class="dict-loading">查询中…</div>
-          <div v-else-if="dictModal.error" class="dict-error">⚠️ {{ dictModal.error }}</div>
+          <div v-else-if="dictModal.error" class="dict-error"> {{ dictModal.error }}</div>
           <div v-else-if="dictModal.data">
             <div v-if="dictModal.data.usphone || dictModal.data.ukphone" class="dict-phonetic">
               <span v-if="dictModal.data.ukphone" class="phonetic-item">
@@ -616,212 +542,94 @@ function formatTime(ts) {
   font-weight: 600;
 }
 
-.table-wrap {
-  margin-top: 16px;
-  overflow-x: auto;
+/* 微信风格单词列表 */
+.word-list {
+  margin-top: 12px;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
-/* 筛选工具栏 */
-.filter-bar {
+.word-item {
+  padding: 12px 16px;
+  position: relative;
+}
+
+.word-item + .word-item::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  top: 0;
+  height: 0.5px;
+  background: #e5e5e5;
+}
+
+.word-main {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  flex-wrap: wrap;
-  margin-top: 16px;
+  gap: 10px;
 }
 
-.search-box {
+.word-left {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex: 1;
-  min-width: 220px;
-  max-width: 360px;
-  background: #ffffff;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  padding: 0 8px 0 10px;
+  min-width: 0;
 }
 
-.search-icon {
-  font-size: 14px;
-}
-
-.search-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  padding: 9px 4px;
-  font-size: 14px;
-  background: transparent;
-  color: var(--text-main);
-}
-
-.status-filters {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.filter-btn {
-  border: 1.5px solid var(--border);
-  background: #ffffff;
-  color: var(--text-sub);
-  border-radius: 10px;
-  padding: 8px 16px;
-  font-size: 14px;
+.word-en {
+  font-size: 17px;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.filter-btn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-.filter-btn.active {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: #ffffff;
-}
-
-.word-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 15px;
-}
-
-.word-table th {
-  text-align: left;
-  padding: 10px 10px;
-  color: var(--text-sub);
-  font-weight: 600;
-  font-size: 13px;
-  border-bottom: 2px solid var(--border);
-  white-space: nowrap;
-  position: relative; /* 为拖拽手柄定位 */
-  user-select: none;
-}
-
-/* 表头排序按钮 */
-.sort-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-left: 6px;
-  width: 22px;
-  height: 22px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: #ffffff;
-  color: var(--text-faint);
-  font-size: 12px;
-  line-height: 1;
-  cursor: pointer;
-  vertical-align: middle;
-  transition: all 0.18s ease;
-}
-
-.sort-btn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: var(--primary-light);
-}
-
-.sort-btn.active {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: #ffffff;
-}
-
-/* 表头拖拽手柄：表头右缘细竖线 */
-.resize-handle {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 9px;
-  cursor: col-resize;
-  z-index: 3;
-  touch-action: none;
-}
-
-.resize-handle::after {
-  content: '';
-  position: absolute;
-  right: 3px;
-  top: 22%;
-  bottom: 22%;
-  width: 2px;
-  border-radius: 2px;
-  background: transparent;
-  transition: background 0.15s;
-}
-
-.resize-handle:hover::after,
-.resize-handle:active::after {
-  background: var(--primary);
-}
-
-.word-table td {
-  padding: 11px 10px;
-  border-bottom: 1px solid var(--border-light);
   color: var(--text-main);
-  vertical-align: middle;
-}
-
-.word-table tbody tr:hover {
-  background: var(--bg-soft);
-}
-
-.idx {
-  color: var(--text-faint);
-  width: 40px;
-}
-
-.en {
-  font-weight: 700;
-  color: var(--primary);
-  white-space: nowrap;
-}
-
-.time-cell {
-  white-space: nowrap;
 }
 
 .pos-tag {
   display: inline-block;
-  padding: 2px 9px;
-  border-radius: 999px;
-  background: #eef3fb;
-  color: var(--primary);
-  font-size: 13px;
+  padding: 1px 8px;
+  border-radius: 4px;
+  background: #f2f2f2;
+  color: var(--text-sub);
+  font-size: 12px;
+  flex-shrink: 0;
 }
 
-.mastered-text {
-  color: var(--success);
-}
-
-.progress-cell {
-  min-width: 120px;
-}
-
-.progress-text {
+.word-count {
   font-size: 13px;
   color: var(--text-sub);
-  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+.word-count.mastered {
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.word-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.word-zh {
+  font-size: 14px;
+  color: var(--text-sub);
+}
+
+.word-time {
+  font-size: 12px;
+  color: #b2b2b2;
 }
 
 .progress-bar {
-  display: inline-block;
-  vertical-align: middle;
-  width: 70px;
-  height: 7px;
+  width: 100%;
+  height: 3px;
   border-radius: 999px;
-  background: #e3ebf4;
+  background: #f0f0f0;
   overflow: hidden;
+  margin-top: 8px;
 }
 
 .progress-fill {
@@ -831,20 +639,120 @@ function formatTime(ts) {
   transition: width 0.3s ease;
 }
 
-.mastered-badge {
-  display: inline-block;
-  padding: 2px 9px;
-  border-radius: 999px;
-  background: #e8f7ee;
-  border: 1px solid #a8dcc0;
-  color: var(--success);
-  font-size: 13px;
-  font-weight: 700;
+.word-ops {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 0.5px solid #f2f2f2;
 }
 
-.th-op {
-  width: 150px;
-  white-space: nowrap;
+.op-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.op-btn:active { background: #f2f2f2; }
+.op-btn.del { color: #fa5151; }
+
+.edit-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.edit-btns {
+  display: flex;
+  gap: 8px;
+}
+
+.confirm-hint {
+  font-size: 13px;
+  color: var(--danger);
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.cell-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.cell-input:focus {
+  border-color: var(--primary);
+}
+
+.mastered-text {
+  color: var(--success);
+}
+
+/* 筛选工具栏 */
+.filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 0 10px;
+  height: 38px;
+}
+
+.search-icon {
+  display: flex;
+  color: #b2b2b2;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  background: transparent;
+  color: var(--text-main);
+}
+
+.status-filters {
+  display: flex;
+  gap: 6px;
+}
+
+.filter-btn {
+  border: none;
+  background: #fff;
+  color: var(--text-sub);
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-btn.active {
+  background: var(--primary);
+  color: #fff;
 }
 
 /* ===== 分页控件 ===== */
@@ -918,59 +826,11 @@ function formatTime(ts) {
   cursor: pointer;
 }
 
-/* 操作列 td 保持表格单元格布局，内层 flex 容器承载按钮，
-   避免 display:flex 导致该列下边框与其他列错位 */
-.op {
-  white-space: nowrap;
-}
-
-.op-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-/* 图标按钮 */
-.icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  font-size: 17px;
-  line-height: 1;
-  cursor: pointer;
-  transition: all 0.15s;
-  filter: grayscale(0.7);
-  opacity: 0.7;
-}
-
-.icon-btn:hover {
-  opacity: 1;
-  filter: none;
-  background: var(--bg-soft);
-}
-
-.icon-btn.edit:hover {
-  color: var(--primary);
-}
-
-.icon-btn.reset:hover {
-  color: var(--warning);
-}
-
-.icon-btn.del:hover {
-  color: var(--danger);
-}
-
 .confirm-hint {
   font-size: 13px;
   color: var(--danger);
   font-weight: 600;
+  margin-right: 4px;
 }
 
 .cell-input {
@@ -997,160 +857,29 @@ function formatTime(ts) {
   opacity: 0;
 }
 
-/* ===== 移动端适配：表格 → 卡片列表 ===== */
+/* ===== 移动端适配 ===== */
 @media (max-width: 768px) {
   .card {
     padding: 0;
+    background: transparent;
   }
 
   .card-head {
-    padding: 14px 15px 0;
-  }
-
-  .table-wrap {
-    overflow-x: visible;
+    padding: 14px 16px 0;
+    background: transparent;
   }
 
   .filter-bar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-    padding: 0 14px;
+    padding: 0 16px;
   }
 
-  .search-box {
-    max-width: 100%;
-    min-width: 0;
+  .word-list {
+    margin: 12px 16px 0;
   }
 
-  .status-filters {
-    justify-content: center;
-  }
-
-  .filter-btn {
-    padding: 8px 12px;
-    font-size: 13px;
-  }
-
-  /* 表格整体转为卡片流 */
-  .word-table,
-  .word-table thead,
-  .word-table tbody,
-  .word-table tr,
-  .word-table td {
-    display: block;
-  }
-
-  .word-table thead {
-    display: none; /* 隐藏表头 */
-  }
-
-  .word-table tr {
-    margin-bottom: 0;
-    padding: 12px 14px;
-    border: none;
-    border-radius: 0;
-    background: #ffffff;
-    border-bottom: 8px solid #f2f2f2;
-    display: block;
-  }
-
-  .word-table tbody tr:hover {
-    background: #ffffff;
-  }
-
-  .word-table td {
-    border: none;
-    padding: 0;
-    vertical-align: top;
-    display: block;
-  }
-
-  /* 序号手机上不显示 */
-  .word-table .idx {
-    display: none;
-  }
-
-  /* 第一行：英文 + 词性在左，操作按钮在右 */
-  .word-table td.en {
-    font-size: 17px;
-    font-weight: 600;
-  }
-
-  .word-table td.pos,
-  .word-table td:nth-child(4) {
-    font-size: 12px;
-    color: var(--text-faint);
-    margin-top: 1px;
-  }
-
-  /* 操作按钮：单独一行，右对齐 */
-  .word-table td.op {
-    float: none;
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 0.5px solid #f0f0f0;
-  }
-
-  .op-actions {
-    justify-content: flex-end;
-    gap: 8px;
-  }
-
-  .icon-btn {
-    width: 34px;
-    height: 34px;
-    font-size: 16px;
-  }
-
-  /* 第二行：中文 */
-  .word-table td.zh {
-    font-size: 14px;
-    color: var(--text-sub);
-    margin-top: 4px;
-  }
-
-  /* 第三行：进度 + 时间 */
-  .word-table td.progress-cell {
-    min-width: 0;
-    font-size: 12px;
-    color: var(--text-faint);
-    margin-top: 6px;
-    display: inline-block;
-    margin-right: 12px;
-  }
-
-  .word-table .time-cell {
-    font-size: 12px;
-    color: var(--text-faint);
-    display: inline-block;
-  }
-
-  .progress-bar {
-    width: 60px;
-    height: 3px;
-    display: inline-block;
-    vertical-align: middle;
-    margin-left: 4px;
-  }
-
-  /* 分页控件 */
   .pagination {
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 14px;
+    padding: 12px 16px;
   }
-
-  .page-btn {
-    min-width: 34px;
-    height: 34px;
-  }
-}
-
-/* 词典按钮 hover */
-.icon-btn.dict:hover {
-  color: var(--primary);
 }
 
 /* ===== 词典查询弹窗 ===== */
