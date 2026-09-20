@@ -462,7 +462,7 @@ next()
       <div class="modal">
         <div class="modal-head">
           <h3>今日背诵记录</h3>
-          <button class="btn ghost mini" @click="closeRecords">✕ 关闭</button>
+          <button class="modal-close" @click="closeRecords">✕</button>
         </div>
         <div class="modal-tabs">
           <button class="tab-btn" :class="{ active: modalTab === 'correct' }" @click="modalTab = 'correct'">
@@ -473,18 +473,21 @@ next()
           </button>
         </div>
         <div class="modal-body">
-          <p v-if="!modalRecords.length" class="muted empty-tip">
+          <p v-if="!modalRecords.length" class="empty-tip">
             今天还没有{{ modalTab === 'correct' ? '答对' : '答错' }}的单词记录
           </p>
           <ul v-else class="modal-list">
             <li v-for="(r, i) in modalRecords" :key="r.id" class="modal-item">
-              <span class="m-num">{{ i + 1 }}</span>
-              <span class="m-en">{{ r.english }}</span>
-              <span class="m-pos">{{ r.pos || '—' }}</span>
-              <span class="m-zh">{{ r.chinese }}</span>
-              <span v-if="!r.correct && r.userAnswer" class="m-wrong-answer">
-                你答：{{ r.userAnswer }}
-              </span>
+              <div class="m-main">
+                <span class="m-en">{{ r.english }}</span>
+                <span class="m-pos">{{ r.pos || '—' }}</span>
+              </div>
+              <div class="m-sub">
+                <span class="m-zh">{{ r.chinese }}</span>
+                <span v-if="!r.correct && r.userAnswer" class="m-wrong-answer">
+                  你答：{{ r.userAnswer }}
+                </span>
+              </div>
             </li>
           </ul>
         </div>
@@ -777,20 +780,19 @@ next()
 .modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.4);
+  background: rgba(0,0,0,0.5);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   z-index: 100;
-  padding: 16px;
 }
 
 .modal {
   background: #fff;
-  border-radius: 14px;
+  border-radius: 16px 16px 0 0;
   width: 100%;
-  max-width: 420px;
-  max-height: 80vh;
+  max-width: 100%;
+  max-height: 85vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -799,26 +801,50 @@ next()
 .modal-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px;
-  border-bottom: 0.5px solid #e5e5e5;
+  justify-content: center;
+  padding: 16px;
+  position: relative;
+  border-bottom: 0.5px solid #f0f0f0;
 }
 
-.modal-head h3 { font-size: 16px; margin: 0; }
+.modal-head h3 {
+  font-size: 18px;
+  margin: 0;
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.modal-close {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: #f0f0f0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 14px;
+  cursor: pointer;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 .modal-tabs {
   display: flex;
-  padding: 10px 18px 0;
+  padding: 12px 16px 0;
   gap: 8px;
 }
 
 .tab-btn {
   flex: 1;
-  padding: 7px;
+  padding: 8px;
   border: none;
   background: #f5f5f5;
-  border-radius: 6px;
-  font-size: 13px;
+  border-radius: 8px;
+  font-size: 14px;
   color: var(--text-sub);
   cursor: pointer;
 }
@@ -829,15 +855,15 @@ next()
 }
 
 .modal-body {
-  padding: 10px 18px 18px;
+  padding: 12px 16px 16px;
   overflow-y: auto;
 }
 
 .empty-tip {
   text-align: center;
-  padding: 24px 0;
+  padding: 40px 0;
   color: var(--text-sub);
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .modal-list {
@@ -847,26 +873,24 @@ next()
 }
 
 .modal-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 0;
-  border-bottom: 0.5px solid #f5f5f5;
-  font-size: 14px;
+  padding: 12px 0;
+  border-bottom: 0.5px solid #f0f0f0;
 }
 
 .modal-item:last-child { border-bottom: none; }
 
-.m-num { color: var(--text-faint); font-size: 12px; width: 18px; }
-.m-en { font-weight: 600; color: var(--text-main); }
-.m-pos { font-size: 11px; color: var(--text-sub); background: #f2f2f2; padding: 1px 6px; border-radius: 3px; }
-.m-zh { flex: 1; color: var(--text-sub); font-size: 13px; }
-.m-wrong-answer { display: block; width: 100%; color: var(--danger); font-size: 12px; }
-
-@media (max-width: 768px) {
-  .modal-mask { align-items: flex-end; padding: 0; }
-  .modal { border-radius: 14px 14px 0 0; max-height: 85vh; }
+.m-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
 }
+
+.m-en { font-size: 16px; font-weight: 600; color: var(--text-main); }
+.m-pos { font-size: 12px; color: var(--text-sub); background: #f5f5f5; padding: 2px 8px; border-radius: 4px; }
+.m-sub { display: flex; flex-direction: column; gap: 2px; }
+.m-zh { color: var(--text-sub); font-size: 14px; }
+.m-wrong-answer { color: var(--danger); font-size: 13px; }
 
 /* ===== 词典查询弹窗 ===== */
 .dict-mask {
