@@ -988,6 +988,14 @@ function formatTime(ts) {
 
 /* ===== 移动端适配：表格 → 卡片列表 ===== */
 @media (max-width: 768px) {
+  .card {
+    padding: 0;
+  }
+
+  .card-head {
+    padding: 14px 15px 0;
+  }
+
   .table-wrap {
     overflow-x: visible;
   }
@@ -996,6 +1004,7 @@ function formatTime(ts) {
     flex-direction: column;
     align-items: stretch;
     gap: 10px;
+    padding: 0 14px;
   }
 
   .search-box {
@@ -1119,6 +1128,7 @@ function formatTime(ts) {
     flex-direction: column;
     align-items: center;
     gap: 10px;
+    padding: 12px 14px;
   }
 
   .page-btn {
