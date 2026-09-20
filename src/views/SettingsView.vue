@@ -215,12 +215,12 @@ function cancelMigrate() {
 
       <!-- 一键重置 -->
       <div class="setting-block danger-block">
-        <h3>🔄 一键重置所有背诵次数</h3>
+        <h3>一键重置所有背诵次数</h3>
         <p class="muted">将词库中所有单词的背诵次数归 0，全部恢复为"未背熟"状态。</p>
 
         <template v-if="confirmResetAll">
           <div class="confirm-box">
-            <span class="confirm-text">⚠️ 确定要重置全部 {{ totalCount }} 个单词的背诵次数吗？此操作不可撤销。</span>
+            <span class="confirm-text">确定要重置全部 {{ totalCount }} 个单词的背诵次数吗？此操作不可撤销。</span>
             <div class="confirm-actions">
               <button class="btn danger mini" @click="doResetAll">是，全部重置</button>
               <button class="btn ghost mini" @click="cancelResetAll">取消</button>
@@ -232,7 +232,7 @@ function cancelMigrate() {
 
       <!-- 数据导入 / 导出 -->
       <div class="setting-block">
-        <h3>📦 数据导入 / 导出</h3>
+        <h3>数据导入 / 导出</h3>
         <p class="muted">
           导出可将词库（含每个单词的背诵次数）与背熟阈值保存为 JSON 备份文件，方便备份或在其他浏览器中迁移；导入可从备份文件恢复数据。
         </p>
@@ -240,7 +240,7 @@ function cancelMigrate() {
         <!-- 导出 -->
         <div class="io-row">
           <span class="io-label">导出备份</span>
-          <button class="btn primary" @click="exportDataFile">⬇️ 导出数据（JSON）</button>
+          <button class="btn primary" @click="exportDataFile">导出数据（JSON）</button>
         </div>
 
         <!-- 导入 -->
@@ -259,7 +259,7 @@ function cancelMigrate() {
         </div>
         <div class="io-row">
           <span class="io-label">选择文件</span>
-          <button class="btn ghost" @click="pickImportFile(importMode)">📂 导入数据（JSON）</button>
+          <button class="btn ghost" @click="pickImportFile(importMode)">导入数据（JSON）</button>
           <input
             ref="fileInput"
             type="file"

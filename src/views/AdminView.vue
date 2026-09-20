@@ -136,7 +136,7 @@ onMounted(loadUsers)
     <!-- 重置密码结果弹窗 -->
     <div v-if="resetPwdUser" class="mask" @click.self="resetPwdUser = null">
       <div class="modal">
-        <h3>🔑 已重置 {{ resetPwdUser.username }} 的密码</h3>
+        <h3>已重置 {{ resetPwdUser.username }} 的密码</h3>
         <p>新密码：<code class="new-pwd">{{ resetPwdResult }}</code></p>
         <p class="muted small">请复制给用户并提醒其登录后修改密码</p>
         <button class="btn primary" @click="resetPwdUser = null">知道了</button>
