@@ -308,200 +308,154 @@ next()
 </script>
 
 <template>
-  <section class="card">
+  <div class="practice">
     <!-- 空词库 -->
     <div v-if="!hasWords" class="empty">
-      <div class="empty-icon">📭</div>
       <h2>词库还是空的</h2>
       <p class="muted">先去「单词录入」添加一些单词，再来这里练习吧！</p>
-      <button class="btn primary" @click="router.push('/input')">去录入单词 →</button>
+      <button class="btn primary" @click="router.push('/input')">去录入单词</button>
     </div>
 
     <!-- 错题本模式：错题本为空 -->
     <div v-else-if="wrongState === 'empty'" class="empty">
-      <div class="empty-icon">📕</div>
       <h2>错题本还是空的</h2>
-      <p class="muted">在「背单词」中答错的单词会自动记入错题本，答对后自动移出</p>
+      <p class="muted">在背单词中答错的单词会自动记入错题本</p>
       <div class="empty-actions">
-        <button class="btn primary" @click="setSource('all')">切换到全部词库练习</button>
-        <button class="btn ghost" @click="router.push('/wrongbook')">查看错题本</button>
+        <button class="btn primary" @click="setSource('all')">切换到全部词库</button>
       </div>
     </div>
 
     <!-- 错题本模式：错题本单词已全部背熟 -->
     <div v-else-if="wrongState === 'all-mastered'" class="empty">
-      <div class="empty-icon">🎉</div>
-      <h2>错题本中的单词都已背熟！</h2>
-      <p class="muted">
-        错题本里的 {{ wrongValid.length }} 个单词都已达到背熟阈值（{{ threshold }} 次），不再出现在出题中
-      </p>
+      <h2>错题本都背熟了！</h2>
+      <p class="muted">错题本里的单词都已达到背熟阈值</p>
       <div class="empty-actions">
         <button class="btn primary" @click="setSource('all')">切换到全部词库</button>
-        <button class="btn ghost" @click="router.push('/wrongbook')">查看错题本</button>
       </div>
     </div>
 
     <!-- 全部背熟 -->
     <div v-else-if="allMastered" class="empty">
-      <div class="empty-icon">🏆</div>
-      <h2>太棒了，全部背熟！</h2>
-      <p class="muted">
-        词库中 {{ totalMastered }} 个单词都已达到背熟阈值（{{ threshold }} 次），不再出现在随机出题中。
-      </p>
+      <h2>全部背熟！</h2>
+      <p class="muted">词库中所有单词都已达到背熟阈值</p>
       <div class="empty-actions">
-        <button class="btn primary" @click="router.push('/settings')">去设置调整阈值 / 重置</button>
-        <button class="btn ghost" @click="router.push('/library')">去词库看看</button>
+        <button class="btn primary" @click="router.push('/settings')">去设置调整</button>
       </div>
     </div>
 
     <!-- 有可练习单词 -->
     <template v-else>
-      <div class="card-head">
-        <h2>背单词</h2>
-        <p class="muted">根据中文释义输入英文；答对 {{ threshold }} 次视为背熟，作答后自动切下一题</p>
-      </div>
-
       <!-- 出题来源切换 -->
-      <div class="source-bar">
-        <span class="source-label">出题来源</span>
+      <div class="source-tabs">
         <button
-          class="source-btn"
+          class="source-tab"
           :class="{ active: sourceMode === 'all' }"
           @click="setSource('all')"
         >
           全部未背熟
         </button>
         <button
-          class="source-btn"
+          class="source-tab"
           :class="{ active: sourceMode === 'wrong' }"
           @click="setSource('wrong')"
         >
           仅错题本
         </button>
-        <span v-if="sourceMode === 'wrong'" class="muted small">错题本 {{ wrongValid.length }} 词</span>
       </div>
 
-      <!-- 今日统计（可点击查看记录） -->
-      <div class="today-bar">
-        <span class="today-label">今日背诵</span>
-        <button class="today-stat today-correct" @click="openRecords('correct')">
-          正确 <strong>{{ todayStats.correct }}</strong> 次
-        </button>
-        <button class="today-stat today-wrong" @click="openRecords('wrong')">
-          错误 <strong>{{ todayStats.wrong }}</strong> 次
-        </button>
-        <span class="today-unique">
-          已背 <strong>{{ todayUnique.totalWords }}</strong> 个单词
-          <span class="unique-sub">（正确 {{ todayUnique.correctWords }} · 错误 {{ todayUnique.wrongWords }}，去重）</span>
-        </span>
-        <span class="muted small">点击数字查看当天记录</span>
+      <!-- 今日统计 -->
+      <div class="today-card">
+        <div class="today-stats">
+          <button class="stat-item" @click="openRecords('correct')">
+            <span class="stat-num ok">{{ todayStats.correct }}</span>
+            <span class="stat-label">正确</span>
+          </button>
+          <button class="stat-item" @click="openRecords('wrong')">
+            <span class="stat-num bad">{{ todayStats.wrong }}</span>
+            <span class="stat-label">错误</span>
+          </button>
+          <div class="stat-item">
+            <span class="stat-num">{{ todayUnique.totalWords }}</span>
+            <span class="stat-label">已背单词</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-num">{{ accuracy }}%</span>
+            <span class="stat-label">正确率</span>
+          </div>
+        </div>
       </div>
 
       <!-- 答题区 -->
-      <div class="quiz-area">
-        <div class="quiz-stats">
-          <span v-if="sourceMode === 'wrong'">错题本共 {{ wrongValid.length }} 词</span>
-          <span v-else>词库共 {{ words.length }} 词</span>
-          <span>已背熟 {{ totalMastered }}/{{ words.length }}</span>
-          <span>今日已答 {{ todayStats.total }} 题</span>
-          <span class="stat-acc">正确率 {{ accuracy }}%</span>
-          <span v-if="todayNewMastered" class="stat-mastered">今日新背熟 {{ todayNewMastered }} 个 🎉</span>
+      <div class="quiz-card">
+        <p class="quiz-label">中文释义</p>
+        <p class="quiz-word">{{ current.chinese }}</p>
+        <p v-if="current.pos" class="quiz-pos">{{ current.pos }}</p>
+
+        <div class="quiz-sound">
+          <button class="sound-btn" @click="speak(current.english)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+            发音
+          </button>
+          <button class="sound-btn" @click="lookupWord(current.english)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            查词
+          </button>
         </div>
 
-        <div v-if="current" class="quiz-card" :class="result || ''">
-          <p class="quiz-label">中文释义</p>
-          <p class="quiz-word">{{ current.chinese }}</p>
-          <p v-if="current.pos" class="quiz-pos">词性：{{ current.pos }}</p>
-
-          <!-- 手动播放发音 + 查词典按钮 -->
-          <div class="quiz-sound">
-            <button class="btn ghost mini" title="播放当前单词发音" @click="speak(current.english)">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-              播放发音
-            </button>
-            <button class="btn ghost mini" title="查询词典释义" @click="lookupWord(current.english)">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-              查词典
-            </button>
+        <div class="quiz-progress">
+          <span class="progress-text">{{ current.count || 0 }}/{{ threshold }}</span>
+          <div class="progress-bar">
+            <div class="progress-fill" :style="{ width: Math.min(100, Math.round(((current.count || 0) / threshold) * 100)) + '%' }"></div>
           </div>
+        </div>
 
-          <div class="quiz-progress">
-            <span class="progress-text">背诵进度 {{ current.count }}/{{ threshold }}</span>
-            <div class="progress-bar">
-              <div
-                class="progress-fill"
-                :style="{ width: Math.min(100, Math.round(((current.count || 0) / threshold) * 100)) + '%' }"
-              ></div>
-            </div>
-          </div>
+        <div class="quiz-input">
+          <input
+            ref="answerInput"
+            v-model="answer"
+            type="text"
+            lang="en"
+            inputmode="text"
+            enterkeyhint="go"
+            autocorrect="off"
+            placeholder="输入英文单词"
+            :disabled="!!result"
+            @keyup.enter="submit"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+          />
+        </div>
 
-          <div class="quiz-input">
-            <input
-              ref="answerInput"
-              v-model="answer"
-              type="text"
-              lang="en"
-              inputmode="text"
-              enterkeyhint="go"
-              autocorrect="off"
-              :placeholder="result ? '看结果了，即将自动切下一题…' : '请输入英文单词…'"
-              :disabled="!!result"
-              @keyup.enter="submit"
-              autocomplete="off"
-              autocapitalize="off"
-              spellcheck="false"
-            />
-          </div>
+        <!-- 判定反馈 -->
+        <div v-if="result" class="feedback" :class="result">
+          <template v-if="result === 'correct'">
+            <span class="fb-text">回答正确</span>
+            <span v-if="current.count >= threshold" class="fb-mastered">已背熟</span>
+          </template>
+          <template v-else>
+            <span class="fb-text">{{ revealed ? '已显示答案' : '回答错误' }}</span>
+            <strong class="correct-word">{{ current.english }}</strong>
+          </template>
+          <button class="speak-btn" @click="speak(current.english)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            重听
+          </button>
+        </div>
 
-          <!-- 判定反馈 -->
-          <div v-if="result" class="feedback" :class="result">
-            <template v-if="result === 'correct'">
-              <span class="fb-icon">🎉</span> 回答正确！很棒！
-              <span v-if="current.count >= threshold" class="fb-mastered">（达成阈值，已背熟 🏆）</span>
-              <button class="speak-btn" title="重听发音" @click="speak(current.english)">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-                重听
-              </button>
-            </template>
-            <template v-else>
-              <span class="fb-icon">😅</span>
-              {{ revealed ? '已显示答案，正确答案是' : '不对哦，正确答案是' }}
-              <strong class="correct-word">{{ current.english }}</strong>
-              <button class="speak-btn" title="重听发音" @click="speak(current.english)">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-                重听
-              </button>
-            </template>
-          </div>
-          <p v-if="result" class="auto-hint">
-            {{
-              result === 'correct'
-                ? '⏳ 即将自动切换到下一题…'
-                : '可点「重做这一题」重新作答，按回车或点「下一题」继续'
-            }}
-          </p>
-
-          <div class="quiz-actions">
-            <button v-if="!result" class="btn ghost" @click="skip">换一题</button>
-            <button v-if="!result" class="btn ghost" @click="revealAnswer">显示答案</button>
-            <button v-if="!result" class="btn primary" :disabled="!answer.trim()" @click="submit">
-              提交答案
-            </button>
-            <button
-              v-else-if="result === 'correct'"
-              class="btn ghost"
-              @click="skip"
-            >
-              跳过等待，下一题 →
-            </button>
-            <template v-else>
-              <button class="btn primary" @click="redo">🔁 重做这一题</button>
-              <button class="btn ghost" @click="skip">下一题 →</button>
-            </template>
-          </div>
+        <div class="quiz-actions">
+          <button v-if="!result" class="btn ghost" @click="skip">换一题</button>
+          <button v-if="!result" class="btn ghost" @click="revealAnswer">显示答案</button>
+          <button v-if="!result" class="btn primary" :disabled="!answer.trim()" @click="submit">提交</button>
+          <button v-else-if="result === 'correct'" class="btn ghost" @click="skip">下一题</button>
+          <template v-else>
+            <button class="btn primary" @click="redo">重做这一题</button>
+            <button class="btn ghost" @click="skip">下一题</button>
+          </template>
         </div>
       </div>
     </template>
+  </div>
 
     <!-- 今日记录弹窗 -->
     <div v-if="showRecordsModal" class="modal-mask" @click.self="closeRecords">
@@ -581,183 +535,155 @@ next()
         </div>
       </div>
     </div>
-  </section>
 </template>
 
 <style scoped>
+.practice {
+  padding: 8px 0;
+}
+
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+}
+.empty h2 { font-size: 18px; margin-bottom: 8px; }
+.empty .muted { margin-bottom: 24px; color: var(--text-sub); }
+.empty-actions { display: flex; justify-content: center; gap: 10px; }
+
 /* 出题来源切换 */
-.source-bar {
+.source-tabs {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin: 16px 0 0;
+  background: #fff;
+  margin: 0 16px 8px;
+  border-radius: 10px;
+  padding: 3px;
+  gap: 3px;
 }
 
-.source-label {
-  font-weight: 700;
-  color: var(--text-main);
+.source-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 8px 0;
   font-size: 14px;
-}
-
-.source-btn {
-  border: 1.5px solid var(--border);
-  background: #ffffff;
-  border-radius: 999px;
-  padding: 6px 16px;
-  font-size: 14px;
-  font-weight: 600;
   color: var(--text-sub);
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.source-btn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+.source-tab.active {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 500;
 }
 
-.source-btn.active {
-  border-color: var(--primary);
-  background: var(--primary-light);
-  color: var(--primary);
-}
-
-.today-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin: 16px 0 4px;
-  padding: 12px 16px;
-  background: var(--bg-soft);
+/* 今日统计卡片 */
+.today-card {
+  background: #fff;
+  margin: 0 16px 8px;
   border-radius: 12px;
+  padding: 16px 0;
 }
 
-.today-label {
-  font-weight: 700;
-  color: var(--text-main);
-  font-size: 15px;
-}
-
-.today-stat {
-  border: 1px solid var(--border);
-  background: #ffffff;
-  border-radius: 10px;
-  padding: 6px 14px;
-  font-size: 14px;
-  color: var(--text-sub);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.today-stat strong {
-  font-size: 17px;
-  margin-left: 4px;
-}
-
-.today-stat.today-correct:hover {
-  border-color: var(--success);
-  color: var(--success);
-  background: #eefaf3;
-}
-
-.today-stat.today-wrong:hover {
-  border-color: var(--danger);
-  color: var(--danger);
-  background: #fdf1ef;
-}
-
-.today-unique {
-  background: #ffffff;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 6px 14px;
-  font-size: 14px;
-  color: var(--text-main);
-}
-
-.today-unique strong {
-  color: var(--primary);
-  font-size: 17px;
-  margin: 0 2px;
-}
-
-.today-unique .unique-sub {
-  color: var(--text-sub);
-  font-size: 13px;
-}
-
-.quiz-stats {
+.today-stats {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 18px;
-  font-size: 14px;
+  align-items: center;
+}
+
+.stat-item {
+  flex: 1;
+  text-align: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.stat-num {
+  display: block;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.stat-num.ok { color: var(--primary); }
+.stat-num.bad { color: var(--danger); }
+
+.stat-label {
+  display: block;
+  font-size: 12px;
   color: var(--text-sub);
-  margin: 14px 0 18px;
+  margin-top: 2px;
 }
 
-.stat-acc {
-  font-weight: 700;
-  color: var(--primary);
-}
-
-.stat-mastered {
-  font-weight: 700;
-  color: var(--success);
-}
-
+/* 答题卡片 */
 .quiz-card {
-  background: linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%);
-  border: 1.5px solid var(--border);
-  border-radius: 16px;
-  padding: 28px 24px;
+  background: #fff;
+  margin: 0 16px;
+  border-radius: 12px;
+  padding: 28px 20px;
   text-align: center;
 }
 
 .quiz-label {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-sub);
   margin-bottom: 8px;
 }
 
 .quiz-word {
-  font-size: 34px;
-  font-weight: 800;
+  font-size: 32px;
+  font-weight: 700;
   color: var(--text-main);
-  margin: 0 0 6px;
+  margin: 0 0 4px;
   word-break: break-all;
 }
 
 .quiz-pos {
   font-size: 14px;
-  color: var(--primary);
+  color: var(--text-sub);
   margin-bottom: 16px;
 }
 
 .quiz-sound {
-  margin-bottom: 16px;
   display: flex;
-  gap: 10px;
   justify-content: center;
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
+.sound-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: #f5f5f5;
+  color: var(--text-sub);
+  font-size: 13px;
+  padding: 7px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.sound-btn:active { background: #e8e8e8; }
+
 .quiz-progress {
-  max-width: 420px;
-  margin: 0 auto 18px;
+  max-width: 300px;
+  margin: 0 auto 16px;
 }
 
 .progress-text {
   display: block;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-sub);
-  margin-bottom: 5px;
+  margin-bottom: 4px;
 }
 
 .progress-bar {
-  height: 8px;
+  height: 4px;
   border-radius: 999px;
-  background: #e3ebf4;
+  background: #f0f0f0;
   overflow: hidden;
 }
 
@@ -770,101 +696,88 @@ next()
 
 .quiz-input input {
   width: 100%;
-  max-width: 420px;
-  padding: 13px 16px;
+  padding: 12px 16px;
   font-size: 18px;
   text-align: center;
-  border: 1.5px solid var(--border);
-  border-radius: 12px;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
 }
 
 .quiz-input input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.15);
 }
 
 .quiz-input input:disabled {
-  background: #f2f4f7;
+  background: #f5f5f5;
   color: var(--text-sub);
 }
 
 .feedback {
-  margin: 16px auto 0;
-  max-width: 480px;
-  padding: 12px 16px;
-  border-radius: 12px;
-  font-size: 15px;
+  margin: 16px 0 0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .feedback.correct {
-  background: #e8f7ee;
-  color: #1f7a4d;
-  border: 1px solid #a8dcc0;
+  background: #e8f8ef;
+  color: #07c160;
 }
 
 .feedback.wrong {
-  background: #fdecea;
-  color: #b3402f;
-  border: 1px solid #f2b8b1;
+  background: #fdecec;
+  color: #fa5151;
 }
 
 .fb-mastered {
-  font-weight: 700;
+  font-size: 12px;
+  background: rgba(7,193,96,0.15);
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 
 .correct-word {
-  font-size: 17px;
-  letter-spacing: 0.5px;
+  font-size: 18px;
+  color: var(--danger);
 }
 
 .speak-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   border: none;
-  background: transparent;
+  background: rgba(0,0,0,0.05);
+  color: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 16px;
-  padding: 2px 6px;
-  border-radius: 8px;
-  vertical-align: middle;
-  transition: all 0.2s;
-}
-
-.speak-btn:hover {
-  background: rgba(74, 144, 217, 0.12);
-  transform: scale(1.12);
-}
-
-.auto-hint {
-  margin-top: 10px;
-  font-size: 13px;
-  color: var(--text-faint);
 }
 
 .quiz-actions {
   display: flex;
   justify-content: center;
-  gap: 14px;
-  margin-top: 20px;
-  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
 }
 
-.empty-actions {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.small {
-  font-size: 13px;
+.quiz-actions .btn {
+  flex: 1;
+  max-width: 140px;
 }
 
 /* ===== 记录弹窗 ===== */
 .modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(20, 30, 45, 0.45);
+  background: rgba(0,0,0,0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -873,173 +786,86 @@ next()
 }
 
 .modal {
-  background: #ffffff;
-  border-radius: 16px;
+  background: #fff;
+  border-radius: 14px;
   width: 100%;
-  max-width: 480px;
+  max-width: 420px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 10px 40px rgba(20, 30, 45, 0.25);
+  overflow: hidden;
 }
 
 .modal-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-light);
+  padding: 14px 18px;
+  border-bottom: 0.5px solid #e5e5e5;
 }
 
-.modal-head h3 {
-  font-size: 17px;
-}
+.modal-head h3 { font-size: 16px; margin: 0; }
 
 .modal-tabs {
   display: flex;
+  padding: 10px 18px 0;
   gap: 8px;
-  padding: 12px 20px 0;
 }
 
 .tab-btn {
   flex: 1;
-  padding: 9px 10px;
-  border: 1px solid var(--border);
-  background: #ffffff;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
+  padding: 7px;
+  border: none;
+  background: #f5f5f5;
+  border-radius: 6px;
+  font-size: 13px;
   color: var(--text-sub);
   cursor: pointer;
-  transition: all 0.2s;
 }
 
 .tab-btn.active {
-  border-color: var(--primary);
-  background: var(--primary-light);
-  color: var(--primary);
+  background: var(--primary);
+  color: #fff;
 }
 
 .modal-body {
-  padding: 12px 20px 20px;
+  padding: 10px 18px 18px;
   overflow-y: auto;
 }
 
 .empty-tip {
   text-align: center;
   padding: 24px 0;
+  color: var(--text-sub);
+  font-size: 14px;
 }
 
 .modal-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
 }
 
 .modal-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
-  border-radius: 10px;
-  background: var(--bg-soft);
-  font-size: 15px;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 0.5px solid #f5f5f5;
+  font-size: 14px;
 }
 
-.m-num {
-  color: var(--text-faint);
-  font-size: 13px;
-  width: 20px;
-}
+.modal-item:last-child { border-bottom: none; }
 
-.m-en {
-  font-weight: 700;
-  color: var(--primary);
-  min-width: 90px;
-}
+.m-num { color: var(--text-faint); font-size: 12px; width: 18px; }
+.m-en { font-weight: 600; color: var(--text-main); }
+.m-pos { font-size: 11px; color: var(--text-sub); background: #f2f2f2; padding: 1px 6px; border-radius: 3px; }
+.m-zh { flex: 1; color: var(--text-sub); font-size: 13px; }
+.m-wrong-answer { display: block; width: 100%; color: var(--danger); font-size: 12px; }
 
-.m-pos {
-  color: var(--text-sub);
-  font-size: 13px;
-  min-width: 40px;
-}
-
-.m-zh {
-  flex: 1;
-  color: var(--text-main);
-}
-
-.m-wrong-answer {
-  display: block;
-  width: 100%;
-  color: var(--danger);
-  font-size: 13px;
-  margin-top: 2px;
-}
-
-/* ===== 移动端适配 ===== */
 @media (max-width: 768px) {
-  .source-bar {
-    gap: 8px;
-  }
-
-  .today-bar {
-    padding: 10px 12px;
-    gap: 8px;
-  }
-
-  .today-stat {
-    padding: 6px 10px;
-    font-size: 13px;
-  }
-
-  .today-stat strong {
-    font-size: 15px;
-  }
-
-  .quiz-stats {
-    gap: 6px 12px;
-    font-size: 13px;
-  }
-
-  .quiz-card {
-    padding: 22px 16px;
-  }
-
-  .quiz-word {
-    font-size: 28px;
-  }
-
-  .quiz-input input {
-    font-size: 18px;
-    padding: 14px 12px;
-  }
-
-  .quiz-actions {
-    gap: 10px;
-  }
-
-  .quiz-actions .btn {
-    flex: 1;
-    min-width: 100px;
-  }
-
-  .modal-mask {
-    padding: 8px;
-    align-items: flex-end;
-  }
-
-  .modal {
-    max-height: 85vh;
-    border-radius: 16px 16px 0 0;
-  }
-
-  .m-en {
-    min-width: 70px;
-  }
+  .modal-mask { align-items: flex-end; padding: 0; }
+  .modal { border-radius: 14px 14px 0 0; max-height: 85vh; }
 }
 
 /* ===== 词典查询弹窗 ===== */

@@ -79,48 +79,40 @@ function clearAllFields() {
 </script>
 
 <template>
-  <section class="card">
-    <div class="card-head">
-      <h2>录入新单词</h2>
-      <p class="muted">填写中文、英文和词性，保存后即可在「背单词」中练习</p>
-    </div>
-
+  <div class="input-view">
     <form class="word-form" @submit.prevent="submit">
-      <div class="form-row">
-        <label for="chinese">中文释义 <em>*</em></label>
-        <input
-          id="chinese"
-          v-model="form.chinese"
-          type="text"
-          placeholder="例如：苹果"
-          autocomplete="off"
-        />
-      </div>
-
-      <div class="form-row">
-        <label for="english">英文单词 <em>*</em></label>
-        <input
-          id="english"
-          v-model="form.english"
-          type="text"
-          placeholder="例如：apple"
-          autocomplete="off"
-        />
-      </div>
-
-      <div class="form-row">
-        <label for="pos">词性</label>
-        <input
-          id="pos"
-          v-model="form.pos"
-          type="text"
-          list="pos-options"
-          placeholder="例如：n.（可手输或从列表选择）"
-          autocomplete="off"
-        />
-        <datalist id="pos-options">
-          <option v-for="opt in posOptions" :key="opt" :value="opt" />
-        </datalist>
+      <div class="form-group">
+        <div class="form-item">
+          <label>中文释义</label>
+          <input
+            v-model="form.chinese"
+            type="text"
+            placeholder="请输入中文释义"
+            autocomplete="off"
+          />
+        </div>
+        <div class="form-item">
+          <label>英文单词</label>
+          <input
+            v-model="form.english"
+            type="text"
+            placeholder="请输入英文单词"
+            autocomplete="off"
+          />
+        </div>
+        <div class="form-item">
+          <label>词性</label>
+          <input
+            v-model="form.pos"
+            type="text"
+            list="pos-options"
+            placeholder="如 n. / v. / adj."
+            autocomplete="off"
+          />
+          <datalist id="pos-options">
+            <option v-for="opt in posOptions" :key="opt" :value="opt" />
+          </datalist>
+        </div>
       </div>
 
       <transition name="fade">
@@ -128,114 +120,79 @@ function clearAllFields() {
       </transition>
 
       <div class="form-actions">
-        <button type="button" class="btn ghost" @click="clearAllFields">清空</button>
         <button type="submit" class="btn primary">保存单词</button>
       </div>
     </form>
-
-    <div class="card-foot muted">
-      当前词库共 <strong>{{ wordCount }}</strong> 个单词
-    </div>
-  </section>
+  </div>
 </template>
 
 <style scoped>
-.word-form {
+.input-view {
+  padding: 8px 0;
+}
+
+.form-group {
+  background: #fff;
+  margin: 0 16px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.form-item {
   display: flex;
-  flex-direction: column;
-  gap: 18px;
-  margin-top: 18px;
+  align-items: center;
+  padding: 12px 16px;
+  position: relative;
 }
 
-.form-row {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
+.form-item + .form-item::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  top: 0;
+  height: 0.5px;
+  background: #e5e5e5;
 }
 
-.form-row label {
-  font-size: 14px;
-  font-weight: 600;
+.form-item label {
+  width: 70px;
+  font-size: 15px;
   color: var(--text-main);
+  flex-shrink: 0;
 }
 
-.form-row label em {
-  color: var(--danger);
-  font-style: normal;
-}
-
-.form-row input {
-  padding: 11px 14px;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  font-size: 16px;
-  color: var(--text-main);
-  background: #ffffff;
-  transition: border-color 0.2s, box-shadow 0.2s;
+.form-item input {
+  flex: 1;
+  border: none;
   outline: none;
+  font-size: 15px;
+  color: var(--text-main);
+  background: transparent;
+  padding: 4px 0;
 }
 
-.form-row input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.15);
+.form-item input::placeholder {
+  color: #b2b2b2;
 }
 
 .tip {
+  margin: 10px 16px 0;
   padding: 10px 14px;
-  border-radius: 10px;
-  background: #fff7e6;
-  border: 1px solid #ffd591;
-  color: #ad6800;
+  border-radius: 8px;
   font-size: 14px;
 }
 
-.tip.ok {
-  background: #e8f7ee;
-  border-color: #a8dcc0;
-  color: #1f7a4d;
-}
-
-.tip.err {
-  background: #fdecea;
-  border-color: #f2b8b1;
-  color: #b3402f;
-  font-weight: 600;
-}
+.tip.ok { background: #e8f8ef; color: #07c160; }
+.tip.err { background: #fdecec; color: #fa5151; }
 
 .form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 4px;
+  margin: 16px;
 }
 
-.card-foot {
-  margin-top: 22px;
-  padding-top: 14px;
-  border-top: 1px dashed var(--border);
+.form-actions .btn {
+  width: 100%;
 }
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.25s;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-@media (max-width: 768px) {
-  .word-form {
-    gap: 14px;
-  }
-
-  .form-actions {
-    flex-direction: column-reverse;
-    gap: 10px;
-  }
-
-  .form-actions .btn {
-    width: 100%;
-  }
-}
+.fade-enter-active, .fade-leave-active { transition: opacity 0.25s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>
