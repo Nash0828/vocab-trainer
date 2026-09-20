@@ -20,19 +20,12 @@ async function lookupWord(word) {
   if (!word) return
   dictModal.value = { word, data: null, loading: true, error: null }
   try {
-    const res = await fetch(`https://dict.youdao.com/jsonapi?q=${encodeURIComponent(word.trim().toLowerCase())}`)
-    if (!res.ok) throw new Error('查询失败')
-    const raw = await res.json()
-    const ec = raw.ec
-    if (!ec || !ec.word || !ec.word.length) throw new Error('未找到该单词的释义')
-    const w = ec.word[0]
-    dictModal.value.data = {
-      usphone: w.usphone,
-      ukphone: w.ukphone,
-      examType: ec.exam_type,
-      trs: (w.trs || []).map(t => t.tr[0].l.i[0]),
-      wfs: (w.wfs || []).map(wf => `${wf.wf.name}：${wf.wf.value}`),
+    const res = await fetch(`/api/dict?word=${encodeURIComponent(word.trim().toLowerCase())}`)
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}))
+      throw new Error(j.error || '查询失败')
     }
+    dictModal.value.data = await res.json()
   } catch (e) {
     dictModal.value.error = e.message || '查询失败，请稍后重试'
   } finally {

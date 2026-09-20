@@ -177,6 +177,32 @@ app.delete('/api/wrongbook', (req, res) => {
   res.json({ ok: true })
 })
 
+// ---- 词典查询代理（避免浏览器跨域问题） ----
+app.get('/api/dict', async (req, res) => {
+  const word = (req.query.word || '').trim()
+  if (!word) return res.status(400).json({ error: '缺少 word 参数' })
+  try {
+    const url = `https://dict.youdao.com/jsonapi?q=${encodeURIComponent(word)}`
+    const r = await fetch(url, { signal: AbortSignal.timeout(5000) })
+    if (!r.ok) return res.status(502).json({ error: '词典服务异常' })
+    const data = await r.json()
+    const ec = data.ec
+    if (!ec || !ec.word || !ec.word.length) {
+      return res.status(404).json({ error: '未找到该单词的释义' })
+    }
+    const w = ec.word[0]
+    res.json({
+      usphone: w.usphone || '',
+      ukphone: w.ukphone || '',
+      examType: ec.exam_type || [],
+      trs: (w.trs || []).map(t => t.tr[0].l.i[0]),
+      wfs: (w.wfs || []).map(wf => `${wf.wf.name}：${wf.wf.value}`),
+    })
+  } catch (e) {
+    res.status(502).json({ error: '词典查询超时或失败' })
+  }
+})
+
 // ---- 导入导出 ----
 app.get('/api/export', (req, res) => {
   const words = db.prepare('SELECT * FROM words ORDER BY created_at ASC').all().map(rowToWord)
