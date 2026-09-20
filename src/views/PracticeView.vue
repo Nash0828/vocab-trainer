@@ -369,7 +369,7 @@ next()
           :class="{ active: sourceMode === 'all' }"
           @click="setSource('all')"
         >
-          📚 全部未背熟
+          全部未背熟
         </button>
         <button
           class="source-btn"
@@ -739,6 +739,7 @@ next()
   margin-bottom: 16px;
   display: flex;
   gap: 10px;
+  justify-content: center;
 }
 
 .quiz-progress {

@@ -136,10 +136,10 @@ function formatDate(dateStr) {
       <div class="day-list">
         <div v-for="day in days" :key="day.date" class="day-item">
           <div class="day-head" @click="toggle(day.date)">
-            <span class="day-date">📅 {{ formatDate(day.date) }}</span>
+            <span class="day-date">{{ formatDate(day.date) }}</span>
             <span class="day-badges">
-              <span class="badge ok">✅ 正确 {{ day.correct }} 次 · {{ day.correctWords }} 词</span>
-              <span class="badge bad">❌ 错误 {{ day.wrong }} 次 · {{ day.wrongWords }} 词</span>
+              <span class="badge ok">正确 {{ day.correct }} 次 · {{ day.correctWords }} 词</span>
+              <span class="badge bad">错误 {{ day.wrong }} 次 · {{ day.wrongWords }} 词</span>
               <span class="badge total">已背 {{ day.totalWords }} 词</span>
             </span>
             <span class="expand-icon">{{ expanded === day.date ? '▲' : '▼' }}</span>
@@ -164,7 +164,7 @@ function formatDate(dateStr) {
                   class="record-item"
                   :class="r.correct ? 'rec-ok' : 'rec-bad'"
                 >
-                  <span class="rec-mark">{{ r.correct ? '✅' : '❌' }}</span>
+                  <span class="rec-mark" :class="r.correct ? 'mark-ok' : 'mark-bad'">{{ r.correct ? '✓' : '✗' }}</span>
                   <span class="rec-en">{{ r.english }}</span>
                   <span class="rec-pos">{{ r.pos || '—' }}</span>
                   <span class="rec-zh">{{ r.chinese }}</span>
@@ -356,7 +356,10 @@ function formatDate(dateStr) {
 
 .rec-mark {
   font-size: 15px;
+  font-weight: 700;
 }
+.rec-mark.mark-ok { color: #07c160; }
+.rec-mark.mark-bad { color: #fa5151; }
 
 .rec-en {
   font-weight: 700;
