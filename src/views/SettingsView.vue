@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useWords } from '../composables/useWords'
 import { api } from '../api/index.js'
 
@@ -13,6 +13,35 @@ const {
   validateImport,
   importData,
 } = useWords()
+
+// 用户状态
+const user = ref({ isLoggedIn: false, username: '', isAdmin: false })
+const showAuthModal = ref(false)
+const authMode = ref('login')
+const authForm = ref({ username: '', password: '' })
+const authError = ref('')
+
+onMounted(async () => {
+  try { user.value = await api.me() } catch (e) {}
+})
+
+async function doAuth() {
+  authError.value = ''
+  const { username, password } = authForm.value
+  if (!username.trim() || !password) { authError.value = '请输入用户名和密码'; return }
+  try {
+    const fn = authMode.value === 'login' ? api.login : api.register
+    const res = await fn(username.trim(), password)
+    user.value = res.user
+    showAuthModal.value = false
+    authForm.value = { username: '', password: '' }
+    window.location.reload()
+  } catch (e) { authError.value = e.message }
+}
+async function doLogout() {
+  await api.logout()
+  window.location.reload()
+}
 
 const thresholdInput = ref(String(settings.value.masteryThreshold))
 const confirmResetAll = ref(false)
@@ -210,6 +239,21 @@ function cancelMigrate() {
         <p class="muted">调整背单词的"背熟"规则与背诵数据</p>
       </div>
 
+      <!-- 用户登录区 -->
+      <div class="user-block">
+        <template v-if="user.isLoggedIn">
+          <span class="user-label">当前账号：</span>
+          <strong>{{ user.username }}</strong>
+          <span v-if="user.isAdmin" class="admin-tag">管理员</span>
+          <button class="btn ghost mini" @click="doLogout" style="margin-left:auto">退出登录</button>
+        </template>
+        <template v-else>
+          <span class="user-label">未登录</span>
+          <span class="muted small">（清缓存会丢数据，建议注册备份）</span>
+          <button class="btn primary mini" style="margin-left:auto" @click="showAuthModal = true">登录 / 注册</button>
+        </template>
+      </div>
+
       <transition name="fade">
         <p v-if="tip" class="tip" :class="tip.kind">{{ tip.text }}</p>
       </transition>
@@ -342,6 +386,21 @@ function cancelMigrate() {
           </div>
         </template>
         <button v-else class="btn ghost" @click="askMigrate">从浏览器本地迁移</button>
+      </div>
+
+      <!-- 登录/注册弹窗 -->
+      <div v-if="showAuthModal" class="auth-mask" @click.self="showAuthModal = false">
+        <div class="auth-modal">
+          <h3>{{ authMode === 'login' ? '登录' : '注册新账号' }}</h3>
+          <div class="auth-tabs">
+            <button :class="{ active: authMode === 'login' }" @click="authMode = 'login'; authError = ''">登录</button>
+            <button :class="{ active: authMode === 'register' }" @click="authMode = 'register'; authError = ''">注册</button>
+          </div>
+          <input v-model="authForm.username" placeholder="用户名（2-20位字母数字下划线）" />
+          <input v-model="authForm.password" type="password" :placeholder="authMode === 'login' ? '密码' : '密码（至少6位）'" @keyup.enter="doAuth" />
+          <div v-if="authError" class="auth-error">{{ authError }}</div>
+          <button class="btn primary" @click="doAuth">{{ authMode === 'login' ? '登录' : '注册并登录' }}</button>
+        </div>
       </div>
     </section>
   </div>
@@ -583,4 +642,39 @@ function cancelMigrate() {
     width: auto;
   }
 }
+
+/* 用户区 */
+.user-block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--bg-soft);
+  border-radius: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.user-label { font-weight: 600; color: var(--text-main); }
+.admin-tag { background: #ff4d4f; color: #fff; font-size: 11px; padding: 1px 8px; border-radius: 999px; }
+
+/* 登录弹窗 */
+.auth-mask {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 300;
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.auth-modal {
+  background: #fff; border-radius: 16px; padding: 24px; width: 100%; max-width: 340px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.auth-modal h3 { margin: 0; text-align: center; }
+.auth-tabs { display: flex; gap: 8px; }
+.auth-tabs button {
+  flex: 1; padding: 8px; border: 1px solid var(--border-light); background: #fff;
+  border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-sub);
+}
+.auth-tabs button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.auth-modal input {
+  padding: 10px 12px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 15px;
+}
+.auth-error { color: var(--danger); font-size: 13px; }
 </style>
