@@ -190,6 +190,25 @@ function speak(word) {
   }
 }
 
+// ===== 词典查询弹窗 =====
+const dictModal = ref(null) // { word, data, loading, error }
+async function lookupWord(word) {
+  if (!word) return
+  dictModal.value = { word, data: null, loading: true, error: null }
+  try {
+    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word.trim().toLowerCase())}`)
+    if (!res.ok) throw new Error('未找到该单词的词典释义')
+    dictModal.value.data = await res.json()
+  } catch (e) {
+    dictModal.value.error = e.message || '查询失败，请稍后重试'
+  } finally {
+    dictModal.value.loading = false
+  }
+}
+function closeDict() {
+  dictModal.value = null
+}
+
 // 答错后重做当前题：清空答案与判定，重新聚焦输入框
 function redo() {
   if (!current.value) return
@@ -380,10 +399,13 @@ next()
           <p class="quiz-word">{{ current.chinese }}</p>
           <p v-if="current.pos" class="quiz-pos">词性：{{ current.pos }}</p>
 
-          <!-- 手动播放发音按钮 -->
+          <!-- 手动播放发音 + 查词典按钮 -->
           <div class="quiz-sound">
             <button class="btn ghost mini" title="播放当前单词发音" @click="speak(current.english)">
               🔊 播放发音
+            </button>
+            <button class="btn ghost mini" title="查询词典释义" @click="lookupWord(current.english)">
+              📖 查词典
             </button>
           </div>
 
@@ -486,6 +508,36 @@ next()
               <span class="m-zh">{{ r.chinese }}</span>
             </li>
           </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 词典查询弹窗 -->
+    <div v-if="dictModal" class="dict-mask" @click.self="closeDict">
+      <div class="dict-modal">
+        <div class="dict-head">
+          <h3>📖 {{ dictModal.word }}</h3>
+          <button class="dict-close" @click="closeDict">✕</button>
+        </div>
+        <div class="dict-body">
+          <div v-if="dictModal.loading" class="dict-loading">查询中…</div>
+          <div v-else-if="dictModal.error" class="dict-error">⚠️ {{ dictModal.error }}</div>
+          <div v-else-if="dictModal.data">
+            <div v-for="(entry, i) in dictModal.data" :key="i">
+              <p v-if="entry.phonetic || entry.phonetics" class="dict-phonetic">
+                音标：{{ entry.phonetic || entry.phonetics?.find(p => p.text)?.text || '' }}
+              </p>
+              <div v-for="(meaning, j) in entry.meanings" :key="j" class="dict-meaning">
+                <span class="dict-pos">{{ meaning.partOfSpeech }}</span>
+                <ul>
+                  <li v-for="(def, k) in meaning.definitions.slice(0, 3)" :key="k">
+                    {{ def.definition }}
+                    <p v-if="def.example" class="dict-example">💬 {{ def.example }}</p>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -937,5 +989,106 @@ next()
   .m-en {
     min-width: 70px;
   }
+}
+
+/* ===== 词典查询弹窗 ===== */
+.dict-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+
+.dict-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dict-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.dict-head h3 {
+  font-size: 20px;
+  margin: 0;
+  color: var(--primary);
+}
+
+.dict-close {
+  border: none;
+  background: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-faint);
+  padding: 4px 8px;
+}
+
+.dict-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+}
+
+.dict-loading, .dict-error {
+  text-align: center;
+  padding: 30px 0;
+  color: var(--text-sub);
+}
+
+.dict-error {
+  color: var(--danger);
+}
+
+.dict-phonetic {
+  color: var(--text-sub);
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+
+.dict-meaning {
+  margin-bottom: 14px;
+}
+
+.dict-pos {
+  display: inline-block;
+  background: var(--primary-light);
+  color: var(--primary);
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.dict-meaning ul {
+  padding-left: 20px;
+  margin: 4px 0;
+}
+
+.dict-meaning li {
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+.dict-example {
+  color: var(--text-sub);
+  font-size: 13px;
+  margin: 2px 0 0 0;
+  font-style: italic;
 }
 </style>
