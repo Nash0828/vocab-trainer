@@ -10,7 +10,9 @@
     "start": "node server/index.js"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.3",
+    "cookie-parser": "^1.4.7",
     "express": "^5.2.1",
     "vue": "^3.5.40",
     "vue-router": "^5.2.0"

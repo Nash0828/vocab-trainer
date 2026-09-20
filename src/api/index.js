@@ -20,6 +20,12 @@ export const api = {
   // 全量状态（启动时调用一次）
   getState: () => req('/api/state'),
 
+  // 认证
+  me: () => req('/api/me'),
+  register: (username, password) => req('/api/register', { method: 'POST', body: { username, password } }),
+  login: (username, password) => req('/api/login', { method: 'POST', body: { username, password } }),
+  logout: () => req('/api/logout', { method: 'POST' }),
+
   // 单词 CRUD
   addWord: (data) => req('/api/words', { method: 'POST', body: data }),
   updateWord: (id, data) => req(`/api/words/${id}`, { method: 'PUT', body: data }),
