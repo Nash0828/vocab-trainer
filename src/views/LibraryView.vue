@@ -20,9 +20,19 @@ async function lookupWord(word) {
   if (!word) return
   dictModal.value = { word, data: null, loading: true, error: null }
   try {
-    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word.trim().toLowerCase())}`)
-    if (!res.ok) throw new Error('未找到该单词的词典释义')
-    dictModal.value.data = await res.json()
+    const res = await fetch(`https://dict.youdao.com/jsonapi?q=${encodeURIComponent(word.trim().toLowerCase())}`)
+    if (!res.ok) throw new Error('查询失败')
+    const raw = await res.json()
+    const ec = raw.ec
+    if (!ec || !ec.word || !ec.word.length) throw new Error('未找到该单词的释义')
+    const w = ec.word[0]
+    dictModal.value.data = {
+      usphone: w.usphone,
+      ukphone: w.ukphone,
+      examType: ec.exam_type,
+      trs: (w.trs || []).map(t => t.tr[0].l.i[0]),
+      wfs: (w.wfs || []).map(wf => `${wf.wf.name}：${wf.wf.value}`),
+    }
   } catch (e) {
     dictModal.value.error = e.message || '查询失败，请稍后重试'
   } finally {
@@ -530,19 +540,24 @@ function formatTime(ts) {
           <div v-if="dictModal.loading" class="dict-loading">查询中…</div>
           <div v-else-if="dictModal.error" class="dict-error">⚠️ {{ dictModal.error }}</div>
           <div v-else-if="dictModal.data">
-            <div v-for="(entry, i) in dictModal.data" :key="i">
-              <p v-if="entry.phonetic || entry.phonetics" class="dict-phonetic">
-                音标：{{ entry.phonetic || entry.phonetics?.find(p => p.text)?.text || '' }}
-              </p>
-              <div v-for="(meaning, j) in entry.meanings" :key="j" class="dict-meaning">
-                <span class="dict-pos">{{ meaning.partOfSpeech }}</span>
-                <ul>
-                  <li v-for="(def, k) in meaning.definitions.slice(0, 3)" :key="k">
-                    {{ def.definition }}
-                    <p v-if="def.example" class="dict-example">💬 {{ def.example }}</p>
-                  </li>
-                </ul>
-              </div>
+            <div v-if="dictModal.data.usphone || dictModal.data.ukphone" class="dict-phonetic">
+              <span v-if="dictModal.data.ukphone">英 [{{ dictModal.data.ukphone }}]</span>
+              <span v-if="dictModal.data.usphone" style="margin-left:12px">美 [{{ dictModal.data.usphone }}]</span>
+            </div>
+            <div v-if="dictModal.data.examType && dictModal.data.examType.length" class="dict-exam">
+              考试类型：{{ dictModal.data.examType.join(' / ') }}
+            </div>
+            <div v-if="dictModal.data.trs && dictModal.data.trs.length" class="dict-meaning">
+              <p class="dict-label">📝 释义</p>
+              <ul>
+                <li v-for="(tr, i) in dictModal.data.trs" :key="i">{{ tr }}</li>
+              </ul>
+            </div>
+            <div v-if="dictModal.data.wfs && dictModal.data.wfs.length" class="dict-meaning">
+              <p class="dict-label">📌 词形变化</p>
+              <ul>
+                <li v-for="(wf, i) in dictModal.data.wfs" :key="i">{{ wf }}</li>
+              </ul>
             </div>
           </div>
         </div>
@@ -1163,5 +1178,21 @@ function formatTime(ts) {
   font-size: 13px;
   margin: 2px 0 0 0;
   font-style: italic;
+}
+
+.dict-exam {
+  background: #fff8e6;
+  color: #b8860b;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.dict-label {
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0 0 6px 0;
+  font-size: 14px;
 }
 </style>
