@@ -84,149 +84,144 @@ function formatDate(dateStr) {
 </script>
 
 <template>
-  <section class="card">
-    <div class="card-head">
-      <h2>背诵历史</h2>
-      <p class="muted">按天查看每天背诵过的单词与对错情况</p>
-    </div>
-
+  <div class="history">
     <transition name="fade">
       <p v-if="tip" class="tip" :class="tip.kind">{{ tip.text }}</p>
     </transition>
 
     <!-- 空状态 -->
     <div v-if="!days.length" class="empty">
-      <div class="empty-icon">🗓️</div>
       <h3>暂无背诵记录</h3>
-      <p class="muted">去「背单词」练习后，这里会按天记录你的背诵情况</p>
+      <p class="muted">去背单词练习后，这里会按天记录你的背诵情况</p>
     </div>
 
     <template v-else>
-      <!-- 汇总 -->
-      <div class="summary-row">
-        <div class="summary-item">
+      <!-- 汇总卡片 -->
+      <div class="summary-card">
+        <div class="sum-item">
           <span class="sum-num">{{ totals.days }}</span>
-          <span class="sum-label">背诵天数</span>
+          <span class="sum-label">天数</span>
         </div>
-        <div class="summary-item">
+        <div class="sum-divider"></div>
+        <div class="sum-item">
           <span class="sum-num">{{ totals.correct }}</span>
-          <span class="sum-label">累计正确（{{ totals.correctWords }} 个单词）</span>
+          <span class="sum-label">正确</span>
         </div>
-        <div class="summary-item">
+        <div class="sum-divider"></div>
+        <div class="sum-item">
           <span class="sum-num wrong">{{ totals.wrong }}</span>
-          <span class="sum-label">累计错误（{{ totals.wrongWords }} 个单词）</span>
+          <span class="sum-label">错误</span>
         </div>
-        <div class="summary-item">
-          <span class="sum-num">{{ totals.total }}</span>
-          <span class="sum-label">累计作答（已背 {{ totals.totalWords }} 词）</span>
+        <div class="sum-divider"></div>
+        <div class="sum-item">
+          <span class="sum-num">{{ totals.totalWords }}</span>
+          <span class="sum-label">已背单词</span>
         </div>
       </div>
 
-      <!-- 全部清空（两步确认） -->
-      <div class="clear-all-row">
-        <template v-if="confirmClearAll">
-          <span class="confirm-hint">确定清空全部历史记录吗？不可恢复。</span>
-          <button class="btn danger mini" @click="doClearAll">是，全部清空</button>
-          <button class="btn ghost mini" @click="cancelClearAll">取消</button>
-        </template>
-        <button v-else class="btn danger-ghost mini" @click="askClearAll">清空全部历史</button>
+      <!-- 清空按钮 -->
+      <div class="clear-bar">
+        <button v-if="!confirmClearAll" class="clear-btn" @click="askClearAll">清空全部历史</button>
+        <span v-else class="clear-confirm">
+          <button class="clear-yes" @click="doClearAll">确认清空</button>
+          <button class="clear-no" @click="cancelClearAll">取消</button>
+        </span>
       </div>
 
       <!-- 按天列表 -->
       <div class="day-list">
-        <div v-for="day in days" :key="day.date" class="day-item">
-          <div class="day-head" @click="toggle(day.date)">
-            <span class="day-date">{{ formatDate(day.date) }}</span>
-            <span class="day-badges">
-              <span class="badge ok">正确 {{ day.correct }} 次 · {{ day.correctWords }} 词</span>
-              <span class="badge bad">错误 {{ day.wrong }} 次 · {{ day.wrongWords }} 词</span>
-              <span class="badge total">已背 {{ day.totalWords }} 词</span>
-            </span>
-            <span class="expand-icon">{{ expanded === day.date ? '▲' : '▼' }}</span>
+        <div v-for="day in days" :key="day.date" class="day-item" @click="toggle(day.date)">
+          <div class="day-head">
+            <div class="day-info">
+              <span class="day-date">{{ formatDate(day.date) }}</span>
+              <span class="day-stats">
+                <span class="stat-ok">对 {{ day.correct }}</span>
+                <span class="stat-bad">错 {{ day.wrong }}</span>
+                <span class="stat-total">{{ day.totalWords }} 词</span>
+              </span>
+            </div>
+            <span class="expand-icon">{{ expanded === day.date ? '⌄' : '›' }}</span>
           </div>
 
           <transition name="fade">
-            <div v-if="expanded === day.date" class="day-detail">
-              <div class="detail-tools">
-                <span class="muted small">点击可查看当天每题的作答情况</span>
-                <template v-if="confirmClearDay === day.date">
-                  <span class="confirm-hint">确定清空当天记录？</span>
-                  <button class="btn danger mini" @click="doClearDay(day.date)">是，清空</button>
-                  <button class="btn ghost mini" @click="cancelClearDay">取消</button>
-                </template>
-                <button v-else class="btn danger-ghost mini" @click="askClearDay(day.date)">清空当天</button>
+            <div v-if="expanded === day.date" class="day-detail" @click.stop>
+              <div class="detail-head">
+                <span class="muted small">当天作答明细</span>
+                <button v-if="confirmClearDay !== day.date" class="mini-clear" @click="askClearDay(day.date)">清空</button>
+                <span v-else class="mini-confirm">
+                  <button class="mini-yes" @click="doClearDay(day.date)">是</button>
+                  <button class="mini-no" @click="cancelClearDay">否</button>
+                </span>
               </div>
-
-              <ul class="record-list">
-                <li
+              <div class="record-list">
+                <div
                   v-for="(r, i) in day.records"
                   :key="r.id"
                   class="record-item"
-                  :class="r.correct ? 'rec-ok' : 'rec-bad'"
                 >
                   <span class="rec-mark" :class="r.correct ? 'mark-ok' : 'mark-bad'">{{ r.correct ? '✓' : '✗' }}</span>
-                  <span class="rec-en">{{ r.english }}</span>
-                  <span class="rec-pos">{{ r.pos || '—' }}</span>
-                  <span class="rec-zh">{{ r.chinese }}</span>
-                  <span v-if="!r.correct && r.userAnswer" class="rec-wrong-answer">你答：{{ r.userAnswer }}</span>
-                  <span class="rec-time small muted">{{ new Date(r.ts).toTimeString().slice(0, 5) }}</span>
-                </li>
-              </ul>
+                  <div class="rec-body">
+                    <div class="rec-line1">
+                      <span class="rec-en">{{ r.english }}</span>
+                      <span v-if="r.pos" class="rec-pos">{{ r.pos }}</span>
+                    </div>
+                    <div class="rec-line2">
+                      <span class="rec-zh">{{ r.chinese }}</span>
+                      <span class="rec-time">{{ new Date(r.ts).toTimeString().slice(0, 5) }}</span>
+                    </div>
+                    <div v-if="!r.correct && r.userAnswer" class="rec-wrong">你答：{{ r.userAnswer }}</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </transition>
         </div>
       </div>
     </template>
-  </section>
+  </div>
 </template>
 
 <style scoped>
+.history {
+  padding: 8px 0;
+}
+
 .tip {
-  margin-top: 14px;
+  margin: 0 16px 10px;
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 14px;
 }
+.tip.ok { background: #e8f8ef; color: #07c160; }
+.tip.warn { background: #fff7e6; color: #fa9d3b; }
+.tip.err { background: #fdecec; color: #fa5151; }
 
-.tip.ok {
-  background: #e8f7ee;
-  border: 1px solid #a8dcc0;
-  color: #1f7a4d;
-}
-
-.tip.warn {
-  background: #fff7e6;
-  border: 1px solid #ffd591;
-  color: #ad6800;
-}
-
-.tip.err {
-  background: #fdecea;
-  border: 1px solid #f2b8b1;
-  color: #b3402f;
-  font-weight: 600;
-}
-
-.summary-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-top: 20px;
-}
-
-.summary-item {
-  background: var(--bg-soft);
-  border-radius: 12px;
-  padding: 16px 10px;
+.empty {
   text-align: center;
+  padding: 60px 20px;
+}
+.empty h3 { font-size: 17px; margin-bottom: 8px; }
+.empty .muted { font-size: 14px; color: var(--text-sub); }
+
+/* 汇总卡片 */
+.summary-card {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  background: #fff;
+  margin: 0 16px 8px;
+  border-radius: 12px;
+  padding: 16px 0;
+}
+
+.sum-item {
+  flex: 1;
+  text-align: center;
 }
 
 .sum-num {
-  font-size: 26px;
-  font-weight: 800;
+  display: block;
+  font-size: 22px;
+  font-weight: 600;
   color: var(--text-main);
 }
 
@@ -235,215 +230,226 @@ function formatDate(dateStr) {
 }
 
 .sum-label {
-  font-size: 13px;
+  display: block;
+  font-size: 12px;
   color: var(--text-sub);
+  margin-top: 2px;
 }
 
-.clear-all-row {
-  margin-top: 20px;
+.sum-divider {
+  width: 0.5px;
+  height: 30px;
+  background: #e5e5e5;
+}
+
+/* 清空按钮 */
+.clear-bar {
+  padding: 0 16px 10px;
+  text-align: center;
+}
+
+.clear-btn {
+  border: none;
+  background: #fff;
+  color: var(--danger);
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.clear-confirm {
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
+  gap: 8px;
+  justify-content: center;
 }
 
+.clear-yes {
+  border: none;
+  background: var(--danger);
+  color: #fff;
+  font-size: 13px;
+  padding: 7px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.clear-no {
+  border: none;
+  background: #fff;
+  color: var(--text-sub);
+  font-size: 13px;
+  padding: 7px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* 按天列表 */
 .day-list {
-  margin-top: 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  padding: 0 16px;
 }
 
 .day-item {
-  background: var(--bg-soft);
+  background: #fff;
   border-radius: 12px;
-  border: 1px solid var(--border-light);
   overflow: hidden;
 }
 
 .day-head {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
+  justify-content: space-between;
+  padding: 12px 16px;
   cursor: pointer;
-  flex-wrap: wrap;
 }
 
-.day-head:hover {
-  background: #e9f0f8;
+.day-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .day-date {
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
   color: var(--text-main);
 }
 
-.day-badges {
+.day-stats {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
-}
-
-.badge {
-  padding: 2px 10px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.badge.ok {
-  background: #e8f7ee;
-  color: var(--success);
-}
-
-.badge.bad {
-  background: #fdecea;
-  color: var(--danger);
-}
-
-.badge.total {
-  background: #eef3fb;
-  color: var(--primary);
-}
-
-.expand-icon {
-  margin-left: auto;
-  color: var(--text-faint);
   font-size: 12px;
 }
 
-.day-detail {
-  padding: 0 16px 14px;
+.stat-ok { color: var(--primary); }
+.stat-bad { color: var(--danger); }
+.stat-total { color: var(--text-sub); }
+
+.expand-icon {
+  font-size: 18px;
+  color: #c8c8c8;
 }
 
-.detail-tools {
+.day-detail {
+  border-top: 0.5px solid #f2f2f2;
+  padding: 0 16px 12px;
+}
+
+.detail-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 8px 0 10px;
-  border-top: 1px dashed var(--border);
-  flex-wrap: wrap;
+  padding: 8px 0;
+}
+
+.mini-clear {
+  border: none;
+  background: transparent;
+  color: var(--danger);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mini-confirm {
+  display: flex;
+  gap: 6px;
+}
+
+.mini-yes {
+  border: none;
+  background: var(--danger);
+  color: #fff;
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.mini-no {
+  border: none;
+  background: #f2f2f2;
+  color: var(--text-sub);
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 .record-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
 }
 
 .record-item {
   display: flex;
-  align-items: center;
   gap: 10px;
-  padding: 9px 12px;
-  border-radius: 10px;
-  font-size: 15px;
-  flex-wrap: wrap;
+  padding: 8px 0;
+  border-bottom: 0.5px solid #f5f5f5;
 }
 
-.record-item.rec-ok {
-  background: #eefaf3;
-}
-
-.record-item.rec-bad {
-  background: #fdf1ef;
+.record-item:last-child {
+  border-bottom: none;
 }
 
 .rec-mark {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
+  width: 18px;
+  flex-shrink: 0;
 }
 .rec-mark.mark-ok { color: #07c160; }
 .rec-mark.mark-bad { color: #fa5151; }
 
-.rec-en {
-  font-weight: 700;
-  color: var(--primary);
-  min-width: 90px;
-}
-
-.rec-pos {
-  color: var(--text-sub);
-  font-size: 13px;
-  min-width: 40px;
-}
-
-.rec-zh {
+.rec-body {
   flex: 1;
+  min-width: 0;
+}
+
+.rec-line1 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rec-en {
+  font-size: 15px;
+  font-weight: 600;
   color: var(--text-main);
 }
 
-.rec-wrong-answer {
-  color: var(--danger);
-  font-size: 12px;
-  background: #fdecea;
+.rec-pos {
+  font-size: 11px;
+  color: var(--text-sub);
+  background: #f2f2f2;
   padding: 1px 6px;
-  border-radius: 4px;
+  border-radius: 3px;
+}
+
+.rec-line2 {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.rec-zh {
+  font-size: 13px;
+  color: var(--text-sub);
 }
 
 .rec-time {
-  color: var(--text-faint);
+  font-size: 11px;
+  color: #b2b2b2;
 }
 
-.confirm-hint {
-  font-size: 13px;
+.rec-wrong {
+  font-size: 12px;
   color: var(--danger);
-  font-weight: 600;
+  margin-top: 2px;
 }
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.25s;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-@media (max-width: 768px) {
-  .summary-row {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-  }
-
-  .summary-item {
-    padding: 12px 6px;
-  }
-
-  .sum-num {
-    font-size: 22px;
-  }
-
-  .sum-label {
-    font-size: 12px;
-  }
-
-  .day-head {
-    padding: 12px 12px;
-    gap: 8px;
-  }
-
-  .day-badges .badge {
-    font-size: 12px;
-    padding: 2px 8px;
-  }
-
-  .record-item {
-    gap: 8px;
-    font-size: 14px;
-  }
-
-  .rec-en {
-    min-width: 70px;
-  }
-
-  .rec-time {
-    width: 100%;
-  }
-}
+.fade-enter-active, .fade-leave-active { transition: opacity 0.25s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>

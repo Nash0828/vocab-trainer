@@ -62,70 +62,65 @@ function formatTime(ts) {
 </script>
 
 <template>
-  <section class="card">
-    <div class="card-head">
-      <h2>错题本</h2>
-    </div>
-
+  <div class="wrongbook">
     <transition name="fade">
       <p v-if="tip" class="tip" :class="tip.kind">{{ tip.text }}</p>
     </transition>
 
     <div v-if="!wrongList.length" class="empty">
-      <div class="empty-icon">📕</div>
       <h3>错题本是空的</h3>
       <p class="muted">去背单词练习，答错的单词会自动记入这里</p>
       <div class="empty-actions">
         <button class="btn primary" @click="router.push('/practice')">去背单词</button>
-        <button class="btn ghost" @click="router.push('/input')">去录入单词</button>
       </div>
     </div>
 
     <template v-else>
       <div class="toolbar">
         <span class="count-badge">共 {{ wrongList.length }} 个错题</span>
-        <div class="tool-actions">
-          <template v-if="confirmClearAll">
-            <span class="confirm-hint">确定清空全部？</span>
-            <button class="btn danger mini" @click="doClearAll">是</button>
-            <button class="btn ghost mini" @click="cancelClearAll">取消</button>
-          </template>
-          <button v-else class="btn ghost mini" @click="askClearAll">清空全部</button>
-        </div>
+        <button v-if="!confirmClearAll" class="clear-btn" @click="askClearAll">清空</button>
+        <span v-else class="clear-confirm">
+          <button class="clear-yes" @click="doClearAll">确认清空</button>
+          <button class="clear-no" @click="cancelClearAll">取消</button>
+        </span>
       </div>
 
-      <ul class="wrong-list">
-        <li v-for="w in wrongList" :key="w.id || w.english" class="wrong-item">
+      <div class="wrong-list">
+        <div v-for="w in wrongList" :key="w.id || w.english" class="wrong-item">
           <div class="w-main">
             <div class="w-line1">
               <span class="w-en">{{ w.english }}</span>
-              <span class="w-pos">{{ w.pos || '' }}</span>
+              <span v-if="w.pos" class="w-pos">{{ w.pos }}</span>
               <button
                 v-if="confirmRemoveId !== (w.id || w.english)"
                 class="w-remove"
-                title="移除"
                 @click="askRemove(w.id || w.english)"
-              >✕</button>
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
             </div>
             <div class="w-zh">{{ w.chinese }}</div>
             <div v-if="lastWrongAnswer(w.english)" class="w-wrong">
               你答：{{ lastWrongAnswer(w.english) }}
             </div>
-            <div class="w-time">{{ formatTime(w.addedAt) }}</div>
           </div>
           <div v-if="confirmRemoveId === (w.id || w.english)" class="w-confirm">
-            <button class="btn danger mini" @click="doRemove(w.id || w.english)">移除</button>
-            <button class="btn ghost mini" @click="cancelRemove">取消</button>
+            <button class="w-confirm-yes" @click="doRemove(w.id || w.english)">移除</button>
+            <button class="w-confirm-no" @click="cancelRemove">取消</button>
           </div>
-        </li>
-      </ul>
+        </div>
+      </div>
     </template>
-  </section>
+  </div>
 </template>
 
 <style scoped>
+.wrongbook {
+  padding: 8px 0;
+}
+
 .tip {
-  margin: 0 14px 10px;
+  margin: 0 16px 10px;
   padding: 10px 14px;
   border-radius: 8px;
   font-size: 14px;
@@ -138,27 +133,60 @@ function formatTime(ts) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 0 16px 10px;
 }
 
 .count-badge {
-  color: var(--text-sub);
   font-size: 14px;
+  color: var(--text-sub);
 }
 
-.tool-actions { display: flex; align-items: center; gap: 8px; }
-.confirm-hint { font-size: 13px; color: var(--danger); }
+.clear-btn {
+  border: none;
+  background: #fff;
+  color: var(--danger);
+  font-size: 14px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.clear-confirm {
+  display: flex;
+  gap: 8px;
+}
+
+.clear-yes {
+  border: none;
+  background: var(--danger);
+  color: #fff;
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.clear-no {
+  border: none;
+  background: #fff;
+  color: var(--text-sub);
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
 
 .wrong-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 16px;
 }
 
 .wrong-item {
   background: #fff;
-  border-bottom: 0.5px solid #e5e5e5;
-  padding: 12px 14px;
+  padding: 12px 16px;
+  position: relative;
 }
 
 .w-line1 {
@@ -168,44 +196,44 @@ function formatTime(ts) {
 }
 
 .w-en {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
   color: var(--text-main);
 }
 
 .w-pos {
   font-size: 12px;
-  color: var(--text-faint);
+  color: var(--text-sub);
+  background: #f2f2f2;
+  padding: 1px 8px;
+  border-radius: 4px;
 }
 
 .w-remove {
   margin-left: auto;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border: none;
   background: transparent;
   color: #c8c8c8;
-  font-size: 16px;
   cursor: pointer;
   border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.w-remove:active { background: #f5f5f5; color: var(--danger); }
+
+.w-remove:active { color: var(--danger); }
 
 .w-zh {
   font-size: 14px;
   color: var(--text-sub);
-  margin-top: 3px;
+  margin-top: 4px;
 }
 
 .w-wrong {
   font-size: 13px;
   color: var(--danger);
-  margin-top: 3px;
-}
-
-.w-time {
-  font-size: 12px;
-  color: var(--text-faint);
   margin-top: 4px;
 }
 
@@ -213,23 +241,37 @@ function formatTime(ts) {
   display: flex;
   gap: 8px;
   margin-top: 8px;
+  padding-top: 8px;
+  border-top: 0.5px solid #f2f2f2;
+}
+
+.w-confirm-yes {
+  border: none;
+  background: var(--danger);
+  color: #fff;
+  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.w-confirm-no {
+  border: none;
+  background: #f2f2f2;
+  color: var(--text-main);
+  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
 .empty {
   text-align: center;
   padding: 60px 20px;
 }
-.empty-icon { font-size: 56px; margin-bottom: 16px; }
-.empty h3 { font-size: 18px; margin-bottom: 8px; }
-.empty .muted { margin-bottom: 24px; }
-.empty-actions { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.empty h3 { font-size: 17px; margin-bottom: 8px; color: var(--text-main); }
+.empty .muted { margin-bottom: 24px; font-size: 14px; color: var(--text-sub); }
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.25s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
-
-@media (min-width: 769px) {
-  .card { padding: 0; }
-  .card-head { padding: 16px; }
-  .wrong-item { border-radius: 0; }
-}
 </style>
