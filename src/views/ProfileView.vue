@@ -56,12 +56,11 @@ async function doLogout() {
   <div class="profile-page">
     <!-- 用户头部卡片 -->
     <div class="profile-header" @click="!user.isLoggedIn && (showAuthModal = true)">
-      <div class="avatar">{{ user.isLoggedIn ? user.username[0].toUpperCase() : '👤' }}</div>
+      <div class="avatar">{{ user.isLoggedIn ? user.username[0].toUpperCase() : '' }}</div>
       <div class="header-info">
         <div class="username">{{ user.isLoggedIn ? user.username : '点击登录 / 注册' }}</div>
         <div v-if="user.isAdmin" class="admin-tag">管理员</div>
       </div>
-      <div class="chevron">›</div>
     </div>
 
     <!-- 菜单列表 -->
@@ -145,33 +144,64 @@ async function doLogout() {
 
 /* 头部卡片 */
 .profile-header {
-  background: linear-gradient(135deg, #07c160, #06ad56);
-  border-radius: 8px; padding: 24px 20px; display: flex; align-items: center; gap: 16px;
-  color: #fff; cursor: pointer; margin-bottom: 10px;
+  background: #fff;
+  padding: 20px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  margin-bottom: 8px;
 }
 .avatar {
-  width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,0.25);
-  display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 700;
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  background: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 600;
+  color: #fff;
 }
 .header-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-.username { font-size: 18px; font-weight: 700; }
-.admin-tag { background: rgba(255,255,255,0.25); font-size: 11px; padding: 2px 8px; border-radius: 999px; width: fit-content; }
-.chevron { font-size: 24px; opacity: 0.6; }
+.username { font-size: 17px; font-weight: 500; color: var(--text-main); }
+.admin-tag {
+  background: #f5f5f5;
+  color: var(--text-sub);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  width: fit-content;
+}
 
 /* 菜单组 */
 .menu-group {
-  background: #fff; border-radius: 0; margin-bottom: 10px; overflow: hidden;
+  background: #fff;
+  margin-bottom: 8px;
+  overflow: hidden;
 }
 .menu-item {
-  display: flex; align-items: center; padding: 13px 15px; cursor: pointer;
-  border-bottom: 0.5px solid #e5e5e5; transition: background 0.15s;
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  cursor: pointer;
+  border-bottom: 0.5px solid #f0f0f0;
+  transition: background 0.15s;
 }
 .menu-item:last-child { border-bottom: none; }
 .menu-item:active { background: #f5f5f5; }
-.menu-icon { font-size: 19px; margin-right: 12px; filter: grayscale(0.6); opacity: 0.75; }
-.menu-label { flex: 1; font-size: 15px; color: var(--text-main); }
-.danger-text { color: #ff4d4f; }
-.menu-arrow { color: #c8c8c8; font-size: 20px; }
+.menu-icon {
+  width: 24px;
+  margin-right: 12px;
+  color: var(--text-sub);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.menu-label { flex: 1; font-size: 16px; color: var(--text-main); }
+.danger-text { color: #fa5151; }
+.menu-arrow { color: #c8c8c8; font-size: 18px; }
 
 .version { text-align: center; color: var(--text-faint); font-size: 12px; margin-top: 24px; }
 
