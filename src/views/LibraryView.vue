@@ -1027,11 +1027,11 @@ function formatTime(ts) {
 
   .word-table tr {
     margin-bottom: 0;
-    padding: 10px 12px;
+    padding: 12px 14px;
     border: none;
     border-radius: 0;
     background: #ffffff;
-    border-bottom: 0.5px solid #e5e5e5;
+    border-bottom: 8px solid #f2f2f2;
     display: block;
   }
 
@@ -1051,45 +1051,43 @@ function formatTime(ts) {
     display: none;
   }
 
-  /* 第一行：英文 + 词性 + 操作按钮 */
+  /* 第一行：英文 + 词性在左，操作按钮在右 */
   .word-table td.en {
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 600;
-    display: inline-block;
-    margin-right: 8px;
   }
 
   .word-table td.pos,
   .word-table td:nth-child(4) {
-    display: inline-block;
     font-size: 12px;
     color: var(--text-faint);
+    margin-top: 1px;
   }
 
-  /* 操作按钮放右侧，和英文同一行 */
+  /* 操作按钮：单独一行，右对齐 */
   .word-table td.op {
-    float: right;
-    margin-top: 0;
-    padding-top: 0;
-    border-top: none;
+    float: none;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 0.5px solid #f0f0f0;
   }
 
   .op-actions {
     justify-content: flex-end;
-    gap: 4px;
+    gap: 8px;
   }
 
   .icon-btn {
-    width: 30px;
-    height: 30px;
-    font-size: 14px;
+    width: 34px;
+    height: 34px;
+    font-size: 16px;
   }
 
   /* 第二行：中文 */
   .word-table td.zh {
     font-size: 14px;
     color: var(--text-sub);
-    margin-top: 2px;
+    margin-top: 4px;
   }
 
   /* 第三行：进度 + 时间 */
@@ -1097,7 +1095,7 @@ function formatTime(ts) {
     min-width: 0;
     font-size: 12px;
     color: var(--text-faint);
-    margin-top: 2px;
+    margin-top: 6px;
     display: inline-block;
     margin-right: 12px;
   }
