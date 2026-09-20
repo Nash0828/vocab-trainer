@@ -475,7 +475,7 @@ next()
 
           <div class="quiz-actions">
             <button v-if="!result" class="btn ghost" @click="skip">换一题</button>
-            <button v-if="!result" class="btn ghost" @click="revealAnswer">👁️ 显示答案</button>
+            <button v-if="!result" class="btn ghost" @click="revealAnswer">显示答案</button>
             <button v-if="!result" class="btn primary" :disabled="!answer.trim()" @click="submit">
               提交答案
             </button>

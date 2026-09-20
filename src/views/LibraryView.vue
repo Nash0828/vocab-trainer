@@ -1026,11 +1026,12 @@ function formatTime(ts) {
   }
 
   .word-table tr {
-    margin-bottom: 12px;
-    padding: 12px 14px;
-    border: 1px solid var(--border);
-    border-radius: 12px;
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 0;
     background: #ffffff;
+    border-bottom: 0.5px solid #e5e5e5;
   }
 
   .word-table tbody tr:hover {
@@ -1039,8 +1040,11 @@ function formatTime(ts) {
 
   .word-table td {
     border: none;
-    padding: 5px 0;
+    padding: 3px 0;
     vertical-align: top;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   /* 序号手机上不显示 */
@@ -1048,29 +1052,39 @@ function formatTime(ts) {
     display: none;
   }
 
-  /* 英文单词放大突出 */
+  /* 英文单词突出，和中文一行 */
   .word-table td.en {
-    font-size: 18px;
-    margin-bottom: 2px;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 0;
+  }
+
+  .word-table td.zh {
+    font-size: 14px;
+    color: var(--text-sub);
   }
 
   .word-table td.progress-cell {
     min-width: 0;
+    font-size: 12px;
+    color: var(--text-faint);
   }
 
   .word-table .time-cell {
     font-size: 12px;
+    color: var(--text-faint);
   }
 
-  /* 操作列：加顶部分隔线，按钮全宽 */
+  /* 操作列：紧凑 */
   .word-table td.op {
-    margin-top: 8px;
-    padding-top: 10px;
-    border-top: 1px dashed var(--border-light);
+    margin-top: 4px;
+    padding-top: 6px;
+    border-top: 0.5px solid #f0f0f0;
   }
 
   .op-actions {
-    justify-content: center;
+    justify-content: flex-end;
+    gap: 6px;
   }
 
   /* 分页控件 */
