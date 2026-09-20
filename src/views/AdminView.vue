@@ -9,6 +9,8 @@ const selectedLogs = ref(null)
 const resetPwdUser = ref(null)
 const resetPwdResult = ref('')
 const confirmDelete = ref(null)
+const confirmResetPwd = ref(null)
+const confirmToggle = ref(null)
 
 async function loadUsers() {
   loading.value = true
@@ -101,8 +103,8 @@ onMounted(loadUsers)
           </td>
           <td class="actions">
             <button class="btn ghost mini" @click="showLogs(u)">日志</button>
-            <button v-if="!u.isAdmin" class="btn ghost mini" @click="doResetPwd(u)">重置密码</button>
-            <button v-if="!u.isAdmin" class="btn ghost mini" @click="toggleDisable(u)">
+            <button v-if="!u.isAdmin" class="btn ghost mini" @click="confirmResetPwd = u">重置密码</button>
+            <button v-if="!u.isAdmin" class="btn ghost mini" @click="confirmToggle = u">
               {{ u.isDisabled ? '启用' : '禁用' }}
             </button>
             <button v-if="!u.isAdmin" class="btn danger-ghost mini" @click="confirmDelete = u">删除</button>
@@ -165,6 +167,44 @@ onMounted(loadUsers)
           <div class="row">
             <button class="btn danger" @click="doDelete(confirmDelete)">确认删除</button>
             <button class="btn ghost" @click="confirmDelete = null">取消</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 重置密码确认 -->
+    <div v-if="confirmResetPwd" class="mask" @click.self="confirmResetPwd = null">
+      <div class="modal">
+        <div class="modal-head">
+          <h3>重置密码</h3>
+          <button class="modal-close" @click="confirmResetPwd = null">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="confirm-text">确定要重置 <strong>{{ confirmResetPwd.username }}</strong> 的密码吗？</p>
+          <p class="muted small">重置后将生成新的随机密码，请提醒用户及时修改。</p>
+          <div class="row">
+            <button class="btn primary" @click="doResetPwd(confirmResetPwd); confirmResetPwd = null">确认重置</button>
+            <button class="btn ghost" @click="confirmResetPwd = null">取消</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 禁用/启用确认 -->
+    <div v-if="confirmToggle" class="mask" @click.self="confirmToggle = null">
+      <div class="modal">
+        <div class="modal-head">
+          <h3>{{ confirmToggle.isDisabled ? '启用用户' : '禁用用户' }}</h3>
+          <button class="modal-close" @click="confirmToggle = null">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="confirm-text">
+            确定要{{ confirmToggle.isDisabled ? '启用' : '禁用' }}用户 <strong>{{ confirmToggle.username }}</strong> 吗？
+          </p>
+          <p v-if="!confirmToggle.isDisabled" class="muted small">禁用后该用户将无法登录。</p>
+          <div class="row">
+            <button class="btn primary" @click="toggleDisable(confirmToggle); confirmToggle = null">确认</button>
+            <button class="btn ghost" @click="confirmToggle = null">取消</button>
           </div>
         </div>
       </div>
