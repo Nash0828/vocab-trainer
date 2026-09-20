@@ -204,83 +204,80 @@ function cancelMigrate() {
 
 <template>
   <div class="settings">
-    <section class="card">
-      <div class="card-head">
-        <h2>设置</h2>
+    <transition name="fade">
+      <p v-if="tip" class="tip" :class="tip.kind">{{ tip.text }}</p>
+    </transition>
+
+    <!-- 数据管理 -->
+    <div class="cell-group">
+      <div class="cell" @click="exportDataFile">
+        <span class="cell-label">导出数据备份</span>
+        <span class="cell-right">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span class="chevron">›</span>
+        </span>
       </div>
 
-      <transition name="fade">
-        <p v-if="tip" class="tip" :class="tip.kind">{{ tip.text }}</p>
-      </transition>
-
-      <!-- 一键重置 -->
-      <div class="setting-block danger-block">
-        <h3>一键重置所有背诵次数</h3>
-        <p class="muted">将词库中所有单词的背诵次数归 0，全部恢复为"未背熟"状态。</p>
-
-        <template v-if="confirmResetAll">
-          <div class="confirm-box">
-            <span class="confirm-text">确定要重置全部 {{ totalCount }} 个单词的背诵次数吗？此操作不可撤销。</span>
-            <div class="confirm-actions">
-              <button class="btn danger mini" @click="doResetAll">是，全部重置</button>
-              <button class="btn ghost mini" @click="cancelResetAll">取消</button>
-            </div>
-          </div>
-        </template>
-        <button v-else class="btn danger" @click="askResetAll">一键重置所有背诵次数</button>
-      </div>
-
-      <!-- 数据导入 / 导出 -->
-      <div class="setting-block">
-        <h3>数据导入 / 导出</h3>
-        <p class="muted">
-          导出可将词库（含每个单词的背诵次数）与背熟阈值保存为 JSON 备份文件，方便备份或在其他浏览器中迁移；导入可从备份文件恢复数据。
-        </p>
-
-        <!-- 导出 -->
-        <div class="io-row">
-          <span class="io-label">导出备份</span>
-          <button class="btn primary" @click="exportDataFile">导出数据（JSON）</button>
-        </div>
-
-        <!-- 导入 -->
-        <div class="io-row">
-          <span class="io-label">导入方式</span>
-          <div class="io-mode">
-            <label class="io-radio" :class="{ active: importMode === 'merge' }">
-              <input v-model="importMode" type="radio" value="merge" />
-              合并（跳过重复单词）
-            </label>
-            <label class="io-radio" :class="{ active: importMode === 'overwrite' }">
-              <input v-model="importMode" type="radio" value="overwrite" />
-              覆盖（用文件整体替换词库）
-            </label>
-          </div>
-        </div>
-        <div class="io-row">
-          <span class="io-label">选择文件</span>
-          <button class="btn ghost" @click="pickImportFile(importMode)">导入数据（JSON）</button>
-          <input
-            ref="fileInput"
-            type="file"
-            accept=".json,application/json"
-            class="hidden-file"
-            @change="onFileSelected"
-          />
-        </div>
-
-        <!-- 覆盖导入确认 -->
-        <div v-if="confirmOverwrite" class="confirm-box overwrite-box">
-          <span class="confirm-text">
-            ⚠️ 覆盖导入将<b>清空当前 {{ totalCount }} 个单词</b>，替换为备份文件中的数据，此操作不可撤销。确定继续吗？
-          </span>
-          <div class="confirm-actions">
-            <button class="btn danger mini" @click="doConfirmOverwrite">是，覆盖导入</button>
-            <button class="btn ghost mini" @click="cancelOverwrite">取消</button>
-          </div>
+      <div class="cell cell-col">
+        <div class="cell-subhead">导入方式</div>
+        <div class="io-mode">
+          <label class="io-radio" :class="{ active: importMode === 'merge' }">
+            <input v-model="importMode" type="radio" value="merge" />
+            合并（跳过重复）
+          </label>
+          <label class="io-radio" :class="{ active: importMode === 'overwrite' }">
+            <input v-model="importMode" type="radio" value="overwrite" />
+            覆盖（整体替换）
+          </label>
         </div>
       </div>
-    </section>
+
+      <div class="cell" @click="pickImportFile(importMode)">
+        <span class="cell-label">导入数据备份</span>
+        <span class="cell-right">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span class="chevron">›</span>
+        </span>
+        <input
+          ref="fileInput"
+          type="file"
+          accept=".json,application/json"
+          class="hidden-file"
+          @change="onFileSelected"
+        />
+      </div>
+    </div>
+
+    <!-- 危险操作 -->
+    <div class="cell-group danger-group">
+      <div class="cell cell-danger" @click="askResetAll">
+        <span class="cell-label">重置所有背诵次数</span>
+        <span class="chevron">›</span>
+      </div>
+    </div>
+
+    <!-- 确认弹层 -->
+    <div v-if="confirmResetAll" class="mask" @click.self="cancelResetAll">
+      <div class="dialog">
+        <p class="dialog-title">重置全部背诵次数？</p>
+        <p class="dialog-msg">将词库中全部 {{ totalCount }} 个单词的背诵次数归 0，此操作不可撤销。</p>
+        <div class="dialog-btns">
+          <button class="dialog-btn" @click="cancelResetAll">取消</button>
+          <button class="dialog-btn danger" @click="doResetAll">确定重置</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="confirmOverwrite" class="mask" @click.self="cancelOverwrite">
+      <div class="dialog">
+        <p class="dialog-title">覆盖导入？</p>
+        <p class="dialog-msg">将清空当前 {{ totalCount }} 个单词并替换为备份数据，此操作不可撤销。</p>
+        <div class="dialog-btns">
+          <button class="dialog-btn" @click="cancelOverwrite">取消</button>
+          <button class="dialog-btn danger" @click="doConfirmOverwrite">确定覆盖</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -289,270 +286,153 @@ function cancelMigrate() {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  padding: 8px 0;
 }
 
 .tip {
-  margin-top: 14px;
+  margin: 0 16px;
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 14px;
 }
 
-.tip.ok {
-  background: #e8f7ee;
-  border: 1px solid #a8dcc0;
-  color: #1f7a4d;
-}
+.tip.ok { background: #e8f7ee; color: #1f7a4d; }
+.tip.warn { background: #fff7e6; color: #ad6800; }
+.tip.err { background: #fdecea; color: #b3402f; font-weight: 600; }
 
-.tip.warn {
-  background: #fff7e6;
-  border: 1px solid #ffd591;
-  color: #ad6800;
-}
-
-.tip.err {
-  background: #fdecea;
-  border: 1px solid #f2b8b1;
-  color: #b3402f;
-  font-weight: 600;
-}
-
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-top: 20px;
-}
-
-.stat-item {
-  background: var(--bg-soft);
+/* 微信 cell 分组 */
+.cell-group {
+  background: #fff;
+  margin: 0 16px;
   border-radius: 12px;
-  padding: 16px 10px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  overflow: hidden;
 }
 
-.stat-num {
-  font-size: 26px;
-  font-weight: 800;
-  color: var(--text-main);
-}
-
-.stat-num.mastered {
-  color: var(--success);
-}
-
-.stat-label {
-  font-size: 13px;
-  color: var(--text-sub);
-}
-
-.setting-block {
-  margin-top: 26px;
-  padding-top: 22px;
-  border-top: 1px dashed var(--border);
-}
-
-.setting-block h3 {
-  font-size: 16px;
-  margin-bottom: 6px;
-  color: var(--text-main);
-}
-
-.setting-block .muted {
-  margin-bottom: 14px;
-}
-
-.threshold-form {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.threshold-input {
-  width: 130px;
-  padding: 10px 14px;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  font-size: 16px;
-  outline: none;
-}
-
-.threshold-input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.15);
-}
-
-.danger-block {
-  border-top-color: #f2b8b1;
-}
-
-.danger-block h3 {
-  color: var(--danger);
-}
-
-.confirm-box {
+.cell {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  background: var(--danger-soft);
-  border: 1px solid #f2b8b1;
-  border-radius: 10px;
-  padding: 12px 14px;
+  padding: 14px 16px;
+  font-size: 15px;
+  color: var(--text-main);
+  cursor: pointer;
+  position: relative;
 }
 
-.confirm-text {
-  font-size: 14px;
-  color: var(--danger);
-  font-weight: 600;
+.cell:active { background: #f2f2f2; }
+
+.cell + .cell::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  top: 0;
+  height: 0.5px;
+  background: #e5e5e5;
 }
 
-.confirm-actions {
-  display: flex;
-  gap: 8px;
-}
+.cell-label { flex: 1; }
+.cell-right { display: flex; align-items: center; gap: 6px; color: #c8c8c8; }
+.chevron { font-size: 20px; color: #c8c8c8; line-height: 1; }
 
-/* 数据导入 / 导出 */
-.io-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-top: 14px;
+.cell-col {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: default;
 }
+.cell-col:active { background: #fff; }
+.cell-subhead { font-size: 13px; color: var(--text-sub); }
 
-.io-label {
-  width: 86px;
-  font-size: 14px;
-  color: var(--text-sub);
-  font-weight: 600;
-  flex-shrink: 0;
-}
+.danger-group { margin-top: 8px; }
+.cell-danger { color: #fa5151; text-align: center; justify-content: center; }
+.cell-danger .chevron { display: none; }
 
-.io-mode {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
+.io-mode { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .io-radio {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  background: #ffffff;
+  padding: 7px 14px;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  background: #fff;
   color: var(--text-sub);
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.2s;
   user-select: none;
-}
-
-.io-radio:hover {
-  border-color: var(--primary);
-  color: var(--primary);
 }
 
 .io-radio.active {
   border-color: var(--primary);
-  background: var(--primary-light);
+  background: #e8f7ee;
   color: var(--primary);
-  font-weight: 600;
+  font-weight: 500;
 }
 
-.io-radio input {
-  accent-color: var(--primary);
-}
+.io-radio input { display: none; }
 
-.hidden-file {
-  display: none;
-}
+.hidden-file { display: none; }
 
-.overwrite-box {
-  margin-top: 14px;
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.25s;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-@media (max-width: 768px) {
-  .stats-row {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-  }
-
-  .stat-item {
-    padding: 12px 6px;
-  }
-
-  .stat-num {
-    font-size: 22px;
-  }
-
-  .stat-label {
-    font-size: 12px;
-  }
-
-  .threshold-form {
-    flex-wrap: wrap;
-  }
-
-  .io-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .io-label {
-    width: auto;
-  }
-}
-
-/* 用户区 */
-.user-block {
+/* 微信风格确认弹窗 */
+.mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 300;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 14px;
-  background: var(--bg-soft);
-  border-radius: 10px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
+  justify-content: center;
+  padding: 24px;
 }
-.user-label { font-weight: 600; color: var(--text-main); }
-.admin-tag { background: #ff4d4f; color: #fff; font-size: 11px; padding: 1px 8px; border-radius: 999px; }
 
-/* 登录弹窗 */
-.auth-mask {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 300;
-  display: flex; align-items: center; justify-content: center; padding: 16px;
+.dialog {
+  background: #fff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 300px;
+  overflow: hidden;
 }
-.auth-modal {
-  background: #fff; border-radius: 16px; padding: 24px; width: 100%; max-width: 340px;
-  display: flex; flex-direction: column; gap: 12px;
+
+.dialog-title {
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  padding: 20px 16px 8px;
+  margin: 0;
 }
-.auth-modal h3 { margin: 0; text-align: center; }
-.auth-tabs { display: flex; gap: 8px; }
-.auth-tabs button {
-  flex: 1; padding: 8px; border: 1px solid var(--border-light); background: #fff;
-  border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-sub);
+
+.dialog-msg {
+  font-size: 14px;
+  color: var(--text-sub);
+  text-align: center;
+  padding: 0 16px 18px;
+  margin: 0;
 }
-.auth-tabs button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-.auth-modal input {
-  padding: 10px 12px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 15px;
+
+.dialog-btns {
+  display: flex;
+  border-top: 0.5px solid #e5e5e5;
 }
-.auth-error { color: var(--danger); font-size: 13px; }
+
+.dialog-btn {
+  flex: 1;
+  padding: 12px;
+  background: #fff;
+  border: none;
+  font-size: 16px;
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.dialog-btn + .dialog-btn {
+  border-left: 0.5px solid #e5e5e5;
+}
+
+.dialog-btn.danger { color: #fa5151; font-weight: 500; }
+
+.fade-enter-active,
+.fade-leave-active { transition: opacity 0.25s; }
+.fade-enter-from,
+.fade-leave-to { opacity: 0; }
 </style>
