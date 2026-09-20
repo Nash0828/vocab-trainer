@@ -1026,12 +1026,13 @@ function formatTime(ts) {
   }
 
   .word-table tr {
-    margin-bottom: 8px;
+    margin-bottom: 0;
     padding: 10px 12px;
     border: none;
     border-radius: 0;
     background: #ffffff;
     border-bottom: 0.5px solid #e5e5e5;
+    display: block;
   }
 
   .word-table tbody tr:hover {
@@ -1040,11 +1041,9 @@ function formatTime(ts) {
 
   .word-table td {
     border: none;
-    padding: 3px 0;
+    padding: 0;
     vertical-align: top;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    display: block;
   }
 
   /* 序号手机上不显示 */
@@ -1052,39 +1051,69 @@ function formatTime(ts) {
     display: none;
   }
 
-  /* 英文单词突出，和中文一行 */
+  /* 第一行：英文 + 词性 + 操作按钮 */
   .word-table td.en {
     font-size: 16px;
     font-weight: 600;
-    margin-bottom: 0;
+    display: inline-block;
+    margin-right: 8px;
   }
 
+  .word-table td.pos,
+  .word-table td:nth-child(4) {
+    display: inline-block;
+    font-size: 12px;
+    color: var(--text-faint);
+  }
+
+  /* 操作按钮放右侧，和英文同一行 */
+  .word-table td.op {
+    float: right;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .op-actions {
+    justify-content: flex-end;
+    gap: 4px;
+  }
+
+  .icon-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+  }
+
+  /* 第二行：中文 */
   .word-table td.zh {
     font-size: 14px;
     color: var(--text-sub);
+    margin-top: 2px;
   }
 
+  /* 第三行：进度 + 时间 */
   .word-table td.progress-cell {
     min-width: 0;
     font-size: 12px;
     color: var(--text-faint);
+    margin-top: 2px;
+    display: inline-block;
+    margin-right: 12px;
   }
 
   .word-table .time-cell {
     font-size: 12px;
     color: var(--text-faint);
+    display: inline-block;
   }
 
-  /* 操作列：紧凑 */
-  .word-table td.op {
-    margin-top: 4px;
-    padding-top: 6px;
-    border-top: 0.5px solid #f0f0f0;
-  }
-
-  .op-actions {
-    justify-content: flex-end;
-    gap: 6px;
+  .progress-bar {
+    width: 60px;
+    height: 3px;
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 4px;
   }
 
   /* 分页控件 */
