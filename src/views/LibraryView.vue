@@ -545,23 +545,17 @@ function formatTime(ts) {
 /* 微信风格单词列表 */
 .word-list {
   margin-top: 12px;
-  background: #fff;
-  border-radius: 12px;
-  overflow: hidden;
 }
 
 .word-item {
   padding: 12px 16px;
   position: relative;
+  background: #fff;
+  margin-bottom: 8px;
 }
 
-.word-item + .word-item::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 0.5px;
-  background: #e5e5e5;
+.word-item:last-child {
+  margin-bottom: 0;
 }
 
 .word-main {
