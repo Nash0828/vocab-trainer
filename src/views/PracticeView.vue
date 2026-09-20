@@ -314,7 +314,7 @@ next()
       <div class="empty-icon">📭</div>
       <h2>词库还是空的</h2>
       <p class="muted">先去「单词录入」添加一些单词，再来这里练习吧！</p>
-      <button class="btn primary" @click="router.push('/')">去录入单词 →</button>
+      <button class="btn primary" @click="router.push('/input')">去录入单词 →</button>
     </div>
 
     <!-- 错题本模式：错题本为空 -->
