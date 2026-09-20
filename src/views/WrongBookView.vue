@@ -10,7 +10,6 @@ const { words } = useWords()
 const { removeWrong, clearWrong, getValidWrongWords } = useWrongBook()
 const { history } = useHistory()
 
-// 找出每个单词最近一次答错的用户答案
 function lastWrongAnswer(english) {
   if (!english) return ''
   const key = english.trim().toLowerCase()
@@ -27,9 +26,9 @@ function lastWrongAnswer(english) {
   return latest
 }
 
-const confirmRemoveId = ref(null) // 待移除的错题记录
+const confirmRemoveId = ref(null)
 const confirmClearAll = ref(false)
-const tip = ref(null) // { text, kind }
+const tip = ref(null)
 let tipTimer = null
 
 const wrongList = computed(() => getValidWrongWords(words.value))
@@ -40,32 +39,19 @@ function showTip(text, kind = 'ok') {
   tipTimer = setTimeout(() => (tip.value = ''), 2600)
 }
 
-function askRemove(id) {
-  confirmRemoveId.value = id
-}
-
-function cancelRemove() {
-  confirmRemoveId.value = null
-}
-
+function askRemove(id) { confirmRemoveId.value = id }
+function cancelRemove() { confirmRemoveId.value = null }
 function doRemove(id) {
   removeWrong(id)
   confirmRemoveId.value = null
-  showTip('🗑️ 已从错题本移除')
+  showTip('已移除')
 }
-
-function askClearAll() {
-  confirmClearAll.value = true
-}
-
-function cancelClearAll() {
-  confirmClearAll.value = false
-}
-
+function askClearAll() { confirmClearAll.value = true }
+function cancelClearAll() { confirmClearAll.value = false }
 function doClearAll() {
   clearWrong()
   confirmClearAll.value = false
-  showTip('🗑️ 已清空错题本')
+  showTip('已清空错题本')
 }
 
 function formatTime(ts) {
@@ -78,68 +64,58 @@ function formatTime(ts) {
 <template>
   <section class="card">
     <div class="card-head">
-      <h2>📕 错题本</h2>
-      <p class="muted">答错的单词会自动记入这里，答对后自动移出；可单独移除或一键清空</p>
+      <h2>错题本</h2>
     </div>
 
     <transition name="fade">
       <p v-if="tip" class="tip" :class="tip.kind">{{ tip.text }}</p>
     </transition>
 
-    <!-- 空状态 -->
     <div v-if="!wrongList.length" class="empty">
       <div class="empty-icon">📕</div>
       <h3>错题本是空的</h3>
-      <p class="muted">去「背单词」练习，答错的单词会自动记入错题本</p>
+      <p class="muted">去背单词练习，答错的单词会自动记入这里</p>
       <div class="empty-actions">
         <button class="btn primary" @click="router.push('/practice')">去背单词</button>
-        <button class="btn ghost" @click="router.push('/')">去录入单词</button>
+        <button class="btn ghost" @click="router.push('/input')">去录入单词</button>
       </div>
     </div>
 
     <template v-else>
-      <!-- 汇总与操作 -->
       <div class="toolbar">
         <span class="count-badge">共 {{ wrongList.length }} 个错题</span>
         <div class="tool-actions">
           <template v-if="confirmClearAll">
-            <span class="confirm-hint">确定清空全部错题吗？不可恢复。</span>
-            <button class="btn danger mini" @click="doClearAll">是，全部清空</button>
+            <span class="confirm-hint">确定清空全部？</span>
+            <button class="btn danger mini" @click="doClearAll">是</button>
             <button class="btn ghost mini" @click="cancelClearAll">取消</button>
           </template>
-          <button v-else class="btn danger-ghost mini" @click="askClearAll">清空全部</button>
+          <button v-else class="btn ghost mini" @click="askClearAll">清空全部</button>
         </div>
       </div>
 
-      <!-- 错题列表 -->
       <ul class="wrong-list">
-        <li
-          v-for="w in wrongList"
-          :key="w.id || w.english"
-          class="wrong-item"
-        >
-          <span class="w-en">{{ w.english }}</span>
-          <span class="w-pos">{{ w.pos || '—' }}</span>
-          <span class="w-zh">{{ w.chinese }}</span>
-          <span v-if="lastWrongAnswer(w.english)" class="w-wrong-answer">
-            你答：{{ lastWrongAnswer(w.english) }}
-          </span>
-          <span class="w-time small muted">{{ formatTime(w.addedAt) }}</span>
-
-          <div class="w-actions">
-            <template v-if="confirmRemoveId === (w.id || w.english)">
-              <span class="confirm-hint">移除？</span>
-              <button class="btn danger mini" @click="doRemove(w.id || w.english)">是，移除</button>
-              <button class="btn ghost mini" @click="cancelRemove">取消</button>
-            </template>
-            <button
-              v-else
-              class="btn danger-ghost mini"
-              title="从错题本移除"
-              @click="askRemove(w.id || w.english)"
-            >
-              🗑️ 移除
-            </button>
+        <li v-for="w in wrongList" :key="w.id || w.english" class="wrong-item">
+          <div class="w-main">
+            <div class="w-line1">
+              <span class="w-en">{{ w.english }}</span>
+              <span class="w-pos">{{ w.pos || '' }}</span>
+              <button
+                v-if="confirmRemoveId !== (w.id || w.english)"
+                class="w-remove"
+                title="移除"
+                @click="askRemove(w.id || w.english)"
+              >✕</button>
+            </div>
+            <div class="w-zh">{{ w.chinese }}</div>
+            <div v-if="lastWrongAnswer(w.english)" class="w-wrong">
+              你答：{{ lastWrongAnswer(w.english) }}
+            </div>
+            <div class="w-time">{{ formatTime(w.addedAt) }}</div>
+          </div>
+          <div v-if="confirmRemoveId === (w.id || w.english)" class="w-confirm">
+            <button class="btn danger mini" @click="doRemove(w.id || w.english)">移除</button>
+            <button class="btn ghost mini" @click="cancelRemove">取消</button>
           </div>
         </li>
       </ul>
@@ -149,159 +125,111 @@ function formatTime(ts) {
 
 <style scoped>
 .tip {
-  margin-top: 14px;
+  margin: 0 14px 10px;
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 14px;
 }
-
-.tip.ok {
-  background: #e8f7ee;
-  border: 1px solid #a8dcc0;
-  color: #1f7a4d;
-}
-
-.tip.warn {
-  background: #fff7e6;
-  border: 1px solid #ffd591;
-  color: #ad6800;
-}
-
-.tip.err {
-  background: #fdecea;
-  border: 1px solid #f2b8b1;
-  color: #b3402f;
-  font-weight: 600;
-}
+.tip.ok { background: #e8f8ef; color: #07c160; }
+.tip.warn { background: #fff7e6; color: #fa9d3b; }
+.tip.err { background: #fdecec; color: #fa5151; }
 
 .toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-top: 20px;
+  padding: 10px 14px;
 }
 
 .count-badge {
-  background: var(--primary-light);
-  color: var(--primary);
-  font-weight: 700;
+  color: var(--text-sub);
   font-size: 14px;
-  padding: 6px 14px;
-  border-radius: 999px;
 }
 
-.tool-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.confirm-hint {
-  font-size: 13px;
-  color: var(--danger);
-  font-weight: 600;
-}
+.tool-actions { display: flex; align-items: center; gap: 8px; }
+.confirm-hint { font-size: 13px; color: var(--danger); }
 
 .wrong-list {
   list-style: none;
-  margin: 14px 0 0;
+  margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
 .wrong-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  background: #fff;
+  border-bottom: 0.5px solid #e5e5e5;
   padding: 12px 14px;
-  border-radius: 12px;
-  background: var(--bg-soft);
-  border: 1px solid var(--border-light);
-  flex-wrap: wrap;
 }
 
-.wrong-item:hover {
-  border-color: #f2b8b1;
-  background: #fdf8f7;
-}
-
-.w-en {
-  font-weight: 700;
-  color: var(--danger);
-  font-size: 16px;
-  min-width: 110px;
-}
-
-.w-pos {
-  color: var(--text-sub);
-  font-size: 13px;
-  min-width: 42px;
-}
-
-.w-zh {
-  flex: 1;
-  color: var(--text-main);
-  min-width: 80px;
-}
-
-.w-wrong-answer {
-  color: var(--danger);
-  font-size: 13px;
-  background: #fdecea;
-  padding: 2px 8px;
-  border-radius: 6px;
-}
-
-.w-time {
-  color: var(--text-faint);
-}
-
-.w-actions {
+.w-line1 {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
 }
 
-.empty-actions {
+.w-en {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.w-pos {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.w-remove {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: #c8c8c8;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.w-remove:active { background: #f5f5f5; color: var(--danger); }
+
+.w-zh {
+  font-size: 14px;
+  color: var(--text-sub);
+  margin-top: 3px;
+}
+
+.w-wrong {
+  font-size: 13px;
+  color: var(--danger);
+  margin-top: 3px;
+}
+
+.w-time {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-top: 4px;
+}
+
+.w-confirm {
   display: flex;
-  justify-content: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
 }
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.25s;
+.empty {
+  text-align: center;
+  padding: 60px 20px;
 }
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
+.empty-icon { font-size: 56px; margin-bottom: 16px; }
+.empty h3 { font-size: 18px; margin-bottom: 8px; }
+.empty .muted { margin-bottom: 24px; }
+.empty-actions { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
 
-@media (max-width: 768px) {
-  .wrong-item {
-    gap: 8px;
-    padding: 10px 12px;
-  }
+.fade-enter-active, .fade-leave-active { transition: opacity 0.25s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 
-  .w-en {
-    min-width: auto;
-    font-size: 15px;
-  }
-
-  .w-pos {
-    min-width: auto;
-  }
-
-  .w-time {
-    width: 100%;
-    font-size: 12px;
-  }
+@media (min-width: 769px) {
+  .card { padding: 0; }
+  .card-head { padding: 16px; }
+  .wrong-item { border-radius: 0; }
 }
 </style>
