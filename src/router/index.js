@@ -52,6 +52,12 @@ const router = createRouter({
       component: () => import('../views/AdminView.vue'),
       meta: { title: '用户管理' },
     },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: () => import('../views/ProfileView.vue'),
+      meta: { title: '我的' },
+    },
   ],
 })
 
