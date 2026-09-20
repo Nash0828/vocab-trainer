@@ -180,6 +180,41 @@ onMounted(loadUsers)
 .error { color: var(--danger); padding: 20px; }
 
 @media (max-width: 768px) {
-  .user-table { display: block; overflow-x: auto; }
+  .user-table, .user-table thead, .user-table tbody, .user-table tr, .user-table td {
+    display: block;
+  }
+  .user-table thead { display: none; }
+  .user-table tr {
+    background: #fff;
+    border-bottom: 8px solid #f2f2f2;
+    padding: 12px 14px;
+  }
+  .user-table td {
+    border: none;
+    padding: 2px 0;
+    font-size: 14px;
+  }
+  .user-table td:first-child {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .user-table td:nth-child(2)::before { content: '单词数：'; color: var(--text-faint); }
+  .user-table td:nth-child(3)::before { content: '创建时间：'; color: var(--text-faint); }
+  .user-table td:nth-child(4)::before { content: '最近登录：'; color: var(--text-faint); }
+  .user-table td:nth-child(5)::before { content: 'IP：'; color: var(--text-faint); }
+  .user-table td:nth-child(6)::before { content: '状态：'; color: var(--text-faint); }
+  .user-table td.actions {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 0.5px solid #f0f0f0;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .modal { max-width: 100%; border-radius: 12px; }
+  .log-time { min-width: auto; width: 100%; }
 }
 </style>
