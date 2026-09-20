@@ -330,14 +330,7 @@ function formatTime(ts) {
 </script>
 
 <template>
-  <section class="card">
-    <div class="card-head">
-      <h2>词库管理</h2>
-      <p class="muted">
-        查看、修改或删除已录入的单词，共 <strong>{{ totalCount }}</strong> 个，其中
-        <strong class="mastered-text">已背熟 {{ masteredCount }}</strong> 个（阈值 {{ threshold }} 次）
-      </p>
-    </div>
+  <div class="library-page">
 
     <transition name="fade">
       <p v-if="tip" class="tip" :class="tip.kind">{{ tip.text }}</p>
@@ -516,7 +509,7 @@ function formatTime(ts) {
         </div>
       </div>
     </div>
-  </section>
+  </div>
 </template>
 
 <style scoped>
