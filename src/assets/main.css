@@ -11,19 +11,19 @@ html, body {
   overflow-x: hidden;
 }
 
-/* ========== 通用卡片 ========== */
+/* ========== 通用卡片（微信风格） ========== */
 .card {
   background: #ffffff;
   border-radius: var(--radius);
-  box-shadow: var(--shadow-card);
-  padding: 26px 28px;
+  padding: 16px;
+  margin-bottom: 10px;
 }
 
 .card-head h2 {
-  font-size: 21px;
-  font-weight: 700;
+  font-size: 17px;
+  font-weight: 600;
   color: var(--text-main);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .muted {
@@ -38,42 +38,43 @@ html, body {
 /* ========== 空状态 ========== */
 .empty {
   text-align: center;
-  padding: 48px 20px;
+  padding: 60px 20px;
 }
 
 .empty-icon {
-  font-size: 56px;
-  margin-bottom: 14px;
+  font-size: 60px;
+  margin-bottom: 16px;
 }
 
 .empty h2,
 .empty h3 {
-  font-size: 20px;
+  font-size: 18px;
   margin-bottom: 8px;
+  font-weight: 600;
 }
 
 .empty .muted {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
-/* ========== 按钮 ========== */
+/* ========== 按钮（微信风格） ========== */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   border: none;
-  border-radius: 10px;
-  padding: 11px 22px;
+  border-radius: 4px;
+  padding: 10px 20px;
   font-size: 15px;
-  font-weight: 600;
-  transition: all 0.18s ease;
+  font-weight: 400;
+  transition: opacity 0.15s;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
 .btn:active {
-  transform: translateY(1px);
+  opacity: 0.8;
 }
 
 .btn.primary {
@@ -86,19 +87,18 @@ html, body {
 }
 
 .btn.primary:disabled {
-  background: #b9cfe8;
+  background: #95e0b8;
   cursor: not-allowed;
 }
 
 .btn.ghost {
   background: #ffffff;
-  color: var(--text-sub);
-  border: 1.5px solid var(--border);
+  color: var(--text-main);
+  border: 1px solid #d8d8d8;
 }
 
-.btn.ghost:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+.btn.ghost:active {
+  background: #f5f5f5;
 }
 
 .btn.danger {
@@ -106,44 +106,41 @@ html, body {
   color: #ffffff;
 }
 
-.btn.danger:hover {
-  background: #c04844;
+.btn.danger:active {
+  opacity: 0.8;
 }
 
 .btn.danger-ghost {
-  background: var(--danger-soft);
+  background: #ffffff;
   color: var(--danger);
-  border: 1.5px solid #f2b8b1;
-}
-
-.btn.danger-ghost:hover {
-  background: #fbdedb;
+  border: 1px solid #f5c6c6;
 }
 
 .btn.mini {
-  padding: 6px 12px;
+  padding: 5px 10px;
   font-size: 13px;
-  border-radius: 8px;
+  border-radius: 4px;
 }
 
 /* ========== 移动端适配 ========== */
 @media (max-width: 768px) {
   .card {
-    padding: 18px 14px;
-    border-radius: 12px;
+    padding: 14px 15px;
+    border-radius: 0;
+    margin-bottom: 10px;
   }
 
   .card-head h2 {
-    font-size: 19px;
+    font-size: 17px;
   }
 
   .btn {
-    padding: 12px 18px;
+    padding: 11px 18px;
     font-size: 15px;
   }
 
   .btn.mini {
-    padding: 8px 12px;
+    padding: 6px 10px;
     font-size: 13px;
   }
 }

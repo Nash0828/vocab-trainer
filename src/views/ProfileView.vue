@@ -135,9 +135,9 @@ async function doLogout() {
 
 /* 头部卡片 */
 .profile-header {
-  background: linear-gradient(135deg, #4a90d9, #3a76b8);
-  border-radius: 16px; padding: 24px 20px; display: flex; align-items: center; gap: 16px;
-  color: #fff; cursor: pointer; margin-bottom: 16px;
+  background: linear-gradient(135deg, #07c160, #06ad56);
+  border-radius: 8px; padding: 24px 20px; display: flex; align-items: center; gap: 16px;
+  color: #fff; cursor: pointer; margin-bottom: 10px;
 }
 .avatar {
   width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,0.25);
@@ -150,11 +150,11 @@ async function doLogout() {
 
 /* 菜单组 */
 .menu-group {
-  background: #fff; border-radius: 12px; margin-bottom: 12px; overflow: hidden;
+  background: #fff; border-radius: 0; margin-bottom: 10px; overflow: hidden;
 }
 .menu-item {
-  display: flex; align-items: center; padding: 14px 16px; cursor: pointer;
-  border-bottom: 1px solid #f0f0f0; transition: background 0.15s;
+  display: flex; align-items: center; padding: 13px 15px; cursor: pointer;
+  border-bottom: 0.5px solid #e5e5e5; transition: background 0.15s;
 }
 .menu-item:last-child { border-bottom: none; }
 .menu-item:active { background: #f5f5f5; }
@@ -166,13 +166,13 @@ async function doLogout() {
 .version { text-align: center; color: var(--text-faint); font-size: 12px; margin-top: 24px; }
 
 /* 弹窗 */
-.mask { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 16px; }
-.modal { background: #fff; border-radius: 16px; padding: 24px; width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 12px; }
-.modal h3 { margin: 0; text-align: center; }
+.mask { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.modal { background: #fff; border-radius: 12px; padding: 24px; width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; }
+.modal h3 { margin: 0; text-align: center; font-size: 17px; font-weight: 600; }
 .tabs { display: flex; gap: 8px; }
-.tabs button { flex: 1; padding: 8px; border: 1px solid var(--border-light); background: #fff; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-sub); }
+.tabs button { flex: 1; padding: 8px; border: 1px solid #e5e5e5; background: #fff; border-radius: 4px; cursor: pointer; font-weight: 500; color: #888; }
 .tabs button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-.modal input { padding: 10px 12px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 15px; }
+.modal input { padding: 10px 12px; border: 1px solid #e5e5e5; border-radius: 4px; font-size: 15px; }
 .err { color: var(--danger); font-size: 13px; }
 
 @media (min-width: 769px) {

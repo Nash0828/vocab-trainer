@@ -1,29 +1,29 @@
-/* ========== 基础样式与设计变量 ========== */
+/* ========== 微信风格设计变量 ========== */
 :root {
-  /* 主色：清爽的蓝色 */
-  --primary: #4a90d9;
-  --primary-dark: #3a76b8;
-  --primary-light: #eaf2fb;
+  /* 微信主色 */
+  --primary: #07c160;
+  --primary-dark: #06ad56;
+  --primary-light: #e8f8ef;
 
   /* 语义色 */
-  --success: #2f9e6e;
-  --danger: #d9534f;
-  --danger-soft: #fdecea;
-  --warning: #f0a02e;
+  --success: #07c160;
+  --danger: #fa5151;
+  --danger-soft: #fdecec;
+  --warning: #fa9d3b;
 
   /* 文字 */
-  --text-main: #2b3a4a;
-  --text-sub: #5b6b7c;
-  --text-faint: #93a1b1;
+  --text-main: #111111;
+  --text-sub: #888888;
+  --text-faint: #b2b2b2;
 
   /* 背景与边框 */
-  --bg-page: #f4f7fb;
-  --bg-soft: #f0f4f9;
-  --border: #d9e2ec;
-  --border-light: #e8eef5;
+  --bg-page: #ededed;
+  --bg-soft: #f7f7f7;
+  --border: #e5e5e5;
+  --border-light: #f0f0f0;
 
-  --radius: 14px;
-  --shadow-card: 0 2px 12px rgba(43, 58, 74, 0.06);
+  --radius: 8px;
+  --shadow-card: none;
 }
 
 * {
@@ -38,11 +38,11 @@ body {
 }
 
 body {
-  font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   background: var(--bg-page);
   color: var(--text-main);
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
@@ -54,6 +54,8 @@ body {
 button {
   font-family: inherit;
   cursor: pointer;
+  border: none;
+  outline: none;
 }
 
 input,
@@ -61,4 +63,5 @@ select,
 textarea {
   font-family: inherit;
   font-size: 16px; /* 防止 iOS 聚焦时自动缩放 */
+  outline: none;
 }
