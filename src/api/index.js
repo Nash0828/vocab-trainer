@@ -25,6 +25,14 @@ export const api = {
   register: (username, password) => req('/api/register', { method: 'POST', body: { username, password } }),
   login: (username, password) => req('/api/login', { method: 'POST', body: { username, password } }),
   logout: () => req('/api/logout', { method: 'POST' }),
+  changePassword: (oldPassword, newPassword) => req('/api/me/password', { method: 'PUT', body: { oldPassword, newPassword } }),
+
+  // 管理员
+  adminUsers: () => req('/api/admin/users'),
+  adminUserLogs: (id) => req(`/api/admin/users/${id}/logs`),
+  adminResetPassword: (id) => req(`/api/admin/users/${id}/password`, { method: 'PUT' }),
+  adminToggleDisable: (id) => req(`/api/admin/users/${id}/disable`, { method: 'PUT' }),
+  adminDeleteUser: (id) => req(`/api/admin/users/${id}`, { method: 'DELETE' }),
 
   // 单词 CRUD
   addWord: (data) => req('/api/words', { method: 'POST', body: data }),

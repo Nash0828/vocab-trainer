@@ -43,6 +43,23 @@ async function doLogout() {
   window.location.reload()
 }
 
+// 修改密码
+const showPwdModal = ref(false)
+const pwdForm = ref({ oldPwd: '', newPwd: '', confirmPwd: '' })
+const pwdError = ref('')
+async function changePwd() {
+  pwdError.value = ''
+  if (!pwdForm.value.oldPwd || !pwdForm.value.newPwd) { pwdError.value = '请填写完整'; return }
+  if (pwdForm.value.newPwd.length < 6) { pwdError.value = '新密码至少 6 位'; return }
+  if (pwdForm.value.newPwd !== pwdForm.value.confirmPwd) { pwdError.value = '两次新密码不一致'; return }
+  try {
+    await api.changePassword(pwdForm.value.oldPwd, pwdForm.value.newPwd)
+    showPwdModal.value = false
+    pwdForm.value = { oldPwd: '', newPwd: '', confirmPwd: '' }
+    showTip('✅ 密码修改成功', 'ok')
+  } catch (e) { pwdError.value = e.message }
+}
+
 const thresholdInput = ref(String(settings.value.masteryThreshold))
 const confirmResetAll = ref(false)
 const tip = ref(null) // { text, kind: 'ok' | 'warn' | 'err' }
@@ -245,7 +262,8 @@ function cancelMigrate() {
           <span class="user-label">当前账号：</span>
           <strong>{{ user.username }}</strong>
           <span v-if="user.isAdmin" class="admin-tag">管理员</span>
-          <button class="btn ghost mini" @click="doLogout" style="margin-left:auto">退出登录</button>
+          <button class="btn ghost mini" @click="showPwdModal = true">修改密码</button>
+          <button class="btn ghost mini" @click="doLogout">退出登录</button>
         </template>
         <template v-else>
           <span class="user-label">未登录</span>
@@ -400,6 +418,21 @@ function cancelMigrate() {
           <input v-model="authForm.password" type="password" :placeholder="authMode === 'login' ? '密码' : '密码（至少6位）'" @keyup.enter="doAuth" />
           <div v-if="authError" class="auth-error">{{ authError }}</div>
           <button class="btn primary" @click="doAuth">{{ authMode === 'login' ? '登录' : '注册并登录' }}</button>
+        </div>
+      </div>
+
+      <!-- 修改密码弹窗 -->
+      <div v-if="showPwdModal" class="auth-mask" @click.self="showPwdModal = false">
+        <div class="auth-modal">
+          <h3>修改密码</h3>
+          <input v-model="pwdForm.oldPwd" type="password" placeholder="原密码" />
+          <input v-model="pwdForm.newPwd" type="password" placeholder="新密码（至少6位）" />
+          <input v-model="pwdForm.confirmPwd" type="password" placeholder="确认新密码" @keyup.enter="changePwd" />
+          <div v-if="pwdError" class="auth-error">{{ pwdError }}</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn primary" style="flex:1" @click="changePwd">确认修改</button>
+            <button class="btn ghost" @click="showPwdModal = false">取消</button>
+          </div>
         </div>
       </div>
     </section>

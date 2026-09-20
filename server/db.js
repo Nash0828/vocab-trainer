@@ -16,8 +16,23 @@ db.exec(`
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     is_admin INTEGER DEFAULT 0,
+    is_disabled INTEGER DEFAULT 0,
+    last_login_at INTEGER DEFAULT 0,
+    last_login_ip TEXT DEFAULT '',
     created_at INTEGER NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS user_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    username TEXT,
+    action TEXT NOT NULL,
+    ip TEXT DEFAULT '',
+    detail TEXT DEFAULT '',
+    ts INTEGER NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_user_logs_user ON user_logs(user_id);
 
   CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
@@ -50,6 +65,7 @@ db.exec(`
     english TEXT NOT NULL,
     pos TEXT DEFAULT '',
     correct INTEGER NOT NULL,
+    user_answer TEXT DEFAULT '',
     ts INTEGER NOT NULL
   );
 
@@ -77,6 +93,9 @@ tryMigrate("ALTER TABLE records ADD COLUMN user_id INTEGER DEFAULT 0")
 tryMigrate("ALTER TABLE records ADD COLUMN user_answer TEXT DEFAULT ''")
 tryMigrate("ALTER TABLE wrongbook ADD COLUMN user_id INTEGER DEFAULT 0")
 tryMigrate("ALTER TABLE wrongbook ADD COLUMN word_id TEXT DEFAULT ''")
+tryMigrate("ALTER TABLE users ADD COLUMN is_disabled INTEGER DEFAULT 0")
+tryMigrate("ALTER TABLE users ADD COLUMN last_login_at INTEGER DEFAULT 0")
+tryMigrate("ALTER TABLE users ADD COLUMN last_login_ip TEXT DEFAULT ''")
 
 // 旧 settings 表结构迁移：如果还是老的 (key, value) 结构，迁移到 (user_id, key, value)
 try {

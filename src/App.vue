@@ -1,15 +1,16 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
 import { api } from './api/index.js'
 
-const navItems = [
+const allNavItems = [
   { to: '/input', label: '录入', icon: '✍️' },
   { to: '/practice', label: '背单词', icon: '🎯' },
   { to: '/wrongbook', label: '错题本', icon: '📕' },
   { to: '/library', label: '词库', icon: '🗂️' },
   { to: '/history', label: '历史', icon: '📜' },
   { to: '/settings', label: '设置', icon: '⚙️' },
+  { to: '/admin', label: '用户', icon: '👥', adminOnly: true },
 ]
 
 const user = ref({ isLoggedIn: false, username: '', isAdmin: false })
@@ -17,6 +18,8 @@ const showAuthModal = ref(false)
 const authMode = ref('login') // 'login' | 'register'
 const authForm = ref({ username: '', password: '' })
 const authError = ref('')
+
+const navItems = computed(() => allNavItems.filter(i => !i.adminOnly || user.value.isAdmin))
 
 onMounted(async () => {
   try {

@@ -37,6 +37,15 @@ function getThreshold(uid) {
   const t = Number(row?.value)
   return Number.isFinite(t) && t >= 1 ? Math.floor(t) : 5
 }
+function getClientIp(req) {
+  return (req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim()
+}
+function logUser(userId, username, action, ip, detail = '') {
+  try {
+    db.prepare("INSERT INTO user_logs (user_id, username, action, ip, detail, ts) VALUES (?, ?, ?, ?, ?, ?)")
+      .run(userId, username, action, ip || '', detail, Date.now())
+  } catch (e) {}
+}
 
 // 中间件：解析当前用户
 function auth(req, res, next) {
@@ -47,7 +56,7 @@ function auth(req, res, next) {
     const sess = db.prepare("SELECT * FROM sessions WHERE token = ?").get(token)
     if (sess) {
       const u = db.prepare("SELECT * FROM users WHERE id = ?").get(sess.user_id)
-      if (u) { userId = u.id; username = u.username; isAdmin = !!u.is_admin }
+      if (u && !u.is_disabled) { userId = u.id; username = u.username; isAdmin = !!u.is_admin }
     }
   }
 
@@ -91,6 +100,9 @@ app.post('/api/register', (req, res) => {
   db.prepare("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)").run(token, userId, Date.now())
   res.cookie('vt_session', token, { maxAge: 30*24*3600*1000, httpOnly: true, sameSite: 'lax' })
   res.clearCookie('vt_anon')
+  const ip = getClientIp(req)
+  db.prepare("UPDATE users SET last_login_at = ?, last_login_ip = ? WHERE id = ?").run(Date.now(), ip, userId)
+  logUser(userId, u, 'register', ip, '注册并登录')
   res.json({ ok: true, user: { username: u, isAdmin: false } })
 })
 
@@ -99,6 +111,7 @@ app.post('/api/login', (req, res) => {
   const u = (username || '').trim(), p = password || ''
   const user = db.prepare("SELECT * FROM users WHERE username = ?").get(u)
   if (!user || !bcrypt.compareSync(p, user.password_hash)) return res.status(400).json({ error: '用户名或密码错误' })
+  if (user.is_disabled) return res.status(403).json({ error: '该账号已被禁用，请联系管理员' })
   const oldUid = req.userId
   if (typeof oldUid === 'string' && oldUid.startsWith('anon_')) {
     db.prepare("UPDATE words SET user_id = ? WHERE user_id = ?").run(user.id, oldUid)
@@ -110,14 +123,105 @@ app.post('/api/login', (req, res) => {
   db.prepare("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)").run(token, user.id, Date.now())
   res.cookie('vt_session', token, { maxAge: 30*24*3600*1000, httpOnly: true, sameSite: 'lax' })
   res.clearCookie('vt_anon')
+  const ip = getClientIp(req)
+  db.prepare("UPDATE users SET last_login_at = ?, last_login_ip = ? WHERE id = ?").run(Date.now(), ip, user.id)
+  logUser(user.id, user.username, 'login', ip)
   res.json({ ok: true, user: { username: user.username, isAdmin: !!user.is_admin } })
 })
 
 app.post('/api/logout', (req, res) => {
   const token = req.cookies?.vt_session
-  if (token) db.prepare("DELETE FROM sessions WHERE token = ?").run(token)
+  if (token) {
+    const sess = db.prepare("SELECT * FROM sessions WHERE token = ?").get(token)
+    if (sess) {
+      const u = db.prepare("SELECT username FROM users WHERE id = ?").get(sess.user_id)
+      logUser(sess.user_id, u?.username || '', 'logout', getClientIp(req))
+    }
+    db.prepare("DELETE FROM sessions WHERE token = ?").run(token)
+  }
   res.clearCookie('vt_session')
   res.clearCookie('vt_anon')
+  res.json({ ok: true })
+})
+
+// 修改密码
+app.put('/api/me/password', (req, res) => {
+  if (!req.username) return res.status(401).json({ error: '请先登录' })
+  const { oldPassword, newPassword } = req.body || {}
+  const user = db.prepare("SELECT * FROM users WHERE username = ?").get(req.username)
+  if (!user || !bcrypt.compareSync(oldPassword || '', user.password_hash)) {
+    return res.status(400).json({ error: '原密码错误' })
+  }
+  if (!newPassword || newPassword.length < 6) return res.status(400).json({ error: '新密码至少 6 位' })
+  const hash = bcrypt.hashSync(newPassword, 10)
+  db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(hash, user.id)
+  logUser(user.id, user.username, 'change_password', getClientIp(req))
+  res.json({ ok: true })
+})
+
+// 管理员：查看所有用户
+app.get('/api/admin/users', (req, res) => {
+  if (!req.isAdmin) return res.status(403).json({ error: '需要管理员权限' })
+  const users = db.prepare(`
+    SELECT u.id, u.username, u.is_admin, u.is_disabled, u.last_login_at, u.last_login_ip, u.created_at,
+      (SELECT COUNT(*) FROM words WHERE user_id = u.id) as word_count
+    FROM users u ORDER BY u.created_at DESC
+  `).all().map(u => ({
+    id: u.id, username: u.username, isAdmin: !!u.is_admin, isDisabled: !!u.is_disabled,
+    lastLoginAt: u.last_login_at, lastLoginIp: u.last_login_ip || '', createdAt: u.created_at,
+    wordCount: u.word_count,
+  }))
+  res.json({ users })
+})
+
+// 管理员：查看用户登录日志
+app.get('/api/admin/users/:id/logs', (req, res) => {
+  if (!req.isAdmin) return res.status(403).json({ error: '需要管理员权限' })
+  const logs = db.prepare("SELECT * FROM user_logs WHERE user_id = ? ORDER BY ts DESC LIMIT 50").all(req.params.id)
+  res.json({ logs })
+})
+
+// 管理员：重置用户密码
+app.put('/api/admin/users/:id/password', (req, res) => {
+  if (!req.isAdmin) return res.status(403).json({ error: '需要管理员权限' })
+  const id = Number(req.params.id)
+  const user = db.prepare("SELECT * FROM users WHERE id = ?").get(id)
+  if (!user) return res.status(404).json({ error: '用户不存在' })
+  if (user.is_admin) return res.status(400).json({ error: '不能修改管理员密码' })
+  const newPass = Math.random().toString(36).slice(-8)
+  const hash = bcrypt.hashSync(newPass, 10)
+  db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(hash, id)
+  logUser(id, user.username, 'admin_reset_password', getClientIp(req), `管理员 ${req.username} 重置了密码`)
+  res.json({ ok: true, newPassword: newPass })
+})
+
+// 管理员：禁用/启用用户
+app.put('/api/admin/users/:id/disable', (req, res) => {
+  if (!req.isAdmin) return res.status(403).json({ error: '需要管理员权限' })
+  const id = Number(req.params.id)
+  const user = db.prepare("SELECT * FROM users WHERE id = ?").get(id)
+  if (!user) return res.status(404).json({ error: '用户不存在' })
+  if (user.is_admin) return res.status(400).json({ error: '不能禁用管理员' })
+  const newVal = user.is_disabled ? 0 : 1
+  db.prepare("UPDATE users SET is_disabled = ? WHERE id = ?").run(newVal, id)
+  logUser(id, user.username, newVal ? 'admin_disable' : 'admin_enable', getClientIp(req))
+  res.json({ ok: true, isDisabled: !!newVal })
+})
+
+// 管理员：删除用户
+app.delete('/api/admin/users/:id', (req, res) => {
+  if (!req.isAdmin) return res.status(403).json({ error: '需要管理员权限' })
+  const id = Number(req.params.id)
+  const user = db.prepare("SELECT * FROM users WHERE id = ?").get(id)
+  if (!user) return res.status(404).json({ error: '用户不存在' })
+  if (user.is_admin) return res.status(400).json({ error: '不能删除管理员' })
+  db.prepare("DELETE FROM words WHERE user_id = ?").run(id)
+  db.prepare("DELETE FROM records WHERE user_id = ?").run(id)
+  db.prepare("DELETE FROM wrongbook WHERE user_id = ?").run(id)
+  db.prepare("DELETE FROM settings WHERE user_id = ?").run(id)
+  db.prepare("DELETE FROM sessions WHERE user_id = ?").run(id)
+  db.prepare("DELETE FROM users WHERE id = ?").run(id)
+  logUser(null, user.username, 'admin_delete', getClientIp(req), `管理员 ${req.username} 删除了该用户`)
   res.json({ ok: true })
 })
 
