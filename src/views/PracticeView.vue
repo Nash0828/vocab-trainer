@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWords, weightedPickIndex } from '../composables/useWords'
 import { useHistory } from '../composables/useHistory'
@@ -176,18 +176,14 @@ function skip() {
   next()
 }
 
-// 播放单词发音（有道词典美音接口：type=0 美音 / type=1 英音）
-function speak(word) {
+// 播放单词发音（有道词典：type=0 美音 / type=1 英音）
+function speak(word, type = 0) {
   if (!word) return
   try {
-    const url = `https://dict.youdao.com/dictvoice?type=0&audio=${encodeURIComponent(String(word).trim())}`
+    const url = `https://dict.youdao.com/dictvoice?type=${type}&audio=${encodeURIComponent(String(word).trim())}`
     const audio = new Audio(url)
-    audio.play().catch(() => {
-      // 网络异常或浏览器拦截时静默处理
-    })
-  } catch (e) {
-    // 静默处理
-  }
+    audio.play().catch(() => {})
+  } catch (e) {}
 }
 
 // ===== 词典查询弹窗（有道词典接口） =====
@@ -211,6 +207,11 @@ async function lookupWord(word) {
 function closeDict() {
   dictModal.value = null
 }
+
+// 弹窗打开时禁止背景滚动
+watch(dictModal, (val) => {
+  document.body.style.overflow = val ? 'hidden' : ''
+})
 
 // 答错后重做当前题：清空答案与判定，重新聚焦输入框
 function redo() {
@@ -527,8 +528,14 @@ next()
           <div v-else-if="dictModal.error" class="dict-error">⚠️ {{ dictModal.error }}</div>
           <div v-else-if="dictModal.data">
             <div v-if="dictModal.data.usphone || dictModal.data.ukphone" class="dict-phonetic">
-              <span v-if="dictModal.data.ukphone">英 [{{ dictModal.data.ukphone }}]</span>
-              <span v-if="dictModal.data.usphone" style="margin-left:12px">美 [{{ dictModal.data.usphone }}]</span>
+              <span v-if="dictModal.data.ukphone" class="phonetic-item">
+                英 [{{ dictModal.data.ukphone }}]
+                <button class="speak-mini" @click="speak(dictModal.word, 1)" title="英式发音">🔊</button>
+              </span>
+              <span v-if="dictModal.data.usphone" class="phonetic-item" style="margin-left:12px">
+                美 [{{ dictModal.data.usphone }}]
+                <button class="speak-mini" @click="speak(dictModal.word, 0)" title="美式发音">🔊</button>
+              </span>
             </div>
             <div v-if="dictModal.data.examType && dictModal.data.examType.length" class="dict-exam">
               考试类型：{{ dictModal.data.examType.join(' / ') }}
@@ -1114,5 +1121,29 @@ next()
   color: var(--text-main);
   margin: 0 0 6px 0;
   font-size: 14px;
+}
+
+.phonetic-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.speak-mini {
+  border: none;
+  background: var(--primary-light);
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.speak-mini:active {
+  transform: scale(0.9);
 }
 </style>

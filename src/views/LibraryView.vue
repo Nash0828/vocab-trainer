@@ -36,6 +36,20 @@ function closeDict() {
   dictModal.value = null
 }
 
+// 播放发音
+function speak(word, type = 0) {
+  if (!word) return
+  try {
+    const url = `https://dict.youdao.com/dictvoice?type=${type}&audio=${encodeURIComponent(String(word).trim())}`
+    new Audio(url).play().catch(() => {})
+  } catch (e) {}
+}
+
+// 弹窗打开时禁止背景滚动
+watch(dictModal, (val) => {
+  document.body.style.overflow = val ? 'hidden' : ''
+})
+
 const threshold = computed(() => settings.value.masteryThreshold)
 const masteredCount = computed(() => words.value.filter((w) => isMastered(w)).length)
 
@@ -534,8 +548,14 @@ function formatTime(ts) {
           <div v-else-if="dictModal.error" class="dict-error">⚠️ {{ dictModal.error }}</div>
           <div v-else-if="dictModal.data">
             <div v-if="dictModal.data.usphone || dictModal.data.ukphone" class="dict-phonetic">
-              <span v-if="dictModal.data.ukphone">英 [{{ dictModal.data.ukphone }}]</span>
-              <span v-if="dictModal.data.usphone" style="margin-left:12px">美 [{{ dictModal.data.usphone }}]</span>
+              <span v-if="dictModal.data.ukphone" class="phonetic-item">
+                英 [{{ dictModal.data.ukphone }}]
+                <button class="speak-mini" @click="speak(dictModal.word, 1)" title="英式发音">🔊</button>
+              </span>
+              <span v-if="dictModal.data.usphone" class="phonetic-item" style="margin-left:12px">
+                美 [{{ dictModal.data.usphone }}]
+                <button class="speak-mini" @click="speak(dictModal.word, 0)" title="美式发音">🔊</button>
+              </span>
             </div>
             <div v-if="dictModal.data.examType && dictModal.data.examType.length" class="dict-exam">
               考试类型：{{ dictModal.data.examType.join(' / ') }}
@@ -1187,5 +1207,29 @@ function formatTime(ts) {
   color: var(--text-main);
   margin: 0 0 6px 0;
   font-size: 14px;
+}
+
+.phonetic-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.speak-mini {
+  border: none;
+  background: var(--primary-light);
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.speak-mini:active {
+  transform: scale(0.9);
 }
 </style>
