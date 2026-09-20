@@ -180,6 +180,12 @@ onMounted(loadUsers)
 .error { color: var(--danger); padding: 20px; }
 
 @media (max-width: 768px) {
+  .card {
+    padding: 0;
+  }
+  .card-head {
+    padding: 14px 15px 0;
+  }
   .user-table, .user-table thead, .user-table tbody, .user-table tr, .user-table td {
     display: block;
   }
@@ -211,8 +217,9 @@ onMounted(loadUsers)
     margin-top: 8px;
     padding-top: 8px;
     border-top: 0.5px solid #f0f0f0;
+    display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
   }
   .modal { max-width: 100%; border-radius: 12px; }
   .log-time { min-width: auto; width: 100%; }
