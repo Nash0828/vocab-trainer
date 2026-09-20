@@ -926,34 +926,35 @@ function formatTime(ts) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-  border: 1px solid var(--border);
-  background: #ffffff;
-  font-size: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  font-size: 17px;
   line-height: 1;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s;
+  filter: grayscale(0.7);
+  opacity: 0.7;
 }
 
 .icon-btn:hover {
-  transform: translateY(-1px);
+  opacity: 1;
+  filter: none;
+  background: var(--bg-soft);
 }
 
 .icon-btn.edit:hover {
-  border-color: var(--primary);
-  background: var(--primary-light);
+  color: var(--primary);
 }
 
 .icon-btn.reset:hover {
-  border-color: #8a6dff;
-  background: #f2eeff;
+  color: var(--warning);
 }
 
 .icon-btn.del:hover {
-  border-color: var(--danger);
-  background: #fdecea;
+  color: var(--danger);
 }
 
 .confirm-hint {
@@ -1139,8 +1140,7 @@ function formatTime(ts) {
 
 /* 词典按钮 hover */
 .icon-btn.dict:hover {
-  border-color: #8a6dff;
-  background: #f2eeff;
+  color: var(--primary);
 }
 
 /* ===== 词典查询弹窗 ===== */

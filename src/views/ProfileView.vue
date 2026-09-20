@@ -158,7 +158,7 @@ async function doLogout() {
 }
 .menu-item:last-child { border-bottom: none; }
 .menu-item:active { background: #f5f5f5; }
-.menu-icon { font-size: 20px; margin-right: 12px; }
+.menu-icon { font-size: 19px; margin-right: 12px; filter: grayscale(0.6); opacity: 0.75; }
 .menu-label { flex: 1; font-size: 15px; color: var(--text-main); }
 .danger-text { color: #ff4d4f; }
 .menu-arrow { color: #c8c8c8; font-size: 20px; }

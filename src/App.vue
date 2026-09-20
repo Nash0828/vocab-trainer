@@ -4,7 +4,7 @@ import { RouterLink, RouterView } from 'vue-router'
 import { api } from './api/index.js'
 
 const allNavItems = [
-  { to: '/input', label: '录入', icon: '✍️' },
+  { to: '/input', label: '录入', icon: '✏️' },
   { to: '/practice', label: '背单词', icon: '🎯' },
   { to: '/wrongbook', label: '错题本', icon: '📕' },
   { to: '/library', label: '词库', icon: '🗂️' },
@@ -89,7 +89,8 @@ onMounted(async () => {
     display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 2px 4px;
     text-decoration: none; color: #888; font-size: 10px; min-width: 48px;
   }
-  .mobile-nav-item .mobile-nav-icon { font-size: 22px; line-height: 1.2; }
+  .mobile-nav-item .mobile-nav-icon { font-size: 22px; line-height: 1.2; filter: grayscale(0.6); }
   .mobile-nav-item.router-link-exact-active { color: var(--primary); }
+  .mobile-nav-item.router-link-exact-active .mobile-nav-icon { filter: none; }
 }
 </style>
