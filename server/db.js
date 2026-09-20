@@ -49,6 +49,13 @@ db.exec(`
   );
 `)
 
+// 迁移：给 records 表加 user_answer 列（已存在则忽略）
+try {
+  db.exec("ALTER TABLE records ADD COLUMN user_answer TEXT DEFAULT ''")
+} catch (e) {
+  // 列已存在，忽略
+}
+
 // 默认设置
 const DEFAULT_SETTINGS = { masteryThreshold: 5 }
 for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {

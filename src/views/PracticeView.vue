@@ -16,7 +16,8 @@ const sourceMode = ref('all')
 const current = ref(null)
 const answer = ref('')
 const result = ref(null) // null | 'correct' | 'wrong'
-const revealed = ref(false) // 是否通过"显示答案"按钮作答（用于反馈文案区分）
+const revealed = ref(false) // 是否通过"显示答案"按钮作答
+const isRedo = ref(false) // 是否处于重做模式（重做答对不算答对、不移除错题本）
 const lastIndex = ref(-1)
 const answerInput = ref(null)
 let autoTimer = null // 作答后自动切换下一题的定时器
@@ -135,36 +136,43 @@ function next() {
   answer.value = ''
   result.value = null
   revealed.value = false
+  isRedo.value = false
   focusInput()
 }
 
 function submit() {
   if (!current.value || result.value || !answer.value.trim()) return
-  const isCorrect =
-    answer.value.trim().toLowerCase() === current.value.english.trim().toLowerCase()
+  // 大小写敏感：严格匹配（去除首尾空格）
+  const isCorrect = answer.value.trim() === current.value.english.trim()
+
+  if (isRedo.value) {
+    // 重做模式：无论对错都不算正式作答，只显示反馈，不更新 count、不移除/加入错题本
+    result.value = isCorrect ? 'correct' : 'wrong'
+    speak(current.value.english)
+    // 重做答对后停在当前题，等用户点"下一题"；答错也停在当前题
+    clearAutoTimer()
+    return
+  }
+
   if (isCorrect) {
     incrementCount(current.value.id)
-    // 答对：从错题本中移除
     removeWrong(current.value)
   } else {
-    // 答错：记入错题本（同一单词只记一次）
     addWrong(current.value)
   }
   result.value = isCorrect ? 'correct' : 'wrong'
   revealed.value = false
-  // 答题后自动朗读正确单词（无论对错）
   speak(current.value.english)
 
-  // 写入当日背诵记录并刷新今日统计
   addRecord({
     chinese: current.value.chinese,
     english: current.value.english,
     pos: current.value.pos || '',
     correct: isCorrect,
+    userAnswer: answer.value,
   })
   refreshToday()
 
-  // 作答后：答对自动切换下一题；答错停留在当前题，由用户点击"下一题"按钮继续
   clearAutoTimer()
   if (isCorrect) {
     autoTimer = setTimeout(next, 1000)
@@ -220,6 +228,7 @@ function redo() {
   answer.value = ''
   result.value = null
   revealed.value = false
+  isRedo.value = true
   focusInput()
 }
 
@@ -234,6 +243,7 @@ function revealAnswer() {
     english: current.value.english,
     pos: current.value.pos || '',
     correct: false,
+    userAnswer: '',
   })
   refreshToday()
   speak(current.value.english)
@@ -510,6 +520,9 @@ next()
               <span class="m-en">{{ r.english }}</span>
               <span class="m-pos">{{ r.pos || '—' }}</span>
               <span class="m-zh">{{ r.chinese }}</span>
+              <span v-if="!r.correct && r.userAnswer" class="m-wrong-answer">
+                你答：{{ r.userAnswer }}
+              </span>
             </li>
           </ul>
         </div>
@@ -942,6 +955,14 @@ next()
 .m-zh {
   flex: 1;
   color: var(--text-main);
+}
+
+.m-wrong-answer {
+  display: block;
+  width: 100%;
+  color: var(--danger);
+  font-size: 13px;
+  margin-top: 2px;
 }
 
 /* ===== 移动端适配 ===== */

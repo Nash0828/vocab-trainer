@@ -168,6 +168,7 @@ function formatDate(dateStr) {
                   <span class="rec-en">{{ r.english }}</span>
                   <span class="rec-pos">{{ r.pos || '—' }}</span>
                   <span class="rec-zh">{{ r.chinese }}</span>
+                  <span v-if="!r.correct && r.userAnswer" class="rec-wrong-answer">你答：{{ r.userAnswer }}</span>
                   <span class="rec-time small muted">{{ new Date(r.ts).toTimeString().slice(0, 5) }}</span>
                 </li>
               </ul>
@@ -372,6 +373,14 @@ function formatDate(dateStr) {
 .rec-zh {
   flex: 1;
   color: var(--text-main);
+}
+
+.rec-wrong-answer {
+  color: var(--danger);
+  font-size: 12px;
+  background: #fdecea;
+  padding: 1px 6px;
+  border-radius: 4px;
 }
 
 .rec-time {

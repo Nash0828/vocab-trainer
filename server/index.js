@@ -46,6 +46,7 @@ app.get('/api/state', (req, res) => {
     english: r.english,
     pos: r.pos || '',
     correct: !!r.correct,
+    userAnswer: r.user_answer || '',
     ts: r.ts,
   }))
   const wrongbook = db.prepare('SELECT * FROM wrongbook ORDER BY added_at ASC').all().map((w) => ({
@@ -127,13 +128,13 @@ app.put('/api/settings/threshold', (req, res) => {
 
 // ---- 背诵记录 ----
 app.post('/api/records', (req, res) => {
-  const { chinese, english, pos, correct } = req.body || {}
+  const { chinese, english, pos, correct, userAnswer } = req.body || {}
   const now = new Date()
   const pad = (n) => String(n).padStart(2, '0')
   const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
   const id = genId('rec-')
   db.prepare(
-    'INSERT INTO records (id, date, chinese, english, pos, correct, ts) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    'INSERT INTO records (id, date, chinese, english, pos, correct, user_answer, ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
   ).run(
     id,
     date,
@@ -141,6 +142,7 @@ app.post('/api/records', (req, res) => {
     (english || '').trim(),
     (pos || '').trim(),
     correct ? 1 : 0,
+    (userAnswer || '').trim(),
     Date.now()
   )
   res.json({ ok: true, id })
@@ -206,12 +208,31 @@ app.get('/api/dict', async (req, res) => {
 // ---- 导入导出 ----
 app.get('/api/export', (req, res) => {
   const words = db.prepare('SELECT * FROM words ORDER BY created_at ASC').all().map(rowToWord)
+  const records = db.prepare('SELECT * FROM records ORDER BY ts ASC').all().map((r) => ({
+    id: r.id,
+    date: r.date,
+    chinese: r.chinese,
+    english: r.english,
+    pos: r.pos || '',
+    correct: !!r.correct,
+    userAnswer: r.user_answer || '',
+    ts: r.ts,
+  }))
+  const wrongbook = db.prepare('SELECT * FROM wrongbook ORDER BY added_at ASC').all().map((w) => ({
+    wordId: String(w.word_id),
+    chinese: w.chinese,
+    english: w.english,
+    pos: w.pos || '',
+    addedAt: w.added_at,
+  }))
   res.json({
     app: 'vocab-trainer',
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     settings: { masteryThreshold: getThreshold() },
     words,
+    records,
+    wrongbook,
   })
 })
 
@@ -241,6 +262,7 @@ app.post('/api/import', (req, res) => {
   const tx = db.transaction(() => {
     if (mode === 'overwrite') {
       db.prepare('DELETE FROM words').run()
+      db.prepare('DELETE FROM records').run()
       db.prepare('DELETE FROM wrongbook').run()
       for (const w of valid) {
         const n = normalize(w)
@@ -248,6 +270,34 @@ app.post('/api/import', (req, res) => {
         imported++
       }
       skipped = list.length - valid.length
+      // 导入历史记录和错题本（覆盖模式直接清空后导入）
+      if (Array.isArray(data.records)) {
+        const insRec = db.prepare('INSERT OR REPLACE INTO records (id, date, chinese, english, pos, correct, user_answer, ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+        for (const r of data.records) {
+          insRec.run(
+            String(r.id || genId('rec-')),
+            String(r.date || ''),
+            String(r.chinese || '').trim(),
+            String(r.english || '').trim(),
+            String(r.pos || '').trim(),
+            r.correct ? 1 : 0,
+            String(r.userAnswer || '').trim(),
+            Number(r.ts) || Date.now()
+          )
+        }
+      }
+      if (Array.isArray(data.wrongbook)) {
+        const insWrong = db.prepare('INSERT OR REPLACE INTO wrongbook (word_id, chinese, english, pos, added_at) VALUES (?, ?, ?, ?, ?)')
+        for (const w of data.wrongbook) {
+          insWrong.run(
+            String(w.wordId || w.word_id || w.id || ''),
+            String(w.chinese || '').trim(),
+            String(w.english || '').trim(),
+            String(w.pos || '').trim(),
+            Number(w.addedAt || w.added_at) || Date.now()
+          )
+        }
+      }
     } else {
       // 合并：中文或英文与已有重复的跳过
       const existing = db.prepare('SELECT chinese, english FROM words').all()

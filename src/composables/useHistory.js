@@ -30,7 +30,7 @@ function uid() {
 
 export function useHistory() {
   /** 写入一条当天背诵记录 */
-  function addRecord({ chinese, english, pos, correct }) {
+  function addRecord({ chinese, english, pos, correct, userAnswer }) {
     const rec = {
       id: uid(),
       date: todayStr(),
@@ -38,10 +38,11 @@ export function useHistory() {
       english: (english || '').trim(),
       pos: (pos || '').trim(),
       correct: !!correct,
+      userAnswer: (userAnswer || '').trim(),
       ts: Date.now(),
     }
     history.value.push(rec)
-    api.addRecord({ chinese: rec.chinese, english: rec.english, pos: rec.pos, correct: rec.correct })
+    api.addRecord({ chinese: rec.chinese, english: rec.english, pos: rec.pos, correct: rec.correct, userAnswer: rec.userAnswer })
       .catch((err) => {
         console.error('addRecord 同步失败', err)
         const idx = history.value.findIndex((r) => r.id === rec.id)

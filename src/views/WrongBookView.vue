@@ -3,10 +3,29 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWords } from '../composables/useWords'
 import { useWrongBook } from '../composables/useWrongBook'
+import { useHistory } from '../composables/useHistory'
 
 const router = useRouter()
 const { words } = useWords()
 const { removeWrong, clearWrong, getValidWrongWords } = useWrongBook()
+const { history } = useHistory()
+
+// 找出每个单词最近一次答错的用户答案
+function lastWrongAnswer(english) {
+  if (!english) return ''
+  const key = english.trim().toLowerCase()
+  let latest = ''
+  let latestTs = 0
+  for (const r of history.value) {
+    if (!r.correct && r.english && r.english.trim().toLowerCase() === key && r.userAnswer) {
+      if (r.ts > latestTs) {
+        latestTs = r.ts
+        latest = r.userAnswer
+      }
+    }
+  }
+  return latest
+}
 
 const confirmRemoveId = ref(null) // 待移除的错题记录
 const confirmClearAll = ref(false)
@@ -102,6 +121,9 @@ function formatTime(ts) {
           <span class="w-en">{{ w.english }}</span>
           <span class="w-pos">{{ w.pos || '—' }}</span>
           <span class="w-zh">{{ w.chinese }}</span>
+          <span v-if="lastWrongAnswer(w.english)" class="w-wrong-answer">
+            你答：{{ lastWrongAnswer(w.english) }}
+          </span>
           <span class="w-time small muted">{{ formatTime(w.addedAt) }}</span>
 
           <div class="w-actions">
@@ -225,6 +247,14 @@ function formatTime(ts) {
   flex: 1;
   color: var(--text-main);
   min-width: 80px;
+}
+
+.w-wrong-answer {
+  color: var(--danger);
+  font-size: 13px;
+  background: #fdecea;
+  padding: 2px 8px;
+  border-radius: 6px;
 }
 
 .w-time {
