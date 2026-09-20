@@ -81,7 +81,7 @@ function clearAllFields() {
 <template>
   <section class="card">
     <div class="card-head">
-      <h2>✍️ 录入新单词</h2>
+      <h2>录入新单词</h2>
       <p class="muted">填写中文、英文和词性，保存后即可在「背单词」中练习</p>
     </div>
 

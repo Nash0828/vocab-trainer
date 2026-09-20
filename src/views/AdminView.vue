@@ -74,7 +74,7 @@ onMounted(loadUsers)
 <template>
   <section class="card">
     <div class="card-head">
-      <h2>👥 用户管理</h2>
+      <h2>用户管理</h2>
       <p class="muted">查看和管理所有注册用户</p>
     </div>
 

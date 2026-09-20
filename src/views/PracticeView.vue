@@ -357,7 +357,7 @@ next()
     <!-- 有可练习单词 -->
     <template v-else>
       <div class="card-head">
-        <h2>🎯 背单词</h2>
+        <h2>背单词</h2>
         <p class="muted">根据中文释义输入英文；答对 {{ threshold }} 次视为背熟，作答后自动切下一题</p>
       </div>
 

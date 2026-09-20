@@ -332,7 +332,7 @@ function formatTime(ts) {
 <template>
   <section class="card">
     <div class="card-head">
-      <h2>🗂️ 词库管理</h2>
+      <h2>词库管理</h2>
       <p class="muted">
         查看、修改或删除已录入的单词，共 <strong>{{ totalCount }}</strong> 个，其中
         <strong class="mastered-text">已背熟 {{ masteredCount }}</strong> 个（阈值 {{ threshold }} 次）

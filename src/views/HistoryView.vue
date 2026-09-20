@@ -86,7 +86,7 @@ function formatDate(dateStr) {
 <template>
   <section class="card">
     <div class="card-head">
-      <h2>📜 背诵历史</h2>
+      <h2>背诵历史</h2>
       <p class="muted">按天查看每天背诵过的单词与对错情况</p>
     </div>
 

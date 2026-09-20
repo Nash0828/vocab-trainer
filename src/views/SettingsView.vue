@@ -206,7 +206,7 @@ function cancelMigrate() {
   <div class="settings">
     <section class="card">
       <div class="card-head">
-        <h2>⚙️ 设置</h2>
+        <h2>设置</h2>
       </div>
 
       <transition name="fade">
