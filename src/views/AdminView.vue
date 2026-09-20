@@ -72,12 +72,7 @@ onMounted(loadUsers)
 </script>
 
 <template>
-  <section class="card">
-    <div class="card-head">
-      <h2>用户管理</h2>
-      <p class="muted">查看和管理所有注册用户</p>
-    </div>
-
+  <div class="admin-page">
     <div v-if="loading" class="muted">加载中...</div>
     <div v-else-if="error" class="error">{{ error }}</div>
 
@@ -154,7 +149,7 @@ onMounted(loadUsers)
         </div>
       </div>
     </div>
-  </section>
+  </div>
 </template>
 
 <style scoped>
