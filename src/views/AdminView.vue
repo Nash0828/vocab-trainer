@@ -114,38 +114,58 @@ onMounted(loadUsers)
     <!-- 日志弹窗 -->
     <div v-if="selectedLogs" class="mask" @click.self="selectedLogs = null">
       <div class="modal">
-        <h3>📋 {{ selectedLogs.user.username }} 登录日志</h3>
-        <div v-if="!selectedLogs.logs.length" class="muted">暂无记录</div>
-        <ul v-else class="log-list">
-          <li v-for="l in selectedLogs.logs" :key="l.id">
-            <span class="log-time">{{ fmtTime(l.ts) }}</span>
-            <span class="log-action">{{ l.action }}</span>
-            <span class="log-ip">{{ l.ip }}</span>
-            <span v-if="l.detail" class="log-detail">{{ l.detail }}</span>
-          </li>
-        </ul>
-        <button class="btn ghost" @click="selectedLogs = null">关闭</button>
+        <div class="modal-head">
+          <h3>{{ selectedLogs.user.username }} 登录日志</h3>
+          <button class="modal-close" @click="selectedLogs = null">✕</button>
+        </div>
+        <div class="modal-body">
+          <div v-if="!selectedLogs.logs.length" class="empty-tip">暂无记录</div>
+          <ul v-else class="log-list">
+            <li v-for="l in selectedLogs.logs" :key="l.id">
+              <div class="log-main">
+                <span class="log-action">{{ l.action }}</span>
+                <span class="log-time">{{ fmtTime(l.ts) }}</span>
+              </div>
+              <div class="log-sub">
+                <span class="log-ip">IP：{{ l.ip }}</span>
+                <span v-if="l.detail" class="log-detail">{{ l.detail }}</span>
+              </div>
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
 
     <!-- 重置密码结果弹窗 -->
     <div v-if="resetPwdUser" class="mask" @click.self="resetPwdUser = null">
       <div class="modal">
-        <h3>已重置 {{ resetPwdUser.username }} 的密码</h3>
-        <p>新密码：<code class="new-pwd">{{ resetPwdResult }}</code></p>
-        <p class="muted small">请复制给用户并提醒其登录后修改密码</p>
-        <button class="btn primary" @click="resetPwdUser = null">知道了</button>
+        <div class="modal-head">
+          <h3>重置密码</h3>
+          <button class="modal-close" @click="resetPwdUser = null">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="result-text">已重置 <strong>{{ resetPwdUser.username }}</strong> 的密码</p>
+          <div class="new-pwd-box">新密码：{{ resetPwdResult }}</div>
+          <p class="muted small">请复制给用户并提醒其登录后修改密码</p>
+          <button class="btn primary" @click="resetPwdUser = null">知道了</button>
+        </div>
       </div>
     </div>
 
     <!-- 删除确认 -->
     <div v-if="confirmDelete" class="mask" @click.self="confirmDelete = null">
       <div class="modal">
-        <h3>⚠️ 确认删除 {{ confirmDelete.username }}？</h3>
-        <p class="muted">该用户的所有单词、记录、错题本都会被删除，不可恢复！</p>
-        <div class="row">
-          <button class="btn danger" @click="doDelete(confirmDelete)">确认删除</button>
-          <button class="btn ghost" @click="confirmDelete = null">取消</button>
+        <div class="modal-head">
+          <h3>确认删除</h3>
+          <button class="modal-close" @click="confirmDelete = null">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="confirm-text">确定要删除用户 <strong>{{ confirmDelete.username }}</strong> 吗？</p>
+          <p class="muted small">该用户的所有单词、记录、错题本都会被删除，不可恢复！</p>
+          <div class="row">
+            <button class="btn danger" @click="doDelete(confirmDelete)">确认删除</button>
+            <button class="btn ghost" @click="confirmDelete = null">取消</button>
+          </div>
         </div>
       </div>
     </div>
@@ -161,26 +181,104 @@ onMounted(loadUsers)
 .tag-disabled { color: #ff4d4f; font-size: 13px; }
 .actions { display: flex; gap: 4px; flex-wrap: wrap; }
 
-.mask { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 16px; }
-.modal { background: #fff; border-radius: 16px; padding: 20px; width: 100%; max-width: 480px; max-height: 80vh; overflow-y: auto; }
-.modal h3 { margin: 0 0 12px; }
-.log-list { list-style: none; padding: 0; margin: 0 0 12px; }
-.log-list li { padding: 8px 0; border-bottom: 1px solid var(--border-light); font-size: 13px; display: flex; gap: 8px; flex-wrap: wrap; }
-.log-time { color: var(--text-sub); min-width: 130px; }
-.log-action { font-weight: 600; color: var(--primary); }
-.log-ip { color: var(--text-faint); }
-.log-detail { color: var(--text-sub); width: 100%; }
-.new-pwd { background: var(--bg-soft); padding: 4px 12px; border-radius: 6px; font-size: 18px; color: var(--primary); }
-.row { display: flex; gap: 8px; margin-top: 12px; }
+.mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal {
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  position: relative;
+  border-bottom: 0.5px solid #f0f0f0;
+}
+.modal-head h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+.modal-close {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: #f0f0f0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 14px;
+  cursor: pointer;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-body {
+  padding: 16px;
+  overflow-y: auto;
+}
+.empty-tip {
+  text-align: center;
+  padding: 40px 0;
+  color: var(--text-sub);
+  font-size: 15px;
+}
+.log-list { list-style: none; padding: 0; margin: 0; }
+.log-list li {
+  padding: 12px 0;
+  border-bottom: 0.5px solid #f0f0f0;
+}
+.log-list li:last-child { border-bottom: none; }
+.log-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.log-action { font-weight: 600; color: var(--text-main); font-size: 15px; }
+.log-time { color: var(--text-sub); font-size: 13px; }
+.log-sub { display: flex; flex-direction: column; gap: 2px; }
+.log-ip { color: var(--text-sub); font-size: 13px; }
+.log-detail { color: var(--text-sub); font-size: 13px; }
+.result-text { font-size: 15px; color: var(--text-main); margin: 0 0 12px 0; }
+.new-pwd-box {
+  background: #f5f5f5;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 18px;
+  color: var(--primary);
+  text-align: center;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+.confirm-text { font-size: 16px; color: var(--text-main); margin: 0 0 8px 0; }
+.row {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.row .btn { flex: 1; }
 .error { color: var(--danger); padding: 20px; }
 
 @media (max-width: 768px) {
-  .card {
-    padding: 0;
-  }
-  .card-head {
-    padding: 14px 15px 0;
-  }
   .user-table, .user-table thead, .user-table tbody, .user-table tr, .user-table td {
     display: block;
   }
@@ -216,7 +314,5 @@ onMounted(loadUsers)
     flex-wrap: wrap;
     gap: 8px;
   }
-  .modal { max-width: 100%; border-radius: 12px; }
-  .log-time { min-width: auto; width: 100%; }
 }
 </style>
