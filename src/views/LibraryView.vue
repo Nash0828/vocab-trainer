@@ -558,7 +558,7 @@ function formatTime(ts) {
 .word-item + .word-item::before {
   content: '';
   position: absolute;
-  left: 16px;
+  left: 0;
   top: 0;
   height: 0.5px;
   background: #e5e5e5;
