@@ -154,7 +154,6 @@ function clearAllFields() {
   background: #fff;
   margin: 0 16px;
   border-radius: 12px;
-  overflow: hidden;
 }
 
 .form-item {
