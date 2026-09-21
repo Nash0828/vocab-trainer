@@ -56,11 +56,12 @@ async function doLogout() {
   <div class="profile-page">
     <!-- 用户头部卡片 -->
     <div class="profile-header" @click="!user.isLoggedIn && (showAuthModal = true)">
-      <div class="avatar">{{ user.isLoggedIn ? user.username[0].toUpperCase() : '' }}</div>
+      <div v-if="user.isLoggedIn" class="avatar">{{ user.username[0].toUpperCase() }}</div>
       <div class="header-info">
-        <div class="username">{{ user.isLoggedIn ? user.username : '点击登录 / 注册' }}</div>
+        <div class="username">{{ user.isLoggedIn ? user.username : '登录 / 注册' }}</div>
         <div v-if="user.isAdmin" class="admin-tag">管理员</div>
       </div>
+      <span v-if="!user.isLoggedIn" class="chevron">›</span>
     </div>
 
     <!-- 菜单列表 -->
@@ -96,13 +97,6 @@ async function doLogout() {
         <span class="menu-label danger-text">退出登录</span>
         <span class="menu-arrow">›</span>
       </div>
-      <div v-if="!user.isLoggedIn" class="menu-item" @click="showAuthModal = true">
-        <span class="menu-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-        </span>
-        <span class="menu-label">登录 / 注册</span>
-        <span class="menu-arrow">›</span>
-      </div>
     </div>
 
     <div class="version">背单词助手 v2.0</div>
@@ -110,29 +104,39 @@ async function doLogout() {
     <!-- 登录/注册弹窗 -->
     <div v-if="showAuthModal" class="mask" @click.self="showAuthModal = false">
       <div class="modal">
-        <h3>{{ authMode === 'login' ? '登录' : '注册新账号' }}</h3>
-        <div class="tabs">
-          <button :class="{ active: authMode === 'login' }" @click="authMode = 'login'; authError = ''">登录</button>
-          <button :class="{ active: authMode === 'register' }" @click="authMode = 'register'; authError = ''">注册</button>
+        <div class="modal-head">
+          <h3>{{ authMode === 'login' ? '登录' : '注册新账号' }}</h3>
+          <button class="modal-close" @click="showAuthModal = false">✕</button>
         </div>
-        <input v-model="authForm.username" placeholder="用户名（2-20位字母数字下划线）" autocomplete="username" />
-        <input v-model="authForm.password" type="password" :placeholder="authMode === 'login' ? '密码' : '密码（至少6位）'" @keyup.enter="doAuth" />
-        <div v-if="authError" class="err">{{ authError }}</div>
-        <button class="btn primary" @click="doAuth">{{ authMode === 'login' ? '登录' : '注册并登录' }}</button>
+        <div class="modal-body">
+          <div class="auth-tabs">
+            <button :class="{ active: authMode === 'login' }" @click="authMode = 'login'; authError = ''">登录</button>
+            <button :class="{ active: authMode === 'register' }" @click="authMode = 'register'; authError = ''">注册</button>
+          </div>
+          <input v-model="authForm.username" placeholder="用户名（2-20位字母数字下划线）" autocomplete="username" />
+          <input v-model="authForm.password" type="password" :placeholder="authMode === 'login' ? '密码' : '密码（至少6位）'" @keyup.enter="doAuth" />
+          <div v-if="authError" class="err">{{ authError }}</div>
+          <button class="btn primary" @click="doAuth">{{ authMode === 'login' ? '登录' : '注册并登录' }}</button>
+        </div>
       </div>
     </div>
 
     <!-- 修改密码弹窗 -->
     <div v-if="showPwdModal" class="mask" @click.self="showPwdModal = false">
       <div class="modal">
-        <h3>修改密码</h3>
-        <input v-model="pwdForm.oldPwd" type="password" placeholder="原密码" />
-        <input v-model="pwdForm.newPwd" type="password" placeholder="新密码（至少6位）" />
-        <input v-model="pwdForm.confirmPwd" type="password" placeholder="确认新密码" @keyup.enter="changePwd" />
-        <div v-if="pwdError" class="err">{{ pwdError }}</div>
-        <div style="display:flex;gap:8px">
-          <button class="btn primary" style="flex:1" @click="changePwd">确认修改</button>
-          <button class="btn ghost" @click="showPwdModal = false">取消</button>
+        <div class="modal-head">
+          <h3>修改密码</h3>
+          <button class="modal-close" @click="showPwdModal = false">✕</button>
+        </div>
+        <div class="modal-body">
+          <input v-model="pwdForm.oldPwd" type="password" placeholder="原密码" />
+          <input v-model="pwdForm.newPwd" type="password" placeholder="新密码（至少6位）" />
+          <input v-model="pwdForm.confirmPwd" type="password" placeholder="确认新密码" @keyup.enter="changePwd" />
+          <div v-if="pwdError" class="err">{{ pwdError }}</div>
+          <div class="row">
+            <button class="btn ghost" @click="showPwdModal = false">取消</button>
+            <button class="btn primary" @click="changePwd">确认修改</button>
+          </div>
         </div>
       </div>
     </div>
@@ -206,14 +210,95 @@ async function doLogout() {
 .version { text-align: center; color: var(--text-faint); font-size: 12px; margin-top: 24px; }
 
 /* 弹窗 */
-.mask { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px; }
-.modal { background: #fff; border-radius: 12px; padding: 24px; width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; }
-.modal h3 { margin: 0; text-align: center; font-size: 17px; font-weight: 600; }
-.tabs { display: flex; gap: 8px; }
-.tabs button { flex: 1; padding: 8px; border: 1px solid #e5e5e5; background: #fff; border-radius: 4px; cursor: pointer; font-weight: 500; color: #888; }
-.tabs button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-.modal input { padding: 10px 12px; border: 1px solid #e5e5e5; border-radius: 4px; font-size: 15px; }
+.mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal {
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  position: relative;
+  border-bottom: 0.5px solid #f0f0f0;
+}
+.modal-head h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+.modal-close {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: #f0f0f0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 14px;
+  cursor: pointer;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.auth-tabs {
+  display: flex;
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 3px;
+  gap: 3px;
+}
+.auth-tabs button {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+.auth-tabs button.active {
+  background: #fff;
+  color: var(--text-main);
+  font-weight: 500;
+}
+.modal-body input {
+  padding: 12px;
+  border: none;
+  background: #f5f5f5;
+  border-radius: 8px;
+  font-size: 15px;
+  outline: none;
+}
 .err { color: var(--danger); font-size: 13px; }
+.row { display: flex; gap: 8px; }
+.row .btn { flex: 1; }
 
 @media (min-width: 769px) {
   .profile-page { max-width: 500px; margin: 0 auto; }
