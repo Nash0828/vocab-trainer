@@ -125,7 +125,7 @@ function clearAllFields() {
               @input="posInput = form.pos"
             />
             <transition name="fade">
-              <div v-if="showPosPicker" class="pos-suggest">
+              <div v-if="showPosPicker && filteredPosOptions.length > 0" class="pos-suggest">
                 <div
                   v-for="opt in filteredPosOptions"
                   :key="opt"
@@ -133,7 +133,6 @@ function clearAllFields() {
                   :class="{ active: form.pos === opt }"
                   @click="form.pos = opt; showPosPicker = false"
                 >{{ opt }}</div>
-                <div v-if="filteredPosOptions.length === 0" class="pos-suggest-empty">无匹配，直接输入即可</div>
               </div>
             </transition>
           </div>
