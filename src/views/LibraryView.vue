@@ -1064,8 +1064,8 @@ function formatTime(ts) {
 .mini-switch {
   position: relative;
   display: inline-block;
-  width: 36px;
-  height: 20px;
+  width: 44px;
+  height: 24px;
 }
 .mini-switch input {
   opacity: 0;
@@ -1080,14 +1080,14 @@ function formatTime(ts) {
   right: 0;
   bottom: 0;
   background-color: #ccc;
-  border-radius: 20px;
+  border-radius: 24px;
   transition: 0.3s;
 }
 .mini-switch-slider:before {
   position: absolute;
   content: "";
-  height: 16px;
-  width: 16px;
+  height: 20px;
+  width: 20px;
   left: 2px;
   bottom: 2px;
   background-color: white;
@@ -1098,7 +1098,7 @@ function formatTime(ts) {
   background-color: var(--primary);
 }
 .mini-switch input:checked + .mini-switch-slider:before {
-  transform: translateX(16px);
+  transform: translateX(20px);
 }
 .mini-switch-label {
   font-size: 13px;

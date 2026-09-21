@@ -139,9 +139,8 @@ function clearAllFields() {
           </div>
         </div>
         <div class="form-item">
-          <label>大小写敏感</label>
+          <label>区分大小写</label>
           <div class="switch-row">
-            <span class="switch-desc">开启后答题需区分大小写</span>
             <label class="switch">
               <input type="checkbox" v-model="form.caseSensitive" />
               <span class="slider"></span>
@@ -333,8 +332,8 @@ function clearAllFields() {
 .switch {
   position: relative;
   display: inline-block;
-  width: 44px;
-  height: 26px;
+  width: 51px;
+  height: 31px;
 }
 .switch input {
   opacity: 0;
@@ -349,14 +348,14 @@ function clearAllFields() {
   right: 0;
   bottom: 0;
   background-color: #ccc;
-  border-radius: 26px;
+  border-radius: 31px;
   transition: 0.3s;
 }
 .switch .slider:before {
   position: absolute;
   content: "";
-  height: 22px;
-  width: 22px;
+  height: 27px;
+  width: 27px;
   left: 2px;
   bottom: 2px;
   background-color: white;
@@ -367,6 +366,6 @@ function clearAllFields() {
   background-color: var(--primary);
 }
 .switch input:checked + .slider:before {
-  transform: translateX(18px);
+  transform: translateX(20px);
 }
 </style>
