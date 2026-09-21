@@ -1,7 +1,9 @@
 <script setup>
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useHistory } from '../composables/useHistory'
 
+const router = useRouter()
 const { getHistoryByDay, clearDay, clearAll } = useHistory()
 
 const expanded = ref(null) // 展开的日期
