@@ -70,7 +70,7 @@ export function useWords() {
     api.addWord({ chinese: c, english: e, pos: p })
       .then((real) => {
         const idx = words.value.findIndex((w) => w.id === word.id)
-        if (idx !== -1) words.value[idx] = { ...words.value[idx], id: real.id }
+        if (idx !== -1) words.value[idx] = { ...real, count: 0 }
         idSeed = Math.max(idSeed, Number(real.id) || 0)
       })
       .catch((err) => {
