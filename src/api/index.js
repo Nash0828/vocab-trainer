@@ -59,4 +59,8 @@ export const api = {
   exportData: () => req('/api/export'),
   importData: (data, mode) => req('/api/import', { method: 'POST', body: { data, mode } }),
   migrateData: (payload) => req('/api/migrate', { method: 'POST', body: payload }),
+
+  // 反馈
+  submitFeedback: (content, contact) => req('/api/feedback', { method: 'POST', body: { content, contact } }),
+  getFeedbacks: () => req('/api/admin/feedbacks'),
 }

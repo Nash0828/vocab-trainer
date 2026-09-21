@@ -450,6 +450,22 @@ app.post('/api/import', (req, res) => {
   res.json({ ok: true, imported, skipped, total })
 })
 
+// ============ 建议反馈 ============
+app.post('/api/feedback', (req, res) => {
+  const { content, contact } = req.body || {}
+  const c = (content || '').trim()
+  if (!c) return res.status(400).json({ error: '反馈内容不能为空' })
+  db.prepare('INSERT INTO feedbacks (user_id, username, content, contact, created_at) VALUES (?, ?, ?, ?, ?)')
+    .run(req.userId, req.username || '访客', c, (contact || '').trim(), Date.now())
+  res.json({ ok: true })
+})
+
+app.get('/api/admin/feedbacks', (req, res) => {
+  if (!req.isAdmin) return res.status(403).json({ error: '需要管理员权限' })
+  const list = db.prepare('SELECT * FROM feedbacks ORDER BY created_at DESC').all()
+  res.json({ feedbacks: list })
+})
+
 // ============ 静态文件 ============
 if (fs.existsSync(DIST_DIR)) {
   app.use(express.static(DIST_DIR))

@@ -87,6 +87,15 @@ db.exec(`
     last_ip TEXT DEFAULT '',
     last_visit INTEGER NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS feedbacks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    username TEXT DEFAULT '',
+    content TEXT NOT NULL,
+    contact TEXT DEFAULT '',
+    created_at INTEGER NOT NULL
+  );
 `)
 
 // 迁移：旧表加列（已存在则忽略）

@@ -12,6 +12,20 @@ const resetPwdResult = ref('')
 const confirmDelete = ref(null)
 const confirmResetPwd = ref(null)
 const confirmToggle = ref(null)
+const showFeedbacks = ref(false)
+const feedbackList = ref([])
+
+async function loadFeedbacks() {
+  try {
+    const res = await api.getFeedbacks()
+    feedbackList.value = res.feedbacks
+  } catch (e) {}
+}
+
+onMounted(() => {
+  loadUsers()
+  loadFeedbacks()
+})
 
 const filteredUsers = computed(() => {
   if (filter.value === 'registered') return users.value.filter(u => !u.isGuest)
@@ -76,8 +90,6 @@ function fmtTime(ts) {
   const pad = n => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
-
-onMounted(loadUsers)
 </script>
 
 <template>
@@ -86,6 +98,11 @@ onMounted(loadUsers)
     <div v-else-if="error" class="error">{{ error }}</div>
 
     <template v-else>
+      <!-- 顶部操作栏 -->
+      <div class="top-bar">
+        <button class="feedback-btn" @click="showFeedbacks = true">查看反馈 ({{ feedbackList.length }})</button>
+      </div>
+
       <!-- 筛选栏 -->
       <div class="filter-bar">
         <button :class="{ active: filter === 'all' }" @click="filter = 'all'">全部</button>
@@ -214,6 +231,27 @@ onMounted(loadUsers)
           <div class="row">
             <button class="btn primary" @click="toggleDisable(confirmToggle); confirmToggle = null">确认</button>
             <button class="btn ghost" @click="confirmToggle = null">取消</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 反馈列表弹窗 -->
+    <div v-if="showFeedbacks" class="mask" @click.self="showFeedbacks = false">
+      <div class="modal">
+        <div class="modal-head">
+          <h3>用户反馈</h3>
+          <button class="modal-close" @click="showFeedbacks = false">✕</button>
+        </div>
+        <div class="modal-body">
+          <div v-if="feedbackList.length === 0" class="muted" style="text-align:center;padding:30px 0">暂无反馈</div>
+          <div v-for="f in feedbackList" :key="f.id" class="feedback-item">
+            <div class="feedback-meta">
+              <span>{{ f.username || '访客' }}</span>
+              <span>{{ fmtTime(f.created_at) }}</span>
+            </div>
+            <div class="feedback-content">{{ f.content }}</div>
+            <div v-if="f.contact" class="feedback-contact">联系方式：{{ f.contact }}</div>
           </div>
         </div>
       </div>
@@ -450,5 +488,38 @@ onMounted(loadUsers)
     flex-wrap: wrap;
     gap: 8px;
   }
+}
+
+.top-bar {
+  padding: 0 16px 8px;
+}
+.feedback-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+}
+.feedback-item {
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.feedback-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 6px;
+}
+.feedback-content {
+  font-size: 14px;
+  color: #333;
+  line-height: 1.5;
+}
+.feedback-contact {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
 }
 </style>

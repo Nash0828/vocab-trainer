@@ -14,6 +14,28 @@ const showAuthModal = ref(false)
 const authMode = ref('login')
 const authForm = ref({ username: '', password: '' })
 const authError = ref('')
+const showFeedbackModal = ref(false)
+const feedbackContent = ref('')
+const feedbackContact = ref('')
+const feedbackError = ref('')
+const feedbackSent = ref(false)
+
+async function submitFeedback() {
+  feedbackError.value = ''
+  if (!feedbackContent.value.trim()) { feedbackError.value = '请输入反馈内容'; return }
+  try {
+    await api.submitFeedback(feedbackContent.value, feedbackContact.value)
+    feedbackSent.value = true
+    setTimeout(() => {
+      showFeedbackModal.value = false
+      feedbackSent.value = false
+      feedbackContent.value = ''
+      feedbackContact.value = ''
+    }, 1500)
+  } catch (e) {
+    feedbackError.value = e.message || '提交失败'
+  }
+}
 
 onMounted(async () => {
   try {
@@ -83,6 +105,13 @@ async function doLogout() {
     </div>
 
     <div class="menu-group">
+      <div class="menu-item" @click="showFeedbackModal = true">
+        <span class="menu-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </span>
+        <span class="menu-label">建议反馈</span>
+        <span class="menu-arrow">›</span>
+      </div>
       <div v-if="user.isLoggedIn" class="menu-item" @click="showPwdModal = true">
         <span class="menu-icon">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -100,6 +129,27 @@ async function doLogout() {
     </div>
 
     <div class="version">背单词助手 v2.0</div>
+
+    <!-- 建议反馈弹窗 -->
+    <div v-if="showFeedbackModal" class="mask" @click.self="showFeedbackModal = false">
+      <div class="modal">
+        <div class="modal-head">
+          <h3>建议反馈</h3>
+          <button class="modal-close" @click="showFeedbackModal = false">✕</button>
+        </div>
+        <div class="modal-body">
+          <div v-if="feedbackSent" class="feedback-done">
+            <p>感谢您的反馈！</p>
+          </div>
+          <template v-else>
+            <textarea v-model="feedbackContent" class="feedback-textarea" placeholder="请输入您的建议或遇到的问题..." rows="4"></textarea>
+            <input v-model="feedbackContact" class="feedback-input" placeholder="联系方式（选填）" />
+            <p v-if="feedbackError" class="feedback-error">{{ feedbackError }}</p>
+            <button class="feedback-submit" @click="submitFeedback">提交</button>
+          </template>
+        </div>
+      </div>
+    </div>
 
     <!-- 登录/注册弹窗 -->
     <div v-if="showAuthModal" class="mask" @click.self="showAuthModal = false">
@@ -303,4 +353,28 @@ async function doLogout() {
 @media (min-width: 769px) {
   .profile-page { max-width: 500px; margin: 0 auto; }
 }
+
+.feedback-textarea, .feedback-input {
+  width: 100%;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+  outline: none;
+}
+.feedback-textarea { resize: vertical; }
+.feedback-textarea:focus, .feedback-input:focus { border-color: var(--primary); }
+.feedback-error { color: #fa5151; font-size: 13px; margin-bottom: 8px; }
+.feedback-submit {
+  width: 100%;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 15px;
+}
+.feedback-done { text-align: center; padding: 30px 0; color: var(--primary); font-size: 16px; }
 </style>
