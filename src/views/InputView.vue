@@ -109,7 +109,7 @@ function clearAllFields() {
         </div>
         <div class="form-item">
           <label>词性</label>
-          <div class="pos-row">
+          <div class="pos-row" style="position: relative;">
             <input
               v-model="form.pos"
               type="text"
@@ -118,19 +118,19 @@ function clearAllFields() {
               @focus="showPosPicker = true"
               @input="posInput = form.pos"
             />
+            <transition name="fade">
+              <div v-if="showPosPicker" class="pos-suggest">
+                <div
+                  v-for="opt in filteredPosOptions"
+                  :key="opt"
+                  class="pos-suggest-item"
+                  :class="{ active: form.pos === opt }"
+                  @click="form.pos = opt; showPosPicker = false"
+                >{{ opt }}</div>
+                <div v-if="filteredPosOptions.length === 0" class="pos-suggest-empty">无匹配，直接输入即可</div>
+              </div>
+            </transition>
           </div>
-          <transition name="fade">
-            <div v-if="showPosPicker" class="pos-suggest">
-              <div
-                v-for="opt in filteredPosOptions"
-                :key="opt"
-                class="pos-suggest-item"
-                :class="{ active: form.pos === opt }"
-                @click="form.pos = opt; showPosPicker = false"
-              >{{ opt }}</div>
-              <div v-if="filteredPosOptions.length === 0" class="pos-suggest-empty">无匹配，直接输入即可</div>
-            </div>
-          </transition>
         </div>
       </div>
 
@@ -209,10 +209,18 @@ function clearAllFields() {
 }
 
 .pos-suggest {
-  margin-top: 8px;
-  background: #f7f7f7;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  margin-top: 4px;
+  background: #fff;
   border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
   overflow: hidden;
+  max-height: 220px;
+  overflow-y: auto;
 }
 .pos-suggest-item {
   padding: 10px 12px;
