@@ -61,6 +61,12 @@ const router = createRouter({
       component: () => import('../views/ProfileView.vue'),
       meta: { title: '我的' },
     },
+    {
+      path: '/feedbacks',
+      name: 'feedbacks',
+      component: () => import('../views/FeedbackView.vue'),
+      meta: { title: '用户反馈' },
+    },
   ],
 })
 
