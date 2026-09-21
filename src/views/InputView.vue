@@ -12,6 +12,12 @@ const form = reactive({
 
 const posOptions = ['n.', 'v.', 'adj.', 'adv.', 'prep.', 'pron.', 'conj.', 'num.', 'art.', '其他']
 const showPosPicker = ref(false)
+const posInput = ref('')
+const filteredPosOptions = computed(() => {
+  const q = posInput.value.trim().toLowerCase()
+  if (!q) return posOptions
+  return posOptions.filter(o => o.toLowerCase().includes(q))
+})
 
 const message = ref(null) // { text, kind: 'warn' | 'ok' | 'err' }
 const showMessage = ref(false)
@@ -109,9 +115,22 @@ function clearAllFields() {
               type="text"
               placeholder="如 n. / v. / adj."
               autocomplete="off"
+              @focus="showPosPicker = true"
+              @input="posInput = form.pos"
             />
-            <span class="pos-pick-btn" @click="showPosPicker = true">选择</span>
           </div>
+          <transition name="fade">
+            <div v-if="showPosPicker" class="pos-suggest">
+              <div
+                v-for="opt in filteredPosOptions"
+                :key="opt"
+                class="pos-suggest-item"
+                :class="{ active: form.pos === opt }"
+                @click="form.pos = opt; showPosPicker = false"
+              >{{ opt }}</div>
+              <div v-if="filteredPosOptions.length === 0" class="pos-suggest-empty">无匹配，直接输入即可</div>
+            </div>
+          </transition>
         </div>
       </div>
 
@@ -123,25 +142,6 @@ function clearAllFields() {
         <button type="submit" class="btn primary">保存单词</button>
       </div>
     </form>
-
-    <!-- 微信风格词性选择弹层 -->
-    <transition name="sheet">
-      <div v-if="showPosPicker" class="sheet-mask" @click="showPosPicker = false">
-        <div class="sheet" @click.stop>
-          <div class="sheet-title">选择词性</div>
-          <div class="sheet-options">
-            <div
-              v-for="opt in posOptions"
-              :key="opt"
-              class="sheet-option"
-              :class="{ active: form.pos === opt }"
-              @click="form.pos = opt; showPosPicker = false"
-            >{{ opt }}</div>
-          </div>
-          <div class="sheet-cancel" @click="showPosPicker = false">取消</div>
-        </div>
-      </div>
-    </transition>
   </div>
 </template>
 
@@ -197,10 +197,9 @@ function clearAllFields() {
 .pos-row {
   display: flex;
   align-items: center;
-  gap: 10px;
 }
 .pos-row input {
-  flex: 1;
+  width: 100%;
   border: none;
   outline: none;
   font-size: 15px;
@@ -208,13 +207,26 @@ function clearAllFields() {
   background: transparent;
   padding: 4px 0;
 }
-.pos-pick-btn {
-  flex-shrink: 0;
+
+.pos-suggest {
+  margin-top: 8px;
+  background: #f7f7f7;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.pos-suggest-item {
+  padding: 10px 12px;
+  font-size: 14px;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pos-suggest-item.active { color: var(--primary); }
+.pos-suggest-empty {
+  padding: 10px 12px;
   font-size: 13px;
-  color: var(--primary);
-  border: 1px solid var(--primary);
-  border-radius: 6px;
-  padding: 4px 10px;
+  color: #999;
+  background: #fff;
+  text-align: center;
 }
 
 .sheet-mask {
