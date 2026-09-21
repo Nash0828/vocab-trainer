@@ -19,6 +19,19 @@ const feedbackContent = ref('')
 const feedbackContact = ref('')
 const feedbackError = ref('')
 const feedbackSent = ref(false)
+const adminFeedbackList = ref([])
+
+async function openFeedback() {
+  showFeedbackModal.value = true
+  feedbackSent.value = false
+  feedbackError.value = ''
+  if (user.value?.isAdmin) {
+    try {
+      const res = await api.getFeedbacks()
+      adminFeedbackList.value = res.feedbacks
+    } catch (e) {}
+  }
+}
 
 async function submitFeedback() {
   feedbackError.value = ''
@@ -105,7 +118,7 @@ async function doLogout() {
     </div>
 
     <div class="menu-group">
-      <div class="menu-item" @click="showFeedbackModal = true">
+      <div class="menu-item" @click="openFeedback">
         <span class="menu-icon">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         </span>
@@ -138,14 +151,27 @@ async function doLogout() {
           <button class="modal-close" @click="showFeedbackModal = false">✕</button>
         </div>
         <div class="modal-body">
-          <div v-if="feedbackSent" class="feedback-done">
-            <p>感谢您的反馈！</p>
-          </div>
+          <template v-if="user.isAdmin">
+            <div v-if="adminFeedbackList.length === 0" class="muted" style="text-align:center;padding:30px 0">暂无反馈</div>
+            <div v-for="f in adminFeedbackList" :key="f.id" class="feedback-item">
+              <div class="feedback-meta">
+                <span>{{ f.username || '访客' }}</span>
+                <span>{{ new Date(f.created_at).toLocaleString() }}</span>
+              </div>
+              <div class="feedback-content">{{ f.content }}</div>
+              <div v-if="f.contact" class="feedback-contact">联系方式：{{ f.contact }}</div>
+            </div>
+          </template>
           <template v-else>
-            <textarea v-model="feedbackContent" class="feedback-textarea" placeholder="请输入您的建议或遇到的问题..." rows="4"></textarea>
-            <input v-model="feedbackContact" class="feedback-input" placeholder="联系方式（选填）" />
-            <p v-if="feedbackError" class="feedback-error">{{ feedbackError }}</p>
-            <button class="feedback-submit" @click="submitFeedback">提交</button>
+            <div v-if="feedbackSent" class="feedback-done">
+              <p>感谢您的反馈！</p>
+            </div>
+            <template v-else>
+              <textarea v-model="feedbackContent" class="feedback-textarea" placeholder="请输入您的建议或遇到的问题..." rows="4"></textarea>
+              <input v-model="feedbackContact" class="feedback-input" placeholder="联系方式（选填）" />
+              <p v-if="feedbackError" class="feedback-error">{{ feedbackError }}</p>
+              <button class="feedback-submit" @click="submitFeedback">提交</button>
+            </template>
           </template>
         </div>
       </div>
@@ -377,4 +403,8 @@ async function doLogout() {
   font-size: 15px;
 }
 .feedback-done { text-align: center; padding: 30px 0; color: var(--primary); font-size: 16px; }
+.feedback-item { padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+.feedback-meta { display: flex; justify-content: space-between; font-size: 12px; color: #999; margin-bottom: 6px; }
+.feedback-content { font-size: 14px; color: #333; line-height: 1.5; }
+.feedback-contact { font-size: 12px; color: #666; margin-top: 4px; }
 </style>
