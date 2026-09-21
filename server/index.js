@@ -62,18 +62,24 @@ function auth(req, res, next) {
 
   if (!userId) {
     const anon = req.cookies?.vt_anon
+    const ip = getClientIp(req)
     if (anon && /^anon_[a-z0-9]+$/.test(anon)) {
       userId = anon
+      // 已有访客：更新 IP 和访问时间
+      try {
+        db.prepare("INSERT OR REPLACE INTO guest_meta (user_id, last_ip, last_visit) VALUES (?, ?, ?)")
+          .run(userId, ip, Date.now())
+      } catch (e) {}
     } else {
       userId = 'anon_' + crypto.randomBytes(8).toString('hex')
       res.cookie('vt_anon', userId, { maxAge: 365*24*3600*1000, httpOnly: true, sameSite: 'lax' })
+      // 新访客：记录 IP 和首次访问日志
+      try {
+        db.prepare("INSERT OR REPLACE INTO guest_meta (user_id, last_ip, last_visit) VALUES (?, ?, ?)")
+          .run(userId, ip, Date.now())
+        logUser(userId, '访客', 'visit', ip)
+      } catch (e) {}
     }
-    // 记录访客 IP
-    const ip = getClientIp(req)
-    try {
-      db.prepare("INSERT OR REPLACE INTO guest_meta (user_id, last_ip, last_visit) VALUES (?, ?, ?)")
-        .run(userId, ip, Date.now())
-    } catch (e) {}
   }
 
   req.userId = userId
