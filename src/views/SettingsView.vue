@@ -209,6 +209,17 @@ function cancelMigrate() {
       <p v-if="tip" class="tip" :class="tip.kind">{{ tip.text }}</p>
     </transition>
 
+    <!-- 背熟规则 -->
+    <div class="cell-group">
+      <div class="cell">
+        <span class="cell-label">背熟阈值</span>
+        <span class="cell-right">
+          <input v-model="thresholdInput" class="threshold-input" type="number" min="1" max="999" @change="saveThreshold" />
+        </span>
+      </div>
+      <div class="cell-desc">答对多少次后视为已背熟，已背熟的单词不再出题</div>
+    </div>
+
     <!-- 数据管理 -->
     <div class="cell-group">
       <div class="cell" @click="exportDataFile">
@@ -475,4 +486,14 @@ function cancelMigrate() {
 .fade-leave-active { transition: opacity 0.25s; }
 .fade-enter-from,
 .fade-leave-to { opacity: 0; }
+
+.threshold-input {
+  width: 60px;
+  text-align: right;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  color: var(--primary);
+  background: transparent;
+}
 </style>
