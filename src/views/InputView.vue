@@ -332,34 +332,26 @@ function clearAllFields() {
 .switch {
   position: relative;
   display: inline-block;
-  width: 51px;
-  height: 31px;
+  width: 50px;
+  height: 30px;
   flex-shrink: 0;
 }
 .switch input {
-  position: absolute;
-  opacity: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  cursor: pointer;
+  display: none;
 }
 .switch .slider {
   position: absolute;
   cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background-color: #ccc;
-  border-radius: 31px;
+  border-radius: 30px;
   transition: 0.3s;
 }
 .switch .slider:before {
   position: absolute;
   content: "";
-  height: 27px;
-  width: 27px;
+  height: 26px;
+  width: 26px;
   left: 2px;
   bottom: 2px;
   background-color: white;
@@ -370,6 +362,6 @@ function clearAllFields() {
   background-color: var(--primary);
 }
 .switch input:checked + .slider:before {
-  transform: translateX(20px);
+  left: 22px;
 }
 </style>
