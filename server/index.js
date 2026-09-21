@@ -68,6 +68,12 @@ function auth(req, res, next) {
       userId = 'anon_' + crypto.randomBytes(8).toString('hex')
       res.cookie('vt_anon', userId, { maxAge: 365*24*3600*1000, httpOnly: true, sameSite: 'lax' })
     }
+    // 记录访客 IP
+    const ip = getClientIp(req)
+    try {
+      db.prepare("INSERT OR REPLACE INTO guest_meta (user_id, last_ip, last_visit) VALUES (?, ?, ?)")
+        .run(userId, ip, Date.now())
+    } catch (e) {}
   }
 
   req.userId = userId
@@ -175,9 +181,11 @@ app.get('/api/admin/users', (req, res) => {
   }))
   // 访客用户（user_id 是 anon_ 开头的字符串）：按 user_id 分组
   const guestRows = db.prepare(`
-    SELECT user_id, COUNT(*) as word_count, MIN(created_at) as created_at, MAX(created_at) as last_active
-    FROM words WHERE typeof(user_id) = 'text' AND user_id LIKE 'anon_%'
-    GROUP BY user_id
+    SELECT w.user_id, COUNT(*) as word_count, MIN(w.created_at) as created_at, MAX(w.created_at) as last_active,
+      g.last_ip
+    FROM words w LEFT JOIN guest_meta g ON w.user_id = g.user_id
+    WHERE typeof(w.user_id) = 'text' AND w.user_id LIKE 'anon_%'
+    GROUP BY w.user_id
   `).all()
   const guests = guestRows.map((g, i) => ({
     id: -1000 - i,
@@ -185,7 +193,7 @@ app.get('/api/admin/users', (req, res) => {
     isAdmin: false,
     isDisabled: false,
     lastLoginAt: g.last_active,
-    lastLoginIp: '',
+    lastLoginIp: g.last_ip || '',
     createdAt: g.created_at,
     wordCount: g.word_count,
     lastActive: g.last_active,

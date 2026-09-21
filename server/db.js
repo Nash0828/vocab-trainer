@@ -81,6 +81,12 @@ db.exec(`
     added_at INTEGER NOT NULL,
     UNIQUE(user_id, word_id)
   );
+
+  CREATE TABLE IF NOT EXISTS guest_meta (
+    user_id TEXT PRIMARY KEY,
+    last_ip TEXT DEFAULT '',
+    last_visit INTEGER NOT NULL
+  );
 `)
 
 // 迁移：旧表加列（已存在则忽略）
