@@ -496,4 +496,10 @@ function cancelMigrate() {
   color: var(--primary);
   background: transparent;
 }
+.cell-desc {
+  padding: 8px 16px 12px;
+  font-size: 13px;
+  color: #999;
+  line-height: 1.4;
+}
 </style>
