@@ -128,7 +128,7 @@ function clearAllFields() {
 
 <style scoped>
 .input-view {
-  padding: 8px 0;
+  padding: 8px 0 16px;
 }
 
 .form-group {

@@ -117,7 +117,7 @@ function formatTime(ts) {
 
 <style scoped>
 .wrongbook {
-  padding: 8px 0;
+  padding: 8px 0 16px;
 }
 
 .tip {

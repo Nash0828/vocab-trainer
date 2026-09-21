@@ -548,7 +548,7 @@ next()
 
 <style scoped>
 .practice {
-  padding: 8px 0;
+  padding: 8px 0 16px;
 }
 
 .empty-state {

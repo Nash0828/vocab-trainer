@@ -517,6 +517,9 @@ function formatTime(ts) {
 </template>
 
 <style scoped>
+.library-page {
+  padding: 8px 0 16px;
+}
 .empty-state {
   background: #fff;
   margin: 8px 16px;

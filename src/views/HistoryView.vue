@@ -189,7 +189,7 @@ function formatDate(dateStr) {
 
 <style scoped>
 .history {
-  padding: 8px 0;
+  padding: 8px 0 16px;
 }
 
 .tip {

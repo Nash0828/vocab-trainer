@@ -283,7 +283,7 @@ function cancelMigrate() {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 8px 0;
+  padding: 8px 0 16px;
 }
 
 .tip {
