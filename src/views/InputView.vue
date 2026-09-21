@@ -334,11 +334,15 @@ function clearAllFields() {
   display: inline-block;
   width: 51px;
   height: 31px;
+  flex-shrink: 0;
 }
 .switch input {
+  position: absolute;
   opacity: 0;
-  width: 0;
-  height: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
 }
 .switch .slider {
   position: absolute;
@@ -350,7 +354,6 @@ function clearAllFields() {
   background-color: #ccc;
   border-radius: 31px;
   transition: 0.3s;
-  box-sizing: border-box;
 }
 .switch .slider:before {
   position: absolute;
