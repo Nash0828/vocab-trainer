@@ -11,6 +11,7 @@ const form = reactive({
 })
 
 const posOptions = ['n.', 'v.', 'adj.', 'adv.', 'prep.', 'pron.', 'conj.', 'num.', 'art.', '其他']
+const showPosPicker = ref(false)
 
 const message = ref(null) // { text, kind: 'warn' | 'ok' | 'err' }
 const showMessage = ref(false)
@@ -102,16 +103,10 @@ function clearAllFields() {
         </div>
         <div class="form-item">
           <label>词性</label>
-          <input
-            v-model="form.pos"
-            type="text"
-            list="pos-options"
-            placeholder="如 n. / v. / adj."
-            autocomplete="off"
-          />
-          <datalist id="pos-options">
-            <option v-for="opt in posOptions" :key="opt" :value="opt" />
-          </datalist>
+          <div class="picker-trigger" @click="showPosPicker = true">
+            <span :class="form.pos ? '' : 'placeholder'">{{ form.pos || '如 n. / v. / adj.' }}</span>
+            <span class="arrow">›</span>
+          </div>
         </div>
       </div>
 
@@ -123,6 +118,25 @@ function clearAllFields() {
         <button type="submit" class="btn primary">保存单词</button>
       </div>
     </form>
+
+    <!-- 微信风格词性选择弹层 -->
+    <transition name="sheet">
+      <div v-if="showPosPicker" class="sheet-mask" @click="showPosPicker = false">
+        <div class="sheet" @click.stop>
+          <div class="sheet-title">选择词性</div>
+          <div class="sheet-options">
+            <div
+              v-for="opt in posOptions"
+              :key="opt"
+              class="sheet-option"
+              :class="{ active: form.pos === opt }"
+              @click="form.pos = opt; showPosPicker = false"
+            >{{ opt }}</div>
+          </div>
+          <div class="sheet-cancel" @click="showPosPicker = false">取消</div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -174,6 +188,64 @@ function clearAllFields() {
 .form-item input::placeholder {
   color: #b2b2b2;
 }
+
+.picker-trigger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 15px;
+  color: var(--text-main);
+}
+.picker-trigger .placeholder { color: #b2b2b2; }
+.picker-trigger .arrow { color: #c8c8c8; font-size: 18px; }
+
+.sheet-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+}
+.sheet {
+  width: 100%;
+  background: #f7f7f7;
+  border-radius: 12px 12px 0 0;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.sheet-title {
+  text-align: center;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 500;
+  background: #fff;
+  border-bottom: 1px solid #e5e5e5;
+}
+.sheet-options {
+  background: #fff;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.sheet-option {
+  padding: 14px;
+  text-align: center;
+  font-size: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.sheet-option.active { color: var(--primary); }
+.sheet-cancel {
+  margin-top: 8px;
+  padding: 14px;
+  text-align: center;
+  font-size: 16px;
+  background: #fff;
+}
+
+.sheet-enter-active, .sheet-leave-active { transition: transform 0.25s ease; }
+.sheet-enter-from, .sheet-leave-to { transform: translateY(100%); }
+.sheet-mask.fade-enter-active, .sheet-mask.fade-leave-active { transition: opacity 0.25s; }
+.sheet-mask.fade-enter-from, .sheet-mask.fade-leave-to { opacity: 0; }
 
 .tip {
   margin: 10px 16px 0;
