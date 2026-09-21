@@ -149,6 +149,8 @@ function clearAllFields() {
           </div>
         </div>
       </div>
+
+      <transition name="fade">
         <p v-if="showMessage && message" class="tip" :class="message.kind">{{ message.text }}</p>
       </transition>
 
