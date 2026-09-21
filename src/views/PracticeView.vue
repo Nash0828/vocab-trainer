@@ -20,6 +20,7 @@ const revealed = ref(false) // 是否通过"显示答案"按钮作答
 const isRedo = ref(false) // 是否处于重做模式（重做答对不算答对、不移除错题本）
 const lastIndex = ref(-1)
 const answerInput = ref(null)
+const focusEnabled = ref(false)
 let autoTimer = null // 作答后自动切换下一题的定时器
 
 // 今日统计与记录弹窗
@@ -106,7 +107,7 @@ function clearAutoTimer() {
 }
 
 function focusInput() {
-  // 多次尝试 focus，兼容手机端浏览器时序
+  if (!focusEnabled) return
   const tryFocus = (retries = 3) => {
     nextTick(() => {
       const el = answerInput.value
@@ -426,6 +427,7 @@ next()
             autocorrect="off"
             placeholder="输入英文单词"
             :disabled="!!result"
+            @focus="focusEnabled = true"
             @keyup.enter="submit"
             autocomplete="off"
             autocapitalize="off"
