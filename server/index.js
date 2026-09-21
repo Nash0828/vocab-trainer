@@ -162,15 +162,32 @@ app.put('/api/me/password', (req, res) => {
 // 管理员：查看所有用户
 app.get('/api/admin/users', (req, res) => {
   if (!req.isAdmin) return res.status(403).json({ error: '需要管理员权限' })
-  const users = db.prepare(`
+  // 注册用户
+  const registered = db.prepare(`
     SELECT u.id, u.username, u.is_admin, u.is_disabled, u.last_login_at, u.last_login_ip, u.created_at,
-      (SELECT COUNT(*) FROM words WHERE user_id = u.id) as word_count
+      (SELECT COUNT(*) FROM words WHERE user_id = u.id) as word_count,
+      (SELECT MAX(ts) FROM user_logs WHERE user_id = u.id) as last_active
     FROM users u ORDER BY u.created_at DESC
   `).all().map(u => ({
     id: u.id, username: u.username, isAdmin: !!u.is_admin, isDisabled: !!u.is_disabled,
     lastLoginAt: u.last_login_at, lastLoginIp: u.last_login_ip || '', createdAt: u.created_at,
-    wordCount: u.word_count,
+    wordCount: u.word_count, lastActive: u.last_active || 0, isGuest: false,
   }))
+  // 访客用户（user_id=0）：按 IP 聚合
+  const guestRows = db.prepare(`
+    SELECT 
+      COALESCE(last_login_ip, '') as ip,
+      COUNT(*) as word_count,
+      MIN(created_at) as created_at,
+      MAX(created_at) as last_active
+    FROM words WHERE user_id = 0 GROUP BY ip
+  `).all()
+  const guests = guestRows.map((g, i) => ({
+    id: -1000 - i, username: '访客-' + (g.ip ? g.ip.split('.').pop() : i), isAdmin: false, isDisabled: false,
+    lastLoginAt: g.last_active, lastLoginIp: g.ip || '未知', createdAt: g.created_at,
+    wordCount: g.word_count, lastActive: g.last_active, isGuest: true,
+  }))
+  const users = [...registered, ...guests].sort((a, b) => (b.lastActive || b.createdAt) - (a.lastActive || a.createdAt))
   res.json({ users })
 })
 

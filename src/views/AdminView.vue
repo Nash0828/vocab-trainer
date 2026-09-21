@@ -1,16 +1,23 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { api } from '../api/index.js'
 
 const users = ref([])
 const loading = ref(true)
 const error = ref('')
+const filter = ref('all')
 const selectedLogs = ref(null)
 const resetPwdUser = ref(null)
 const resetPwdResult = ref('')
 const confirmDelete = ref(null)
 const confirmResetPwd = ref(null)
 const confirmToggle = ref(null)
+
+const filteredUsers = computed(() => {
+  if (filter.value === 'registered') return users.value.filter(u => !u.isGuest)
+  if (filter.value === 'guest') return users.value.filter(u => u.isGuest)
+  return users.value
+})
 
 async function loadUsers() {
   loading.value = true
@@ -78,40 +85,42 @@ onMounted(loadUsers)
     <div v-if="loading" class="muted">加载中...</div>
     <div v-else-if="error" class="error">{{ error }}</div>
 
-    <table v-else class="user-table">
-      <thead>
-        <tr>
-          <th>用户名</th>
-          <th>单词数</th>
-          <th>创建时间</th>
-          <th>最近登录</th>
-          <th>最近 IP</th>
-          <th>状态</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="u in users" :key="u.id">
-          <td><strong>{{ u.username }}</strong><span v-if="u.isAdmin" class="tag-admin">管理员</span></td>
-          <td>{{ u.wordCount }}</td>
-          <td>{{ fmtTime(u.createdAt) }}</td>
-          <td>{{ fmtTime(u.lastLoginAt) }}</td>
-          <td>{{ u.lastLoginIp || '—' }}</td>
-          <td>
+    <template v-else>
+      <!-- 筛选栏 -->
+      <div class="filter-bar">
+        <button :class="{ active: filter === 'all' }" @click="filter = 'all'">全部</button>
+        <button :class="{ active: filter === 'registered' }" @click="filter = 'registered'">注册用户</button>
+        <button :class="{ active: filter === 'guest' }" @click="filter = 'guest'">访客</button>
+      </div>
+
+      <div class="user-list">
+        <div v-for="u in filteredUsers" :key="u.id" class="user-card">
+          <div class="user-main">
+            <span class="user-name">{{ u.username }}</span>
+            <span v-if="u.isAdmin" class="tag-admin">管理员</span>
+            <span v-if="u.isGuest" class="tag-guest">访客</span>
             <span v-if="u.isDisabled" class="tag-disabled">已禁用</span>
-            <span v-else class="tag-active">正常</span>
-          </td>
-          <td class="actions">
-            <button class="btn ghost mini" @click="showLogs(u)">日志</button>
-            <button v-if="!u.isAdmin" class="btn ghost mini" @click="confirmResetPwd = u">重置密码</button>
-            <button v-if="!u.isAdmin" class="btn ghost mini" @click="confirmToggle = u">
+          </div>
+          <div class="user-info">
+            <span>单词：{{ u.wordCount }}</span>
+            <span>创建：{{ fmtTime(u.createdAt) }}</span>
+            <span>最近活跃：{{ fmtTime(u.lastLoginAt) }}</span>
+            <span v-if="u.lastLoginIp">IP：{{ u.lastLoginIp }}</span>
+          </div>
+          <div class="user-actions">
+            <button class="action-btn" @click="showLogs(u)">日志</button>
+            <button v-if="!u.isAdmin && !u.isGuest" class="action-btn" @click="confirmResetPwd = u">重置密码</button>
+            <button v-if="!u.isAdmin && !u.isGuest" class="action-btn" @click="confirmToggle = u">
               {{ u.isDisabled ? '启用' : '禁用' }}
             </button>
-            <button v-if="!u.isAdmin" class="btn danger-ghost mini" @click="confirmDelete = u">删除</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            <button v-if="!u.isAdmin && !u.isGuest" class="action-btn danger" @click="confirmDelete = u">删除</button>
+          </div>
+        </div>
+        <div v-if="!filteredUsers.length" class="empty-state">
+          <p class="empty-title">暂无用户</p>
+        </div>
+      </div>
+    </template>
 
     <!-- 日志弹窗 -->
     <div v-if="selectedLogs" class="mask" @click.self="selectedLogs = null">
@@ -213,13 +222,100 @@ onMounted(loadUsers)
 </template>
 
 <style scoped>
-.user-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-.user-table th, .user-table td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--border-light); font-size: 14px; }
-.user-table th { color: var(--text-sub); font-weight: 600; }
-.tag-admin { background: #ff4d4f; color: #fff; font-size: 11px; padding: 1px 6px; border-radius: 4px; margin-left: 6px; }
-.tag-active { color: #52c41a; font-size: 13px; }
-.tag-disabled { color: #ff4d4f; font-size: 13px; }
-.actions { display: flex; gap: 4px; flex-wrap: wrap; }
+.filter-bar {
+  display: flex;
+  background: #fff;
+  margin: 8px 16px;
+  border-radius: 10px;
+  padding: 3px;
+  gap: 3px;
+}
+.filter-bar button {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+.filter-bar button.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.user-list {
+  margin: 0 16px;
+}
+.user-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 8px;
+}
+.user-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.user-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+.tag-admin {
+  background: #ff4d4f;
+  color: #fff;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.tag-guest {
+  background: #fa9d3b;
+  color: #fff;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.tag-disabled {
+  background: #f5f5f5;
+  color: var(--text-sub);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.user-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 13px;
+  color: var(--text-sub);
+  margin-bottom: 12px;
+}
+.user-actions {
+  display: flex;
+  gap: 8px;
+  border-top: 0.5px solid #f0f0f0;
+  padding-top: 10px;
+}
+.action-btn {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  background: #f5f5f5;
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--text-main);
+  cursor: pointer;
+}
+.action-btn.danger {
+  color: #fa5151;
+}
+.action-btn:active {
+  background: #e8e8e8;
+}
 
 .mask {
   position: fixed;
