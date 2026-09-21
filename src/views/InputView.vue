@@ -188,7 +188,7 @@ function clearAllFields() {
 }
 
 .form-item label {
-  width: 70px;
+  width: 84px;
   font-size: 15px;
   color: var(--text-main);
   flex-shrink: 0;
@@ -350,6 +350,7 @@ function clearAllFields() {
   background-color: #ccc;
   border-radius: 31px;
   transition: 0.3s;
+  box-sizing: border-box;
 }
 .switch .slider:before {
   position: absolute;
