@@ -107,7 +107,7 @@ function clearAutoTimer() {
 }
 
 function focusInput() {
-  if (!focusEnabled) return
+  if (!focusEnabled.value) return
   const tryFocus = (retries = 3) => {
     nextTick(() => {
       const el = answerInput.value
