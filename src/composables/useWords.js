@@ -52,7 +52,7 @@ export function weightedPickIndex(counts, threshold, lastIndex = -1) {
 }
 
 export function useWords() {
-  function addWord({ chinese, english, pos }) {
+  function addWord({ chinese, english, pos, caseSensitive }) {
     const c = (chinese || '').trim()
     const e = (english || '').trim()
     const p = (pos || '').trim()
@@ -62,12 +62,13 @@ export function useWords() {
       chinese: c,
       english: e,
       pos: p,
+      caseSensitive: !!caseSensitive,
       count: 0,
       createdAt: Date.now(),
     }
     words.value.push(word)
     // 异步同步到后端，成功后用真实 id 替换临时 id
-    api.addWord({ chinese: c, english: e, pos: p })
+    api.addWord({ chinese: c, english: e, pos: p, caseSensitive: !!caseSensitive })
       .then((real) => {
         const idx = words.value.findIndex((w) => w.id === word.id)
         if (idx !== -1) words.value[idx] = { ...real, count: 0 }
