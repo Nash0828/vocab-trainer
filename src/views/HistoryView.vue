@@ -90,9 +90,13 @@ function formatDate(dateStr) {
     </transition>
 
     <!-- 空状态 -->
-    <div v-if="!days.length" class="empty">
-      <h3>暂无背诵记录</h3>
-      <p class="muted">去背单词练习后，这里会按天记录你的背诵情况</p>
+    <div v-if="!days.length" class="empty-state">
+      <div class="empty-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+      <p class="empty-title">暂无背诵记录</p>
+      <p class="empty-desc">去背单词练习后，这里会按天记录你的背诵情况</p>
+      <button class="empty-btn" @click="router.push('/practice')">去背单词</button>
     </div>
 
     <template v-else>
@@ -196,12 +200,38 @@ function formatDate(dateStr) {
 .tip.warn { background: #fff7e6; color: #fa9d3b; }
 .tip.err { background: #fdecec; color: #fa5151; }
 
-.empty {
+.empty-state {
+  background: #fff;
+  margin: 8px 16px;
+  border-radius: 12px;
+  padding: 48px 20px;
   text-align: center;
-  padding: 60px 20px;
 }
-.empty h3 { font-size: 17px; margin-bottom: 8px; }
-.empty .muted { font-size: 14px; color: var(--text-sub); }
+.empty-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.empty-title {
+  font-size: 16px;
+  color: var(--text-main);
+  margin: 0 0 8px 0;
+  font-weight: 500;
+}
+.empty-desc {
+  font-size: 14px;
+  color: var(--text-sub);
+  margin: 0 0 24px 0;
+}
+.empty-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 10px 32px;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+}
 
 /* 汇总卡片 */
 .summary-card {

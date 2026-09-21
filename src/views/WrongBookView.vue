@@ -67,12 +67,13 @@ function formatTime(ts) {
       <p v-if="tip" class="tip" :class="tip.kind">{{ tip.text }}</p>
     </transition>
 
-    <div v-if="!wrongList.length" class="empty">
-      <h3>错题本是空的</h3>
-      <p class="muted">去背单词练习，答错的单词会自动记入这里</p>
-      <div class="empty-actions">
-        <button class="btn primary" @click="router.push('/practice')">去背单词</button>
+    <div v-if="!wrongList.length" class="empty-state">
+      <div class="empty-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       </div>
+      <p class="empty-title">错题本是空的</p>
+      <p class="empty-desc">去背单词练习，答错的单词会自动记入这里</p>
+      <button class="empty-btn" @click="router.push('/practice')">去背单词</button>
     </div>
 
     <template v-else>
@@ -265,12 +266,38 @@ function formatTime(ts) {
   cursor: pointer;
 }
 
-.empty {
+.empty-state {
+  background: #fff;
+  margin: 8px 16px;
+  border-radius: 12px;
+  padding: 48px 20px;
   text-align: center;
-  padding: 60px 20px;
 }
-.empty h3 { font-size: 17px; margin-bottom: 8px; color: var(--text-main); }
-.empty .muted { margin-bottom: 24px; font-size: 14px; color: var(--text-sub); }
+.empty-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.empty-title {
+  font-size: 16px;
+  color: var(--text-main);
+  margin: 0 0 8px 0;
+  font-weight: 500;
+}
+.empty-desc {
+  font-size: 14px;
+  color: var(--text-sub);
+  margin: 0 0 24px 0;
+}
+.empty-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 10px 32px;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+}
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.25s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
