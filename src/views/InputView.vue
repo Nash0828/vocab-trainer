@@ -103,9 +103,14 @@ function clearAllFields() {
         </div>
         <div class="form-item">
           <label>词性</label>
-          <div class="picker-trigger" @click="showPosPicker = true">
-            <span :class="form.pos ? '' : 'placeholder'">{{ form.pos || '如 n. / v. / adj.' }}</span>
-            <span class="arrow">›</span>
+          <div class="pos-row">
+            <input
+              v-model="form.pos"
+              type="text"
+              placeholder="如 n. / v. / adj."
+              autocomplete="off"
+            />
+            <span class="pos-pick-btn" @click="showPosPicker = true">选择</span>
           </div>
         </div>
       </div>
@@ -189,16 +194,28 @@ function clearAllFields() {
   color: #b2b2b2;
 }
 
-.picker-trigger {
+.pos-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 4px 0;
+  gap: 10px;
+}
+.pos-row input {
+  flex: 1;
+  border: none;
+  outline: none;
   font-size: 15px;
   color: var(--text-main);
+  background: transparent;
+  padding: 4px 0;
 }
-.picker-trigger .placeholder { color: #b2b2b2; }
-.picker-trigger .arrow { color: #c8c8c8; font-size: 18px; }
+.pos-pick-btn {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: 6px;
+  padding: 4px 10px;
+}
 
 .sheet-mask {
   position: fixed;
