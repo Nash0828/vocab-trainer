@@ -693,7 +693,6 @@ function formatTime(ts) {
 }
 
 .op-btn:active { background: #f2f2f2; }
-.op-btn.del { color: #fa5151; }
 
 .edit-row {
   display: flex;
