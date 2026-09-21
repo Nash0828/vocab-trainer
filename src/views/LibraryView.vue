@@ -108,8 +108,7 @@ const filteredWords = computed(() => {
     const matchKw =
       !kw ||
       w.chinese.toLowerCase().includes(kw) ||
-      w.english.toLowerCase().includes(kw) ||
-      (w.pos || '').toLowerCase().includes(kw)
+      w.english.toLowerCase().includes(kw)
     const mastered = isMastered(w)
     const matchStatus =
       statusFilter.value === 'all' ||
@@ -164,7 +163,7 @@ function changePageSize(v) {
 
 const filterOptions = [
   { value: 'all', label: '全部' },
-  { value: 'mastered', label: '✓ 已背熟' },
+  { value: 'mastered', label: '已背熟' },
   { value: 'notMastered', label: '未背熟' },
 ]
 
