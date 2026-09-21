@@ -345,7 +345,7 @@ function formatTime(ts) {
           v-model="keyword"
           type="text"
           class="search-input"
-          placeholder="搜索中文 / 英文 / 词性…"
+          placeholder="搜索中文 / 英文…"
         />
         <button v-if="keyword" class="btn ghost mini" @click="keyword = ''">清空</button>
       </div>
