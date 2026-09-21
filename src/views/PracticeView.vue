@@ -310,37 +310,43 @@ next()
 <template>
   <div class="practice">
     <!-- 空词库 -->
-    <div v-if="!hasWords" class="empty">
-      <h2>词库还是空的</h2>
-      <p class="muted">先去「单词录入」添加一些单词，再来这里练习吧！</p>
-      <button class="btn primary" @click="router.push('/input')">去录入单词</button>
+    <div v-if="!hasWords" class="empty-state">
+      <div class="empty-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      </div>
+      <p class="empty-title">词库还是空的</p>
+      <p class="empty-desc">先去录入一些单词，再来这里练习吧</p>
+      <button class="empty-btn" @click="router.push('/input')">去录入单词</button>
     </div>
 
     <!-- 错题本模式：错题本为空 -->
-    <div v-else-if="wrongState === 'empty'" class="empty">
-      <h2>错题本还是空的</h2>
-      <p class="muted">在背单词中答错的单词会自动记入错题本</p>
-      <div class="empty-actions">
-        <button class="btn primary" @click="setSource('all')">切换到全部词库</button>
+    <div v-else-if="wrongState === 'empty'" class="empty-state">
+      <div class="empty-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       </div>
+      <p class="empty-title">错题本还是空的</p>
+      <p class="empty-desc">在背单词中答错的单词会自动记入错题本</p>
+      <button class="empty-btn" @click="setSource('all')">切换到全部词库</button>
     </div>
 
     <!-- 错题本模式：错题本单词已全部背熟 -->
-    <div v-else-if="wrongState === 'all-mastered'" class="empty">
-      <h2>错题本都背熟了！</h2>
-      <p class="muted">错题本里的单词都已达到背熟阈值</p>
-      <div class="empty-actions">
-        <button class="btn primary" @click="setSource('all')">切换到全部词库</button>
+    <div v-else-if="wrongState === 'all-mastered'" class="empty-state">
+      <div class="empty-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
       </div>
+      <p class="empty-title">错题本都背熟了</p>
+      <p class="empty-desc">错题本里的单词都已达到背熟阈值</p>
+      <button class="empty-btn" @click="setSource('all')">切换到全部词库</button>
     </div>
 
     <!-- 全部背熟 -->
-    <div v-else-if="allMastered" class="empty">
-      <h2>全部背熟！</h2>
-      <p class="muted">词库中所有单词都已达到背熟阈值</p>
-      <div class="empty-actions">
-        <button class="btn primary" @click="router.push('/settings')">去设置调整</button>
+    <div v-else-if="allMastered" class="empty-state">
+      <div class="empty-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
       </div>
+      <p class="empty-title">全部背熟了</p>
+      <p class="empty-desc">词库中所有单词都已达到背熟阈值</p>
+      <button class="empty-btn" @click="router.push('/settings')">去设置调整</button>
     </div>
 
     <!-- 有可练习单词 -->
@@ -545,13 +551,38 @@ next()
   padding: 8px 0;
 }
 
-.empty {
+.empty-state {
+  background: #fff;
+  margin: 8px 16px;
+  border-radius: 12px;
+  padding: 48px 20px;
   text-align: center;
-  padding: 60px 20px;
 }
-.empty h2 { font-size: 18px; margin-bottom: 8px; }
-.empty .muted { margin-bottom: 24px; color: var(--text-sub); }
-.empty-actions { display: flex; justify-content: center; gap: 10px; }
+.empty-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.empty-title {
+  font-size: 16px;
+  color: var(--text-main);
+  margin: 0 0 8px 0;
+  font-weight: 500;
+}
+.empty-desc {
+  font-size: 14px;
+  color: var(--text-sub);
+  margin: 0 0 24px 0;
+}
+.empty-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 10px 32px;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+}
 
 /* 出题来源切换 */
 .source-tabs {

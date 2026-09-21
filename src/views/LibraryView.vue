@@ -364,19 +364,23 @@ function formatTime(ts) {
     </div>
 
     <!-- 空状态：词库为空 -->
-    <div v-if="!totalCount" class="empty">
-      
-      <h3>暂无单词</h3>
-      <p class="muted">去「单词录入」添加你的第一个单词吧！</p>
-      <button class="btn primary" @click="router.push('/')">去录入 →</button>
+    <div v-if="!totalCount" class="empty-state">
+      <div class="empty-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      </div>
+      <p class="empty-title">暂无单词</p>
+      <p class="empty-desc">去录入添加你的第一个单词吧</p>
+      <button class="empty-btn" @click="router.push('/input')">去录入</button>
     </div>
 
     <!-- 无匹配结果 -->
-    <div v-else-if="noMatch" class="empty">
-      
-      <h3>没有符合条件的单词</h3>
-      <p class="muted">试试换一个关键词或切换筛选条件</p>
-      <button class="btn ghost" @click="resetFilters">清除筛选</button>
+    <div v-else-if="noMatch" class="empty-state">
+      <div class="empty-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </div>
+      <p class="empty-title">没有符合条件的单词</p>
+      <p class="empty-desc">试试换一个关键词或切换筛选条件</p>
+      <button class="empty-btn" @click="resetFilters">清除筛选</button>
     </div>
 
     <!-- 列表 -->
@@ -513,6 +517,39 @@ function formatTime(ts) {
 </template>
 
 <style scoped>
+.empty-state {
+  background: #fff;
+  margin: 8px 16px;
+  border-radius: 12px;
+  padding: 48px 20px;
+  text-align: center;
+}
+.empty-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.empty-title {
+  font-size: 16px;
+  color: var(--text-main);
+  margin: 0 0 8px 0;
+  font-weight: 500;
+}
+.empty-desc {
+  font-size: 14px;
+  color: var(--text-sub);
+  margin: 0 0 24px 0;
+}
+.empty-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 10px 32px;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
 .tip {
   margin: 14px 0 0;
   padding: 10px 14px;
