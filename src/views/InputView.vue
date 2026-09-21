@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useWords } from '../composables/useWords'
 
 const { words, addWord, checkDuplicate } = useWords()
@@ -18,6 +18,12 @@ const filteredPosOptions = computed(() => {
   if (!q) return posOptions
   return posOptions.filter(o => o.toLowerCase().includes(q))
 })
+
+function closePosPicker() {
+  showPosPicker.value = false
+}
+onMounted(() => document.addEventListener('click', closePosPicker))
+onUnmounted(() => document.removeEventListener('click', closePosPicker))
 
 const message = ref(null) // { text, kind: 'warn' | 'ok' | 'err' }
 const showMessage = ref(false)
@@ -109,7 +115,7 @@ function clearAllFields() {
         </div>
         <div class="form-item">
           <label>词性</label>
-          <div class="pos-row" style="position: relative;">
+          <div class="pos-row" style="position: relative;" @click.stop>
             <input
               v-model="form.pos"
               type="text"
