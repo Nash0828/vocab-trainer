@@ -173,16 +173,24 @@ app.get('/api/admin/users', (req, res) => {
     lastLoginAt: u.last_login_at, lastLoginIp: u.last_login_ip || '', createdAt: u.created_at,
     wordCount: u.word_count, lastActive: u.last_active || 0, isGuest: false,
   }))
-  // 访客用户（user_id=0）：所有访客数据归为一个访客
-  const guestCount = db.prepare(`
-    SELECT COUNT(*) as cnt, MIN(created_at) as created_at, MAX(created_at) as last_active
-    FROM words WHERE user_id = 0
-  `).get()
-  const guests = guestCount && guestCount.cnt > 0 ? [{
-    id: -1000, username: '访客用户', isAdmin: false, isDisabled: false,
-    lastLoginAt: guestCount.last_active, lastLoginIp: '', createdAt: guestCount.created_at,
-    wordCount: guestCount.cnt, lastActive: guestCount.last_active, isGuest: true,
-  }] : []
+  // 访客用户（user_id 是 anon_ 开头的字符串）：按 user_id 分组
+  const guestRows = db.prepare(`
+    SELECT user_id, COUNT(*) as word_count, MIN(created_at) as created_at, MAX(created_at) as last_active
+    FROM words WHERE typeof(user_id) = 'text' AND user_id LIKE 'anon_%'
+    GROUP BY user_id
+  `).all()
+  const guests = guestRows.map((g, i) => ({
+    id: -1000 - i,
+    username: '访客-' + (g.user_id || '').slice(-6),
+    isAdmin: false,
+    isDisabled: false,
+    lastLoginAt: g.last_active,
+    lastLoginIp: '',
+    createdAt: g.created_at,
+    wordCount: g.word_count,
+    lastActive: g.last_active,
+    isGuest: true,
+  }))
   const users = [...registered, ...guests].sort((a, b) => (b.lastActive || b.createdAt) - (a.lastActive || a.createdAt))
   res.json({ users })
 })
