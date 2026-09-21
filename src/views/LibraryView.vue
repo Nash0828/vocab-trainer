@@ -8,7 +8,7 @@ const { words, updateWord, removeWord, checkDuplicate, resetCount, isMastered, s
   useWords()
 
 const editingId = ref(null)
-const editForm = reactive({ chinese: '', english: '', pos: '' })
+const editForm = reactive({ chinese: '', english: '', pos: '', caseSensitive: false })
 const confirmDeleteId = ref(null)
 const confirmResetId = ref(null)
 const tip = ref(null) // { text, kind: 'ok' | 'warn' | 'err' }
@@ -249,6 +249,7 @@ function startEdit(word) {
   editForm.chinese = word.chinese
   editForm.english = word.english
   editForm.pos = word.pos || ''
+  editForm.caseSensitive = !!word.caseSensitive
 }
 
 function cancelEdit() {
@@ -277,6 +278,7 @@ function saveEdit(word) {
     chinese: editForm.chinese.trim(),
     english: editForm.english.trim(),
     pos: editForm.pos.trim(),
+    caseSensitive: editForm.caseSensitive,
   })
   if (ok) {
     showTip(`✅ 已保存修改：${editForm.english}`, 'ok')
@@ -390,6 +392,11 @@ function formatTime(ts) {
           <input v-model="editForm.chinese" class="cell-input" placeholder="中文" />
           <input v-model="editForm.english" class="cell-input" placeholder="英文" />
           <input v-model="editForm.pos" class="cell-input pos" placeholder="词性" />
+          <label class="mini-switch">
+            <input type="checkbox" v-model="editForm.caseSensitive" />
+            <span class="mini-switch-slider"></span>
+          </label>
+          <span class="mini-switch-label">大小写敏感</span>
           <div class="edit-btns">
             <button class="btn primary mini" @click="saveEdit(word)">保存</button>
             <button class="btn ghost mini" @click="cancelEdit">取消</button>
@@ -1052,5 +1059,49 @@ function formatTime(ts) {
 
 .speak-mini:active {
   transform: scale(0.9);
+}
+
+.mini-switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+}
+.mini-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.mini-switch-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  border-radius: 20px;
+  transition: 0.3s;
+}
+.mini-switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  border-radius: 50%;
+  transition: 0.3s;
+}
+.mini-switch input:checked + .mini-switch-slider {
+  background-color: var(--primary);
+}
+.mini-switch input:checked + .mini-switch-slider:before {
+  transform: translateX(16px);
+}
+.mini-switch-label {
+  font-size: 13px;
+  color: #666;
 }
 </style>

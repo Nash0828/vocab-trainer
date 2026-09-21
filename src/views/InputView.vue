@@ -8,6 +8,7 @@ const form = reactive({
   chinese: '',
   english: '',
   pos: '',
+  caseSensitive: false,
 })
 
 const posOptions = ['n.', 'v.', 'adj.', 'adv.', 'prep.', 'pron.', 'conj.', 'num.', 'art.', '其他']
@@ -137,9 +138,17 @@ function clearAllFields() {
             </transition>
           </div>
         </div>
+        <div class="form-item">
+          <label>大小写敏感</label>
+          <div class="switch-row">
+            <span class="switch-desc">开启后答题需区分大小写</span>
+            <label class="switch">
+              <input type="checkbox" v-model="form.caseSensitive" />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
       </div>
-
-      <transition name="fade">
         <p v-if="showMessage && message" class="tip" :class="message.kind">{{ message.text }}</p>
       </transition>
 
@@ -308,4 +317,54 @@ function clearAllFields() {
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.25s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+}
+.switch-desc {
+  font-size: 13px;
+  color: #999;
+}
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 26px;
+}
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.switch .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  border-radius: 26px;
+  transition: 0.3s;
+}
+.switch .slider:before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  border-radius: 50%;
+  transition: 0.3s;
+}
+.switch input:checked + .slider {
+  background-color: var(--primary);
+}
+.switch input:checked + .slider:before {
+  transform: translateX(18px);
+}
 </style>

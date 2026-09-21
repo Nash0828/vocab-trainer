@@ -143,8 +143,12 @@ function next() {
 
 function submit() {
   if (!current.value || result.value || !answer.value.trim()) return
-  // 大小写敏感：严格匹配（去除首尾空格）
-  const isCorrect = answer.value.trim() === current.value.english.trim()
+  // 大小写敏感：开启则严格匹配，否则不区分大小写（均去除首尾空格）
+  const userInput = answer.value.trim()
+  const rightAnswer = current.value.english.trim()
+  const isCorrect = current.value.caseSensitive
+    ? userInput === rightAnswer
+    : userInput.toLowerCase() === rightAnswer.toLowerCase()
 
   if (isRedo.value) {
     // 重做模式：无论对错都不算正式作答，只显示反馈，不更新 count、不移除/加入错题本

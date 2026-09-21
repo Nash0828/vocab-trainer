@@ -30,7 +30,7 @@ if (!existingAdmin) {
 function genToken() { return crypto.randomBytes(32).toString('hex') }
 function genId(prefix = '') { return `${prefix}${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }
 function rowToWord(row) {
-  return { id: String(row.id), chinese: row.chinese, english: row.english, pos: row.pos || '', count: row.count || 0, createdAt: row.created_at }
+  return { id: String(row.id), chinese: row.chinese, english: row.english, pos: row.pos || '', count: row.count || 0, createdAt: row.created_at, caseSensitive: !!row.case_sensitive }
 }
 function getThreshold(uid) {
   const row = db.prepare("SELECT value FROM settings WHERE user_id = ? AND key = 'masteryThreshold'").get(uid)
@@ -281,19 +281,19 @@ app.get('/api/state', (req, res) => {
 })
 
 app.post('/api/words', (req, res) => {
-  const { chinese, english, pos } = req.body || {}
+  const { chinese, english, pos, caseSensitive } = req.body || {}
   const c = (chinese||'').trim(), e = (english||'').trim(), p = (pos||'').trim()
   if (!c || !e) return res.status(400).json({ error: '中文和英文不能为空' })
-  const info = db.prepare('INSERT INTO words (user_id, chinese, english, pos, count, created_at) VALUES (?, ?, ?, ?, 0, ?)').run(req.userId, c, e, p, Date.now())
+  const info = db.prepare('INSERT INTO words (user_id, chinese, english, pos, count, created_at, case_sensitive) VALUES (?, ?, ?, ?, 0, ?, ?)').run(req.userId, c, e, p, Date.now(), caseSensitive ? 1 : 0)
   res.json(rowToWord(db.prepare('SELECT * FROM words WHERE id = ?').get(info.lastInsertRowid)))
 })
 
 app.put('/api/words/:id', (req, res) => {
   const id = Number(req.params.id)
-  const { chinese, english, pos } = req.body || {}
+  const { chinese, english, pos, caseSensitive } = req.body || {}
   const c = (chinese||'').trim(), e = (english||'').trim(), p = (pos||'').trim()
   if (!c || !e) return res.status(400).json({ error: '中文和英文不能为空' })
-  const info = db.prepare('UPDATE words SET chinese = ?, english = ?, pos = ? WHERE id = ? AND user_id = ?').run(c, e, p, id, req.userId)
+  const info = db.prepare('UPDATE words SET chinese = ?, english = ?, pos = ?, case_sensitive = ? WHERE id = ? AND user_id = ?').run(c, e, p, caseSensitive ? 1 : 0, id, req.userId)
   if (!info.changes) return res.status(404).json({ error: '单词不存在' })
   db.prepare('UPDATE wrongbook SET chinese = ?, english = ?, pos = ? WHERE word_id = ? AND user_id = ?').run(c, e, p, String(id), req.userId)
   res.json({ ok: true })
