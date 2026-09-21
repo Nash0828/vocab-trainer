@@ -141,10 +141,9 @@ function clearAllFields() {
         <div class="form-item">
           <label>区分大小写</label>
           <div class="switch-row">
-            <label class="switch">
-              <input type="checkbox" v-model="form.caseSensitive" />
-              <span class="slider"></span>
-            </label>
+            <div class="switch" :class="{ on: form.caseSensitive }" @click="form.caseSensitive = !form.caseSensitive">
+              <div class="switch-knob"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -331,37 +330,29 @@ function clearAllFields() {
 }
 .switch {
   position: relative;
-  display: inline-block;
   width: 50px;
   height: 30px;
+  border-radius: 30px;
+  background-color: #ccc;
+  transition: background-color 0.3s;
+  cursor: pointer;
   flex-shrink: 0;
 }
-.switch input {
-  display: none;
-}
-.switch .slider {
-  position: absolute;
-  cursor: pointer;
-  inset: 0;
-  background-color: #ccc;
-  border-radius: 30px;
-  transition: 0.3s;
-}
-.switch .slider:before {
-  position: absolute;
-  content: "";
-  height: 26px;
-  width: 26px;
-  left: 2px;
-  bottom: 2px;
-  background-color: white;
-  border-radius: 50%;
-  transition: 0.3s;
-}
-.switch input:checked + .slider {
+.switch.on {
   background-color: var(--primary);
 }
-.switch input:checked + .slider:before {
+.switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background-color: #fff;
+  transition: left 0.3s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.switch.on .switch-knob {
   left: 22px;
 }
 </style>

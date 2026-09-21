@@ -392,10 +392,9 @@ function formatTime(ts) {
           <input v-model="editForm.chinese" class="cell-input" placeholder="中文" />
           <input v-model="editForm.english" class="cell-input" placeholder="英文" />
           <input v-model="editForm.pos" class="cell-input pos" placeholder="词性" />
-          <label class="mini-switch">
-            <input type="checkbox" v-model="editForm.caseSensitive" />
-            <span class="mini-switch-slider"></span>
-          </label>
+          <div class="mini-switch" :class="{ on: editForm.caseSensitive }" @click="editForm.caseSensitive = !editForm.caseSensitive">
+            <div class="mini-switch-knob"></div>
+          </div>
           <span class="mini-switch-label">大小写敏感</span>
           <div class="edit-btns">
             <button class="btn primary mini" @click="saveEdit(word)">保存</button>
@@ -1063,42 +1062,30 @@ function formatTime(ts) {
 
 .mini-switch {
   position: relative;
-  display: inline-block;
   width: 44px;
   height: 24px;
-}
-.mini-switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-.mini-switch-slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #ccc;
   border-radius: 24px;
-  transition: 0.3s;
+  background-color: #ccc;
+  transition: background-color 0.3s;
+  cursor: pointer;
+  flex-shrink: 0;
 }
-.mini-switch-slider:before {
-  position: absolute;
-  content: "";
-  height: 20px;
-  width: 20px;
-  left: 2px;
-  bottom: 2px;
-  background-color: white;
-  border-radius: 50%;
-  transition: 0.3s;
-}
-.mini-switch input:checked + .mini-switch-slider {
+.mini-switch.on {
   background-color: var(--primary);
 }
-.mini-switch input:checked + .mini-switch-slider:before {
-  transform: translateX(20px);
+.mini-switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #fff;
+  transition: left 0.3s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.mini-switch.on .mini-switch-knob {
+  left: 22px;
 }
 .mini-switch-label {
   font-size: 13px;
