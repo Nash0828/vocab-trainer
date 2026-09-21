@@ -20,10 +20,10 @@ const tip = ref(null) // { text, kind: 'ok' | 'warn' | 'err' }
 let tipTimer = null
 
 // ---- 导入 / 导出 ----
-const importMode = ref('merge') // 'merge' | 'overwrite'
 const fileInput = ref(null)
 const pendingImport = ref(null) // { data, mode }
 const confirmOverwrite = ref(false)
+const showImportMode = ref(false)
 let pendingMode = 'merge'
 
 const totalCount = computed(() => words.value.length)
@@ -73,13 +73,13 @@ async function exportDataFile() {
     const d = new Date()
     const pad = (n) => String(n).padStart(2, '0')
     const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`
-    a.download = `背单词助手备份_${stamp}.json`
+    a.download = `背单词助手数据_${stamp}.json`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
     showTip(
-      `✅ 已导出 ${data.words.length} 个单词（含背诵次数）与背熟阈值，文件名：背单词助手备份_${stamp}.json`,
+      `✅ 已导出 ${data.words.length} 个单词（含背诵次数）与背熟阈值，文件名：背单词助手数据_${stamp}.json`,
       'ok'
     )
   } catch (err) {
@@ -88,7 +88,8 @@ async function exportDataFile() {
 }
 
 // ---- 导入：选择文件 ----
-function pickImportFile(mode) {
+function chooseImportMode(mode) {
+  showImportMode.value = false
   pendingMode = mode
   fileInput.value?.click()
 }
@@ -211,29 +212,15 @@ function cancelMigrate() {
     <!-- 数据管理 -->
     <div class="cell-group">
       <div class="cell" @click="exportDataFile">
-        <span class="cell-label">导出数据备份</span>
+        <span class="cell-label">导出数据</span>
         <span class="cell-right">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <span class="chevron">›</span>
         </span>
       </div>
 
-      <div class="cell cell-col">
-        <div class="cell-subhead">导入方式</div>
-        <div class="io-mode">
-          <label class="io-radio" :class="{ active: importMode === 'merge' }">
-            <input v-model="importMode" type="radio" value="merge" />
-            合并（跳过重复）
-          </label>
-          <label class="io-radio" :class="{ active: importMode === 'overwrite' }">
-            <input v-model="importMode" type="radio" value="overwrite" />
-            覆盖（整体替换）
-          </label>
-        </div>
-      </div>
-
-      <div class="cell" @click="pickImportFile(importMode)">
-        <span class="cell-label">导入数据备份</span>
+      <div class="cell" @click="showImportMode = true">
+        <span class="cell-label">导入数据</span>
         <span class="cell-right">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           <span class="chevron">›</span>
@@ -268,10 +255,20 @@ function cancelMigrate() {
       </div>
     </div>
 
+    <!-- 导入方式选择 -->
+    <div v-if="showImportMode" class="mask" @click.self="showImportMode = false">
+      <div class="action-sheet">
+        <div class="action-sheet-title">选择导入方式</div>
+        <button class="action-sheet-btn" @click="chooseImportMode('merge')">合并（跳过重复单词）</button>
+        <button class="action-sheet-btn" @click="chooseImportMode('overwrite')">覆盖（清空当前词库）</button>
+        <button class="action-sheet-cancel" @click="showImportMode = false">取消</button>
+      </div>
+    </div>
+
     <div v-if="confirmOverwrite" class="mask" @click.self="cancelOverwrite">
       <div class="dialog">
         <p class="dialog-title">覆盖导入？</p>
-        <p class="dialog-msg">将清空当前 {{ totalCount }} 个单词并替换为备份数据，此操作不可撤销。</p>
+        <p class="dialog-msg">将清空当前 {{ totalCount }} 个单词并替换为导入数据，此操作不可撤销。</p>
         <div class="dialog-btns">
           <button class="dialog-btn" @click="cancelOverwrite">取消</button>
           <button class="dialog-btn danger" @click="doConfirmOverwrite">确定覆盖</button>
@@ -381,9 +378,8 @@ function cancelMigrate() {
   background: rgba(0,0,0,0.5);
   z-index: 300;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  padding: 24px;
 }
 
 .dialog {
@@ -430,6 +426,50 @@ function cancelMigrate() {
 }
 
 .dialog-btn.danger { color: #fa5151; font-weight: 500; }
+
+.action-sheet {
+  width: 100%;
+  background: #f7f7f7;
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
+}
+
+.action-sheet-title {
+  background: #fff;
+  padding: 14px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-sub);
+  border-bottom: 0.5px solid #e5e5e5;
+}
+
+.action-sheet-btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  background: #fff;
+  border: none;
+  border-bottom: 0.5px solid #e5e5e5;
+  font-size: 16px;
+  color: var(--text-main);
+  cursor: pointer;
+  text-align: center;
+}
+
+.action-sheet-btn:active { background: #f5f5f5; }
+
+.action-sheet-cancel {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  margin-top: 8px;
+  background: #fff;
+  border: none;
+  font-size: 16px;
+  color: var(--primary);
+  cursor: pointer;
+  text-align: center;
+}
 
 .fade-enter-active,
 .fade-leave-active { transition: opacity 0.25s; }
