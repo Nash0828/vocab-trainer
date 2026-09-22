@@ -231,16 +231,16 @@ function formatTime(ts) {
   justify-content: space-between;
   gap: 12px;
   padding: 16px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 .page-info {
   font-size: 13px;
   color: var(--text-sub);
+  white-space: nowrap;
 }
 .page-btns {
   display: flex;
   gap: 4px;
-  flex-wrap: wrap;
 }
 .page-btn {
   min-width: 32px;
@@ -276,6 +276,7 @@ function formatTime(ts) {
   border-radius: 6px;
   font-size: 14px;
   background: #fff;
+  white-space: nowrap;
 }
 
 .wrong-item {
