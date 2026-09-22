@@ -512,6 +512,8 @@ function cancelMigrate() {
 }
 .menu-item.danger .menu-label {
   color: var(--danger);
+  text-align: center;
+  flex: none;
 }
 .menu-icon {
   width: 24px;
