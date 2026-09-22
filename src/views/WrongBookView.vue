@@ -231,8 +231,8 @@ function formatTime(ts) {
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  margin-top: 16px;
-  padding-top: 14px;
+  margin: 16px 16px 0;
+  padding: 14px 16px 0;
   border-top: 1px solid var(--border-light);
 }
 .page-info {
