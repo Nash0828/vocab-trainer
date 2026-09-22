@@ -244,36 +244,38 @@ function formatTime(ts) {
   flex-wrap: wrap;
 }
 .page-btn {
-  min-width: 32px;
-  height: 32px;
-  padding: 0 8px;
-  border: 1px solid #e5e5e5;
-  background: #fff;
-  border-radius: 6px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  border-radius: 7px;
   font-size: 14px;
+  color: var(--text-sub);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.18s ease;
 }
 .page-btn.active {
-  background: var(--primary);
-  color: #fff;
   border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+  font-weight: 700;
 }
 .page-btn:disabled {
-  color: #ccc;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 .page-ellipsis {
-  padding: 0 4px;
-  display: flex;
-  align-items: center;
-  color: var(--text-sub);
+  padding: 0 3px;
+  color: var(--text-faint);
+  font-size: 13px;
 }
 .page-size {
   padding: 6px 8px;
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 14px;
   background: #fff;
