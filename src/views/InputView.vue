@@ -20,6 +20,11 @@ const filteredPosOptions = computed(() => {
   return posOptions.filter(o => o.toLowerCase().includes(q))
 })
 
+function onPosFocus() {
+  posInput.value = form.pos
+  showPosPicker.value = true
+}
+
 function closePosPicker() {
   showPosPicker.value = false
 }
@@ -80,6 +85,7 @@ function submit() {
     form.chinese = ''
     form.english = ''
     form.pos = ''
+    posInput.value = ''
   } else {
     showTip('保存失败，请检查输入')
   }
@@ -122,7 +128,7 @@ function clearAllFields() {
               type="text"
               placeholder="如 n. / v. / adj."
               autocomplete="off"
-              @focus="showPosPicker = true"
+              @focus="onPosFocus"
               @input="posInput = form.pos"
             />
             <transition name="fade">
