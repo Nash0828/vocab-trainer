@@ -146,21 +146,23 @@ function formatTime(ts) {
       <!-- 分页 -->
       <div v-if="wrongList.length > pageSize" class="pagination">
         <span class="page-info">共 {{ wrongList.length }} 条 · {{ currentPage }}/{{ totalPages }} 页</span>
-        <div class="page-btns">
-          <button class="page-btn" :disabled="currentPage <= 1" @click="currentPage = 1">«</button>
-          <button class="page-btn" :disabled="currentPage <= 1" @click="changePage(currentPage - 1)">‹</button>
-          <template v-for="(p, i) in pageNumbers" :key="i">
-            <span v-if="p === '…'" class="page-ellipsis">…</span>
-            <button v-else class="page-btn" :class="{ active: p === currentPage }" @click="changePage(p)">{{ p }}</button>
-          </template>
-          <button class="page-btn" :disabled="currentPage >= totalPages" @click="changePage(currentPage + 1)">›</button>
-          <button class="page-btn" :disabled="currentPage >= totalPages" @click="changePage(totalPages)">»</button>
+        <div class="page-row">
+          <div class="page-btns">
+            <button class="page-btn" :disabled="currentPage <= 1" @click="currentPage = 1">«</button>
+            <button class="page-btn" :disabled="currentPage <= 1" @click="changePage(currentPage - 1)">‹</button>
+            <template v-for="(p, i) in pageNumbers" :key="i">
+              <span v-if="p === '…'" class="page-ellipsis">…</span>
+              <button v-else class="page-btn" :class="{ active: p === currentPage }" @click="changePage(p)">{{ p }}</button>
+            </template>
+            <button class="page-btn" :disabled="currentPage >= totalPages" @click="changePage(currentPage + 1)">›</button>
+            <button class="page-btn" :disabled="currentPage >= totalPages" @click="changePage(totalPages)">»</button>
+          </div>
+          <select class="page-size" :value="pageSize" @change="changePageSize">
+            <option :value="20">20 条/页</option>
+            <option :value="50">50 条/页</option>
+            <option :value="100">100 条/页</option>
+          </select>
         </div>
-        <select class="page-size" :value="pageSize" @change="changePageSize">
-          <option :value="20">20 条/页</option>
-          <option :value="50">50 条/页</option>
-          <option :value="100">100 条/页</option>
-        </select>
       </div>
     </template>
   </div>
@@ -232,6 +234,12 @@ function formatTime(ts) {
   margin: 16px 16px 0;
   padding: 14px 16px 0;
   border-top: 1px solid var(--border-light);
+}
+.page-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 .page-info {
   font-size: 13px;
