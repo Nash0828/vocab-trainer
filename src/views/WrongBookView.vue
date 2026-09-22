@@ -227,20 +227,18 @@ function formatTime(ts) {
 
 .pagination {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
   padding: 16px;
-  flex-wrap: nowrap;
 }
 .page-info {
   font-size: 13px;
   color: var(--text-sub);
-  white-space: nowrap;
 }
 .page-btns {
   display: flex;
   gap: 4px;
+  flex-wrap: wrap;
 }
 .page-btn {
   min-width: 32px;
@@ -276,7 +274,6 @@ function formatTime(ts) {
   border-radius: 6px;
   font-size: 14px;
   background: #fff;
-  white-space: nowrap;
 }
 
 .wrong-item {

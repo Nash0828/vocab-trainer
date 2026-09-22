@@ -791,8 +791,8 @@ function formatTime(ts) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  flex-wrap: nowrap;
+  gap: 12px;
+  flex-wrap: wrap;
   margin-top: 16px;
   padding-top: 14px;
   border-top: 1px solid var(--border-light);
@@ -801,14 +801,13 @@ function formatTime(ts) {
 .page-info {
   font-size: 13px;
   color: var(--text-sub);
-  white-space: nowrap;
 }
 
 .page-btns {
   display: flex;
   align-items: center;
   gap: 4px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 
 .page-btn {
