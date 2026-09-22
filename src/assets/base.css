@@ -95,46 +95,6 @@
   font-size: 13px;
   color: var(--text-sub);
 }
-
-/* 微信风格菜单组 */
-.menu-group {
-  background: #fff;
-  margin: 10px 12px;
-  overflow: hidden;
-}
-.menu-group:first-child {
-  margin-top: 0;
-}
-.menu-item {
-  display: flex;
-  align-items: center;
-  padding: 14px 16px;
-  cursor: pointer;
-  border-bottom: 0.5px solid #f0f0f0;
-  transition: background 0.15s;
-}
-.menu-item:last-child { border-bottom: none; }
-.menu-item:active { background: #f5f5f5; }
-.menu-item.danger {
-  color: var(--danger);
-  justify-content: center;
-}
-.menu-icon {
-  width: 24px;
-  margin-right: 12px;
-  color: var(--text-sub);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.menu-label { flex: 1; font-size: 16px; color: var(--text-main); }
-.menu-arrow { color: #c8c8c8; font-size: 18px; }
-.menu-desc {
-  padding: 0 20px 8px;
-  font-size: 13px;
-  color: var(--text-sub);
-}
 .danger-group {
   margin-top: 20px;
 }
