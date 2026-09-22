@@ -231,7 +231,9 @@ function formatTime(ts) {
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  padding: 16px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-light);
 }
 .page-info {
   font-size: 13px;
@@ -253,9 +255,6 @@ function formatTime(ts) {
   font-size: 14px;
   color: var(--text-sub);
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   transition: all 0.18s ease;
 }
 .page-btn.active {
@@ -279,6 +278,7 @@ function formatTime(ts) {
   border-radius: 6px;
   font-size: 14px;
   background: #fff;
+  color: var(--text-main);
 }
 
 .wrong-item {
