@@ -488,7 +488,7 @@ function cancelMigrate() {
 /* 微信风格菜单组 */
 .menu-group {
   background: #fff;
-  margin: 8px 0;
+  margin: 0;
   overflow: hidden;
 }
 .menu-group:first-child {
