@@ -284,7 +284,7 @@ function formatTime(ts) {
   border-radius: 6px;
   font-size: 14px;
   background: #fff;
-  color: var(--text-main);
+  color: var(--text-sub);
 }
 
 .wrong-item {
