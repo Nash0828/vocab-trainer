@@ -210,32 +210,32 @@ function cancelMigrate() {
     </transition>
 
     <!-- 背熟规则 -->
-    <div class="cell-group">
-      <div class="cell">
-        <span class="cell-label">背熟阈值</span>
-        <span class="cell-right">
-          <input v-model="thresholdInput" class="threshold-input" type="number" min="1" max="999" @change="saveThreshold" />
+    <div class="menu-group">
+      <div class="menu-item">
+        <span class="menu-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         </span>
+        <span class="menu-label">背熟阈值</span>
+        <input v-model="thresholdInput" class="threshold-input" type="number" min="1" max="999" @change="saveThreshold" />
       </div>
-      <div class="cell cell-desc">答对多少次后视为已背熟，已背熟的单词不再出题</div>
     </div>
+    <div class="menu-desc">答对多少次后视为已背熟，已背熟的单词不再出题</div>
 
     <!-- 数据管理 -->
-    <div class="cell-group">
-      <div class="cell" @click="exportDataFile">
-        <span class="cell-label">导出数据</span>
-        <span class="cell-right">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          <span class="chevron">›</span>
+    <div class="menu-group">
+      <div class="menu-item" @click="exportDataFile">
+        <span class="menu-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         </span>
+        <span class="menu-label">导出数据</span>
+        <span class="menu-arrow">›</span>
       </div>
-
-      <div class="cell" @click="showImportMode = true">
-        <span class="cell-label">导入数据</span>
-        <span class="cell-right">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <span class="chevron">›</span>
+      <div class="menu-item" @click="showImportMode = true">
+        <span class="menu-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         </span>
+        <span class="menu-label">导入数据</span>
+        <span class="menu-arrow">›</span>
         <input
           ref="fileInput"
           type="file"
@@ -247,10 +247,9 @@ function cancelMigrate() {
     </div>
 
     <!-- 危险操作 -->
-    <div class="cell-group danger-group">
-      <div class="cell cell-danger" @click="askResetAll">
-        <span class="cell-label">重置所有背诵次数</span>
-        <span class="chevron">›</span>
+    <div class="menu-group">
+      <div class="menu-item danger" @click="askResetAll">
+        <span class="menu-label">重置所有背诵次数</span>
       </div>
     </div>
 
