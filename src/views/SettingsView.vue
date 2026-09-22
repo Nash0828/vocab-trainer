@@ -510,6 +510,9 @@ function cancelMigrate() {
   padding: 16px;
   font-size: 16px;
 }
+.menu-item.danger .menu-label {
+  color: var(--danger);
+}
 .menu-icon {
   width: 24px;
   margin-right: 12px;
