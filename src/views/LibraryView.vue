@@ -38,17 +38,20 @@ function closeDict() {
 
 // 播放发音
 let currentAudio = null
+let audioPlaying = false
 function speak(word, type = 0) {
-  if (!word) return
+  if (!word || audioPlaying) return
   try {
-    if (currentAudio) {
-      currentAudio.pause()
-      currentAudio = null
-    }
+    audioPlaying = true
     const url = `https://dict.youdao.com/dictvoice?type=${type}&audio=${encodeURIComponent(String(word).trim())}`
     currentAudio = new Audio(url)
-    currentAudio.play().catch(() => {})
-  } catch (e) {}
+    currentAudio.onended = () => { audioPlaying = false }
+    currentAudio.onpause = () => { audioPlaying = false }
+    currentAudio.onerror = () => { audioPlaying = false }
+    currentAudio.play().catch(() => { audioPlaying = false })
+  } catch (e) {
+    audioPlaying = false
+  }
 }
 
 // 弹窗打开时禁止背景滚动
