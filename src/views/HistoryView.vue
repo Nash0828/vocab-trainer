@@ -192,9 +192,15 @@ function formatDate(dateStr) {
   padding: 8px 0 16px;
 }
 
-.empty-icon {
+.empty-state {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
+  padding: 80px 24px;
+  text-align: center;
+}
+.empty-icon {
   margin-bottom: 16px;
 }
 .empty-title {
