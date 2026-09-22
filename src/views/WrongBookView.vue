@@ -33,6 +33,23 @@ let tipTimer = null
 
 const wrongList = computed(() => getValidWrongWords(words.value))
 
+// 分页
+const currentPage = ref(1)
+const pageSize = ref(20)
+const totalPages = computed(() => Math.ceil(wrongList.value.length / pageSize.value) || 1)
+const pagedList = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return wrongList.value.slice(start, start + pageSize.value)
+})
+function changePage(p) {
+  currentPage.value = Math.max(1, Math.min(totalPages.value, p))
+  window.scrollTo(0, 0)
+}
+function changePageSize(e) {
+  pageSize.value = Number(e.target.value)
+  currentPage.value = 1
+}
+
 function showTip(text, kind = 'ok') {
   tip.value = { text, kind }
   clearTimeout(tipTimer)
@@ -87,7 +104,7 @@ function formatTime(ts) {
       </div>
 
       <div class="wrong-list">
-        <div v-for="w in wrongList" :key="w.id || w.english" class="wrong-item">
+        <div v-for="w in pagedList" :key="w.id || w.english" class="wrong-item">
           <div class="w-main">
             <div class="w-line1">
               <span class="w-en">{{ w.english }}</span>
@@ -110,6 +127,17 @@ function formatTime(ts) {
             <button class="w-confirm-no" @click="cancelRemove">取消</button>
           </div>
         </div>
+      </div>
+
+      <!-- 分页 -->
+      <div v-if="wrongList.length > pageSize" class="pagination">
+        <button :disabled="currentPage === 1" @click="changePage(currentPage - 1)" class="page-btn">上一页</button>
+        <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
+        <button :disabled="currentPage === totalPages" @click="changePage(currentPage + 1)" class="page-btn">下一页</button>
+        <select :value="pageSize" @change="changePageSize" class="page-size">
+          <option :value="20">20条/页</option>
+          <option :value="100">100条/页</option>
+        </select>
       </div>
     </template>
   </div>
@@ -172,6 +200,37 @@ function formatTime(ts) {
   flex-direction: column;
   gap: 8px;
   padding: 0 16px;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px;
+}
+.page-btn {
+  padding: 6px 12px;
+  border: none;
+  background: #fff;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.page-btn:disabled {
+  color: #ccc;
+  cursor: not-allowed;
+}
+.page-info {
+  font-size: 14px;
+  color: var(--text-sub);
+}
+.page-size {
+  padding: 6px 8px;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  font-size: 14px;
+  background: #fff;
 }
 
 .wrong-item {
