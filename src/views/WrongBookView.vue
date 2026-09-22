@@ -396,6 +396,17 @@ function formatTime(ts) {
   cursor: pointer;
 }
 
+@media (max-width: 768px) {
+  .pagination {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .page-btns {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
 .fade-enter-active, .fade-leave-active { transition: opacity 0.25s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>
