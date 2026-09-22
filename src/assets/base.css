@@ -26,6 +26,29 @@
   --shadow-card: none;
 }
 
+/* 全局 Toast 提示 */
+.tip {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  max-width: 90vw;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  animation: toast-in 0.25s ease;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+.tip.ok { background: #333; color: #fff; }
+.tip.warn { background: #fa9d3b; color: #fff; }
+.tip.err { background: #fa5151; color: #fff; }
+
 * {
   margin: 0;
   padding: 0;

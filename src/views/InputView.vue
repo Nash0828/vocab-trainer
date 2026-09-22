@@ -297,19 +297,7 @@ function clearAllFields() {
 .sheet-mask.fade-enter-active, .sheet-mask.fade-leave-active { transition: opacity 0.25s; }
 .sheet-mask.fade-enter-from, .sheet-mask.fade-leave-to { opacity: 0; }
 
-.tip {
-  margin: 10px 16px 0;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 14px;
-}
 
-.tip.ok { background: #e8f8ef; color: #07c160; }
-.tip.err { background: #fdecec; color: #fa5151; }
-
-.form-actions {
-  margin: 16px;
-}
 
 .form-actions .btn {
   width: 100%;

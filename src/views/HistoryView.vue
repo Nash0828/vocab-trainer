@@ -192,23 +192,6 @@ function formatDate(dateStr) {
   padding: 8px 0 16px;
 }
 
-.tip {
-  margin: 0 16px 10px;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 14px;
-}
-.tip.ok { background: #e8f8ef; color: #07c160; }
-.tip.warn { background: #fff7e6; color: #fa9d3b; }
-.tip.err { background: #fdecec; color: #fa5151; }
-
-.empty-state {
-  background: #fff;
-  margin: 8px 16px;
-  border-radius: 12px;
-  padding: 48px 20px;
-  text-align: center;
-}
 .empty-icon {
   display: flex;
   justify-content: center;

@@ -560,31 +560,9 @@ function formatTime(ts) {
   cursor: pointer;
 }
 
-.tip {
-  margin: 14px 0 0;
-  padding: 10px 14px;
-  border-radius: 10px;
-  font-size: 14px;
-}
 
-.tip.ok {
-  background: #e8f7ee;
-  border: 1px solid #a8dcc0;
-  color: #1f7a4d;
-}
 
-.tip.warn {
-  background: #fff7e6;
-  border: 1px solid #ffd591;
-  color: #ad6800;
-}
 
-.tip.err {
-  background: #fdecea;
-  border: 1px solid #f2b8b1;
-  color: #b3402f;
-  font-weight: 600;
-}
 
 /* 微信风格单词列表 */
 .word-list {

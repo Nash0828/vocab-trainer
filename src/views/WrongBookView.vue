@@ -120,22 +120,6 @@ function formatTime(ts) {
   padding: 8px 0 16px;
 }
 
-.tip {
-  margin: 0 16px 10px;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 14px;
-}
-.tip.ok { background: #e8f8ef; color: #07c160; }
-.tip.warn { background: #fff7e6; color: #fa9d3b; }
-.tip.err { background: #fdecec; color: #fa5151; }
-
-.toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px 10px;
-}
 
 .count-badge {
   font-size: 14px;

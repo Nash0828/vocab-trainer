@@ -297,24 +297,7 @@ function cancelMigrate() {
   padding: 8px 0 16px;
 }
 
-.tip {
-  margin: 0 16px;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 14px;
-}
 
-.tip.ok { background: #e8f7ee; color: #1f7a4d; }
-.tip.warn { background: #fff7e6; color: #ad6800; }
-.tip.err { background: #fdecea; color: #b3402f; font-weight: 600; }
-
-/* 微信 cell 分组 */
-.cell-group {
-  background: #fff;
-  margin: 0 16px;
-  border-radius: 12px;
-  overflow: hidden;
-}
 
 .cell {
   display: flex;
