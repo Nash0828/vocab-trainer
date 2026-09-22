@@ -217,7 +217,7 @@ function cancelMigrate() {
           <input v-model="thresholdInput" class="threshold-input" type="number" min="1" max="999" @change="saveThreshold" />
         </span>
       </div>
-      <div class="cell-desc">答对多少次后视为已背熟，已背熟的单词不再出题</div>
+      <div class="cell cell-desc">答对多少次后视为已背熟，已背熟的单词不再出题</div>
     </div>
 
     <!-- 数据管理 -->

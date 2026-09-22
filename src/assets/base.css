@@ -52,7 +52,7 @@
 /* 微信风格 cell 列表 */
 .cell-group {
   background: #fff;
-  margin: 12px 0;
+  margin: 10px 12px;
 }
 .cell-group:first-child {
   margin-top: 0;
@@ -89,6 +89,11 @@
   color: var(--danger);
   justify-content: center;
   font-size: 16px;
+}
+.cell-desc {
+  padding: 0 16px 14px;
+  font-size: 13px;
+  color: var(--text-sub);
 }
 .danger-group {
   margin-top: 20px;
