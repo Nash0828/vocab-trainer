@@ -281,7 +281,7 @@ function saveEdit(word) {
     caseSensitive: editForm.caseSensitive,
   })
   if (ok) {
-    showTip(`✅ 已保存修改：${editForm.english}`, 'ok')
+    showTip(`已保存修改：${editForm.english}`, 'ok')
     editingId.value = null
   }
 }
@@ -299,7 +299,7 @@ function cancelDelete() {
 function doDelete(word) {
   const ok = removeWord(word.id)
   if (ok) {
-    showTip(`🗑️ 已删除：${word.english}`, 'ok')
+    showTip(`已删除：${word.english}`, 'ok')
   }
   confirmDeleteId.value = null
 }
@@ -317,7 +317,7 @@ function cancelReset() {
 function doReset(word) {
   const ok = resetCount(word.id)
   if (ok) {
-    showTip(`↺ 已将「${word.english}」背诵次数重置为 0`, 'ok')
+    showTip(`已将「${word.english}」背诵次数重置为 0`, 'ok')
   }
   confirmResetId.value = null
 }
@@ -392,10 +392,12 @@ function formatTime(ts) {
           <input v-model="editForm.chinese" class="cell-input" placeholder="中文" />
           <input v-model="editForm.english" class="cell-input" placeholder="英文" />
           <input v-model="editForm.pos" class="cell-input pos" placeholder="词性" />
-          <div class="mini-switch" :class="{ on: editForm.caseSensitive }" @click="editForm.caseSensitive = !editForm.caseSensitive">
-            <div class="mini-switch-knob"></div>
+          <div class="case-row">
+            <span class="case-label">区分大小写</span>
+            <div class="mini-switch" :class="{ on: editForm.caseSensitive }" @click="editForm.caseSensitive = !editForm.caseSensitive">
+              <div class="mini-switch-knob"></div>
+            </div>
           </div>
-          <span class="mini-switch-label">大小写敏感</span>
           <div class="edit-btns">
             <button class="btn primary mini" @click="saveEdit(word)">保存</button>
             <button class="btn ghost mini" @click="cancelEdit">取消</button>
@@ -1060,6 +1062,16 @@ function formatTime(ts) {
   transform: scale(0.9);
 }
 
+.case-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.case-label {
+  font-size: 13px;
+  color: #666;
+  white-space: nowrap;
+}
 .mini-switch {
   position: relative;
   width: 44px;

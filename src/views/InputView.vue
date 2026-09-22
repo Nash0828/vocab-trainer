@@ -43,15 +43,15 @@ function showTip(text, kind = 'warn') {
 
 function validate() {
   if (!form.chinese.trim()) {
-    showTip('⚠️ 请填写中文释义')
+    showTip('请填写中文释义')
     return false
   }
   if (!form.english.trim()) {
-    showTip('⚠️ 请填写英文单词')
+    showTip('请填写英文单词')
     return false
   }
   if (!/^[A-Za-z][A-Za-z\s\-'’]*$/.test(form.english.trim())) {
-    showTip('⚠️ 英文单词只允许字母（可含空格、连字符）')
+    showTip('英文单词只允许字母（可含空格、连字符）')
     return false
   }
   return true
@@ -76,12 +76,12 @@ function submit() {
   }
   const word = addWord({ ...form })
   if (word) {
-    showTip(`✅ 已保存：${word.english}（${word.chinese}）`, 'ok')
+    showTip(`已保存：${word.english}（${word.chinese}）`, 'ok')
     form.chinese = ''
     form.english = ''
     form.pos = ''
   } else {
-    showTip('⚠️ 保存失败，请检查输入')
+    showTip('保存失败，请检查输入')
   }
 }
 

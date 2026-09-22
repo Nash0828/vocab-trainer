@@ -87,7 +87,7 @@ export function useWords() {
     if (idx === -1) return false
     words.value[idx] = { ...words.value[idx], ...patch }
     const w = words.value[idx]
-    api.updateWord(id, { chinese: w.chinese, english: w.english, pos: w.pos }).catch((err) =>
+    api.updateWord(id, { chinese: w.chinese, english: w.english, pos: w.pos, caseSensitive: !!w.caseSensitive }).catch((err) =>
       console.error('updateWord 同步失败', err)
     )
     return true

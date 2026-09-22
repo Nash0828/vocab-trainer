@@ -62,7 +62,7 @@ function doClearDay(date) {
   clearDay(date)
   confirmClearDay.value = null
   if (expanded.value === date) expanded.value = null
-  showTip(`🗑️ 已清空 ${date} 的记录`)
+  showTip(`已清空 ${date} 的记录`)
 }
 
 function askClearAll() {
@@ -77,7 +77,7 @@ function doClearAll() {
   clearAll()
   confirmClearAll.value = false
   expanded.value = null
-  showTip('🗑️ 已清空全部历史记录')
+  showTip('已清空全部历史记录')
 }
 
 function formatDate(dateStr) {

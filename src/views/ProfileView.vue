@@ -62,7 +62,7 @@ async function changePwd() {
     await api.changePassword(pwdForm.value.oldPwd, pwdForm.value.newPwd)
     showPwdModal.value = false
     pwdForm.value = { oldPwd: '', newPwd: '', confirmPwd: '' }
-    alert('✅ 密码修改成功')
+    alert('密码修改成功')
   } catch (e) { pwdError.value = e.message }
 }
 

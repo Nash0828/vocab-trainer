@@ -39,12 +39,12 @@ function showTip(text, kind = 'ok') {
 function saveThreshold() {
   const val = Number(thresholdInput.value)
   if (!Number.isInteger(val) || val < 1 || val > 999) {
-    showTip('⚠️ 请输入 1~999 之间的整数', 'warn')
+    showTip('请输入 1~999 之间的整数', 'warn')
     return
   }
   if (setThreshold(val)) {
     thresholdInput.value = String(settings.value.masteryThreshold)
-    showTip(`✅ 背熟阈值已保存为 ${settings.value.masteryThreshold} 次`, 'ok')
+    showTip(`背熟阈值已保存为 ${settings.value.masteryThreshold} 次`, 'ok')
   }
 }
 
@@ -59,7 +59,7 @@ function cancelResetAll() {
 function doResetAll() {
   resetAllCounts()
   confirmResetAll.value = false
-  showTip('✅ 已将全部单词背诵次数重置为 0', 'ok')
+  showTip('已将全部单词背诵次数重置为 0', 'ok')
 }
 
 // ---- 导出：下载 JSON 备份文件 ----
@@ -79,7 +79,7 @@ async function exportDataFile() {
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
     showTip(
-      `✅ 已导出 ${data.words.length} 个单词（含背诵次数）与背熟阈值，文件名：背单词助手数据_${stamp}.json`,
+      `已导出 ${data.words.length} 个单词（含背诵次数）与背熟阈值，文件名：背单词助手数据_${stamp}.json`,
       'ok'
     )
   } catch (err) {
@@ -131,7 +131,7 @@ function applyImport(data, mode) {
   const modeText = mode === 'merge' ? '合并' : '覆盖'
   const skipText = res.skipped ? `，跳过 ${res.skipped} 个（重复或无有效内容）` : ''
   showTip(
-    `✅ ${modeText}导入成功：新增 ${res.imported} 个单词${skipText}，当前词库共 ${res.total} 个`,
+    `${modeText}导入成功：新增 ${res.imported} 个单词${skipText}，当前词库共 ${res.total} 个`,
     'ok'
   )
 }
@@ -183,7 +183,7 @@ async function doMigrate() {
     const res = await api.migrateData(payload)
     if (res.ok) {
       showTip(
-        `✅ 迁移成功：${res.words} 个单词、${res.records} 条记录、${res.wrongbook} 个错题${res.threshold ? `、阈值 ${res.threshold}` : ''}，即将刷新页面…`,
+        `迁移成功：${res.words} 个单词、${res.records} 条记录、${res.wrongbook} 个错题${res.threshold ? `、阈值 ${res.threshold}` : ''}，即将刷新页面…`,
         'ok'
       )
       setTimeout(() => window.location.reload(), 1500)
