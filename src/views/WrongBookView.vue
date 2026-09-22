@@ -41,6 +41,20 @@ const pagedList = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
   return wrongList.value.slice(start, start + pageSize.value)
 })
+const pageNumbers = computed(() => {
+  const pages = totalPages.value
+  const cur = currentPage.value
+  const set = new Set([1, pages, cur - 1, cur, cur + 1])
+  const list = [...set].filter((p) => p >= 1 && p <= pages).sort((a, b) => a - b)
+  const out = []
+  let prev = 0
+  for (const p of list) {
+    if (prev && p - prev > 1) out.push('…')
+    out.push(p)
+    prev = p
+  }
+  return out
+})
 function changePage(p) {
   currentPage.value = Math.max(1, Math.min(totalPages.value, p))
   window.scrollTo(0, 0)
@@ -131,12 +145,21 @@ function formatTime(ts) {
 
       <!-- 分页 -->
       <div v-if="wrongList.length > pageSize" class="pagination">
-        <button :disabled="currentPage === 1" @click="changePage(currentPage - 1)" class="page-btn">上一页</button>
-        <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
-        <button :disabled="currentPage === totalPages" @click="changePage(currentPage + 1)" class="page-btn">下一页</button>
-        <select :value="pageSize" @change="changePageSize" class="page-size">
-          <option :value="20">20条/页</option>
-          <option :value="100">100条/页</option>
+        <span class="page-info">共 {{ wrongList.length }} 条 · {{ currentPage }}/{{ totalPages }} 页</span>
+        <div class="page-btns">
+          <button class="page-btn" :disabled="currentPage <= 1" @click="currentPage = 1">«</button>
+          <button class="page-btn" :disabled="currentPage <= 1" @click="changePage(currentPage - 1)">‹</button>
+          <template v-for="(p, i) in pageNumbers" :key="i">
+            <span v-if="p === '…'" class="page-ellipsis">…</span>
+            <button v-else class="page-btn" :class="{ active: p === currentPage }" @click="changePage(p)">{{ p }}</button>
+          </template>
+          <button class="page-btn" :disabled="currentPage >= totalPages" @click="changePage(currentPage + 1)">›</button>
+          <button class="page-btn" :disabled="currentPage >= totalPages" @click="changePage(totalPages)">»</button>
+        </div>
+        <select class="page-size" :value="pageSize" @change="changePageSize">
+          <option :value="20">20 条/页</option>
+          <option :value="50">50 条/页</option>
+          <option :value="100">100 条/页</option>
         </select>
       </div>
     </template>
@@ -205,24 +228,46 @@ function formatTime(ts) {
 .pagination {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 12px;
   padding: 16px;
+  flex-wrap: wrap;
+}
+.page-info {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+.page-btns {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
 }
 .page-btn {
-  padding: 6px 12px;
-  border: none;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #e5e5e5;
   background: #fff;
   border-radius: 6px;
   font-size: 14px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.page-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
 }
 .page-btn:disabled {
   color: #ccc;
   cursor: not-allowed;
 }
-.page-info {
-  font-size: 14px;
+.page-ellipsis {
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
   color: var(--text-sub);
 }
 .page-size {
