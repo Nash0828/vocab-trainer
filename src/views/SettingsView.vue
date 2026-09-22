@@ -292,7 +292,7 @@ function cancelMigrate() {
 .settings {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 8px;
   padding: 8px 0 16px;
 }
 
@@ -520,7 +520,7 @@ function cancelMigrate() {
 .menu-label { flex: 1; font-size: 16px; color: var(--text-main); }
 .menu-arrow { color: #c8c8c8; font-size: 18px; }
 .menu-desc {
-  padding: 0 20px 8px;
+  padding: 4px 16px 8px;
   font-size: 13px;
   color: var(--text-sub);
 }
