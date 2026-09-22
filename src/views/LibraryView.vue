@@ -349,7 +349,9 @@ function formatTime(ts) {
           class="search-input"
           placeholder="搜索中文 / 英文…"
         />
-        <button v-if="keyword" class="btn ghost mini" @click="keyword = ''">清空</button>
+        <button v-if="keyword" class="search-clear" @click="keyword = ''">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
       <div class="status-filters">
         <button
@@ -574,6 +576,7 @@ function formatTime(ts) {
   position: relative;
   background: #fff;
   margin-bottom: 8px;
+  border-radius: 8px;
 }
 
 .word-item:last-child {
@@ -738,6 +741,19 @@ function formatTime(ts) {
 .search-icon {
   display: flex;
   color: #b2b2b2;
+}
+
+.search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  color: #fff;
+  border: none;
+  cursor: pointer;
 }
 
 .search-input {
