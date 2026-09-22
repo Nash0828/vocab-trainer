@@ -227,8 +227,10 @@ function formatTime(ts) {
 
 .pagination {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
   padding: 16px;
 }
 .page-info {
@@ -237,6 +239,7 @@ function formatTime(ts) {
 }
 .page-btns {
   display: flex;
+  align-items: center;
   gap: 4px;
   flex-wrap: wrap;
 }
