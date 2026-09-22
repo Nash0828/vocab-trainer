@@ -507,6 +507,8 @@ function cancelMigrate() {
 .menu-item.danger {
   color: var(--danger);
   justify-content: center;
+  padding: 16px;
+  font-size: 16px;
 }
 .menu-icon {
   width: 24px;
