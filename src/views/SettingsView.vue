@@ -218,8 +218,8 @@ function cancelMigrate() {
         <span class="menu-label">背熟阈值</span>
         <input v-model="thresholdInput" class="threshold-input" type="number" min="1" max="999" @change="saveThreshold" />
       </div>
+      <div class="menu-desc">答对多少次后视为已背熟，已背熟的单词不再出题</div>
     </div>
-    <div class="menu-desc">答对多少次后视为已背熟，已背熟的单词不再出题</div>
 
     <!-- 数据管理 -->
     <div class="menu-group">
@@ -527,7 +527,7 @@ function cancelMigrate() {
 .menu-label { flex: 1; font-size: 16px; color: var(--text-main); }
 .menu-arrow { color: #c8c8c8; font-size: 18px; }
 .menu-desc {
-  padding: 4px 16px 8px;
+  padding: 4px 16px 14px;
   font-size: 13px;
   color: var(--text-sub);
 }
