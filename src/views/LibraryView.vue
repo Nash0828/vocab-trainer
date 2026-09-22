@@ -37,11 +37,17 @@ function closeDict() {
 }
 
 // 播放发音
+let currentAudio = null
 function speak(word, type = 0) {
   if (!word) return
   try {
+    if (currentAudio) {
+      currentAudio.pause()
+      currentAudio = null
+    }
     const url = `https://dict.youdao.com/dictvoice?type=${type}&audio=${encodeURIComponent(String(word).trim())}`
-    new Audio(url).play().catch(() => {})
+    currentAudio = new Audio(url)
+    currentAudio.play().catch(() => {})
   } catch (e) {}
 }
 

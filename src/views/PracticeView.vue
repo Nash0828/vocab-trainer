@@ -190,12 +190,17 @@ function skip() {
 }
 
 // 播放单词发音（有道词典：type=0 美音 / type=1 英音）
+let currentAudio = null
 function speak(word, type = 0) {
   if (!word) return
   try {
+    if (currentAudio) {
+      currentAudio.pause()
+      currentAudio = null
+    }
     const url = `https://dict.youdao.com/dictvoice?type=${type}&audio=${encodeURIComponent(String(word).trim())}`
-    const audio = new Audio(url)
-    audio.play().catch(() => {})
+    currentAudio = new Audio(url)
+    currentAudio.play().catch(() => {})
   } catch (e) {}
 }
 
