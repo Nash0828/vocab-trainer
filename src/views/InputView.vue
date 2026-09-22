@@ -299,6 +299,9 @@ function clearAllFields() {
 
 
 
+.form-actions {
+  margin: 16px;
+}
 .form-actions .btn {
   width: 100%;
 }
