@@ -14,15 +14,31 @@ const form = reactive({
 const posOptions = ['n.', 'v.', 'adj.', 'adv.', 'prep.', 'pron.', 'conj.', 'num.', 'art.', '其他']
 const showPosPicker = ref(false)
 const posInput = ref('')
-const filteredPosOptions = computed(() => {
-  const q = posInput.value.trim().toLowerCase()
-  if (!q) return posOptions
-  return posOptions.filter(o => o.toLowerCase().includes(q))
-})
+const selectedPos = ref([])
+
+// 多选词性：始终显示全部选项，不匹配用户输入
+const filteredPosOptions = computed(() => posOptions)
+
+function syncSelectedFromInput() {
+  const parts = posInput.value.trim().split(/\s+/).filter(Boolean)
+  selectedPos.value = posOptions.filter((o) => parts.includes(o))
+}
 
 function onPosFocus() {
   posInput.value = form.pos
+  syncSelectedFromInput()
   showPosPicker.value = true
+}
+
+function togglePos(opt) {
+  const idx = selectedPos.value.indexOf(opt)
+  if (idx >= 0) {
+    selectedPos.value.splice(idx, 1)
+  } else {
+    selectedPos.value.push(opt)
+  }
+  form.pos = selectedPos.value.join(' ')
+  posInput.value = form.pos
 }
 
 function closePosPicker() {
@@ -137,9 +153,12 @@ function clearAllFields() {
                   v-for="opt in filteredPosOptions"
                   :key="opt"
                   class="pos-suggest-item"
-                  :class="{ active: form.pos === opt }"
-                  @click="form.pos = opt; showPosPicker = false"
-                >{{ opt }}</div>
+                  :class="{ active: selectedPos.includes(opt) }"
+                  @click="togglePos(opt)"
+                >
+                  <span>{{ opt }}</span>
+                  <span v-if="selectedPos.includes(opt)" class="pos-check">✓</span>
+                </div>
               </div>
             </transition>
           </div>
@@ -242,12 +261,20 @@ function clearAllFields() {
   overflow-y: auto;
 }
 .pos-suggest-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 10px 12px;
   font-size: 14px;
   background: #fff;
   border-bottom: 1px solid #f0f0f0;
 }
 .pos-suggest-item.active { color: var(--primary); }
+.pos-check {
+  color: var(--primary);
+  font-size: 15px;
+  font-weight: 600;
+}
 .pos-suggest-empty {
   padding: 10px 12px;
   font-size: 13px;
