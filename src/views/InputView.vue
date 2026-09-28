@@ -11,7 +11,7 @@ const form = reactive({
   caseSensitive: false,
 })
 
-const posOptions = ['n.', 'v.', 'adj.', 'adv.', 'prep.', 'pron.', 'conj.', 'num.', 'art.', '其他']
+const posOptions = ['n.', 'v.', 'adj.', 'adv.', 'prep.', 'pron.', 'conj.', 'num.', 'art.']
 const showPosPicker = ref(false)
 const posInput = ref('')
 const selectedPos = ref([])
