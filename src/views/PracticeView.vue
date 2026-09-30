@@ -221,8 +221,9 @@ function highlightWord(word, sentence) {
     const base = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const suffixes = ['s', 'es', 'ed', 'ing', 'd', "'s"]
     if (/[^aeiou]y$/i.test(w)) suffixes.push('ies')
-    const re = new RegExp(`(?<![a-zA-Z])(${base}(?:${suffixes.join('|')})?)(?![a-zA-Z])`, 'gi')
-    return esc.replace(re, '<span class="sent-hl">$1</span>')
+    // 不用 lookbehind（部分移动端浏览器不支持），前缀用捕获组保留
+    const re = new RegExp(`([^a-zA-Z]|^)(${base}(?:${suffixes.join('|')})?)(?![a-zA-Z])`, 'gi')
+    return esc.replace(re, (m, prefix, wordPart) => `${prefix}<span class="sent-hl">${wordPart}</span>`)
   } catch (e) {
     return esc
   }
