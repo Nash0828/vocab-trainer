@@ -523,8 +523,8 @@ function formatTime(ts) {
     </div>
 
     <!-- 词典查询弹窗 -->
-    <div v-if="dictModal" class="dict-mask" @click.self="closeDict">
-      <div class="dict-modal">
+    <div v-if="dictModal" class="dict-mask" @click.self="closeDict" @touchmove.prevent>
+      <div class="dict-modal" @touchmove.stop>
         <div class="dict-head">
           <h3>{{ dictModal.word }}</h3>
           <button class="dict-close" @click="closeDict">✕</button>
@@ -980,6 +980,7 @@ function formatTime(ts) {
   align-items: flex-end;
   justify-content: center;
   z-index: 100;
+  touch-action: none;
 }
 
 .dict-modal {
@@ -991,6 +992,7 @@ function formatTime(ts) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  touch-action: pan-y;
 }
 
 .dict-head {
@@ -1030,6 +1032,8 @@ function formatTime(ts) {
 .dict-body {
   padding: 16px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .dict-loading, .dict-error {
