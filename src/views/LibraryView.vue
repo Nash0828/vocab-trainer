@@ -54,6 +54,22 @@ function speak(word, type = 0) {
   }
 }
 
+// 例句中高亮当前单词
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+function highlightWord(word, sentence) {
+  const esc = escapeHtml(sentence)
+  const w = String(word || '').trim()
+  if (!w) return esc
+  try {
+    const re = new RegExp(`(${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
+    return esc.replace(re, '<span class="sent-hl">$1</span>')
+  } catch (e) {
+    return esc
+  }
+}
+
 // 弹窗打开时禁止背景滚动
 watch(dictModal, (val) => {
   document.body.style.overflow = val ? 'hidden' : ''
@@ -525,6 +541,15 @@ function formatTime(ts) {
               <p class="dict-label">词形变化</p>
               <ul>
                 <li v-for="(wf, i) in dictModal.data.wfs" :key="i">{{ wf }}</li>
+              </ul>
+            </div>
+            <div v-if="dictModal.data.sentences && dictModal.data.sentences.length" class="dict-meaning">
+              <p class="dict-label">例句</p>
+              <ul class="sent-list">
+                <li v-for="(s, i) in dictModal.data.sentences" :key="i" class="sent-item">
+                  <p class="sent-en" v-html="highlightWord(dictModal.word, s.en)"></p>
+                  <p v-if="s.zh" class="sent-zh">{{ s.zh }}</p>
+                </li>
               </ul>
             </div>
           </div>
@@ -1030,6 +1055,28 @@ function formatTime(ts) {
 
 .dict-meaning li:last-child {
   border-bottom: none;
+}
+
+.sent-item {
+  padding: 10px 0;
+}
+.sent-en {
+  font-size: 15px;
+  color: var(--text-main);
+  line-height: 1.6;
+  margin: 0 0 4px 0;
+  word-break: break-word;
+}
+.sent-zh {
+  font-size: 13px;
+  color: var(--text-sub);
+  line-height: 1.5;
+  margin: 0;
+  word-break: break-word;
+}
+.sent-hl {
+  color: var(--primary);
+  font-weight: 600;
 }
 
 .dict-exam {

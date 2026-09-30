@@ -365,16 +365,32 @@ app.get('/api/dict', async (req, res) => {
   const word = (req.query.word || '').trim()
   if (!word) return res.status(400).json({ error: '缺少 word 参数' })
   try {
-    const r = await fetch(`https://dict.youdao.com/jsonapi?q=${encodeURIComponent(word)}`, { signal: AbortSignal.timeout(5000) })
+    const r = await fetch(`https://dict.youdao.com/jsonapi?q=${encodeURIComponent(word)}`, { signal: AbortSignal.timeout(6000) })
     if (!r.ok) return res.status(502).json({ error: '词典服务异常' })
     const data = await r.json()
     const ec = data.ec
     if (!ec || !ec.word || !ec.word.length) return res.status(404).json({ error: '未找到该单词的释义' })
     const w = ec.word[0]
+    // 双语例句（blng_sents_part / media_sents_part 兜底）
+    let sentences = []
+    const blng = data.blng_sents_part
+    if (blng && Array.isArray(blng['sentence-pair'])) {
+      sentences = blng['sentence-pair'].map((s) => ({
+        en: String(s.sentence || s['sentence-eng'] || '').trim(),
+        zh: String(s['sentence-translation'] || '').trim(),
+      })).filter((s) => s.en)
+    }
+    if (!sentences.length && data.media_sents_part && Array.isArray(data.media_sents_part['sentence-pair'])) {
+      sentences = data.media_sents_part['sentence-pair'].map((s) => ({
+        en: String(s.sentence || s['sentence-eng'] || '').trim(),
+        zh: String(s['sentence-translation'] || '').trim(),
+      })).filter((s) => s.en)
+    }
     res.json({
       usphone: w.usphone||'', ukphone: w.ukphone||'', examType: ec.exam_type||[],
       trs: (w.trs||[]).map(t => t.tr[0].l.i[0]),
       wfs: (w.wfs||[]).map(wf => `${wf.wf.name}：${wf.wf.value}`),
+      sentences: sentences.slice(0, 5),
     })
   } catch (e) { res.status(502).json({ error: '词典查询超时或失败' }) }
 })
