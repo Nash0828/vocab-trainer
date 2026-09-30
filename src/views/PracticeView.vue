@@ -209,7 +209,7 @@ function speak(word, type = 0) {
   }
 }
 
-// 例句中高亮当前单词
+// 例句中高亮当前单词（含常见词形变化）
 function escapeHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
@@ -218,10 +218,28 @@ function highlightWord(word, sentence) {
   const w = String(word || '').trim()
   if (!w) return esc
   try {
-    const re = new RegExp(`(${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
+    const base = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const suffixes = ['s', 'es', 'ed', 'ing', 'd', "'s"]
+    if (/[^aeiou]y$/i.test(w)) suffixes.push('ies')
+    const re = new RegExp(`(?<![a-zA-Z])(${base}(?:${suffixes.join('|')})?)(?![a-zA-Z])`, 'gi')
     return esc.replace(re, '<span class="sent-hl">$1</span>')
   } catch (e) {
     return esc
+  }
+}
+// 朗读例句（有道 dictvoice type=2 句子发音）
+function speakSentence(sentence) {
+  if (!sentence || audioPlaying) return
+  try {
+    audioPlaying = true
+    const url = `https://dict.youdao.com/dictvoice?type=2&audio=${encodeURIComponent(String(sentence).trim())}`
+    currentAudio = new Audio(url)
+    currentAudio.onended = () => { audioPlaying = false }
+    currentAudio.onpause = () => { audioPlaying = false }
+    currentAudio.onerror = () => { audioPlaying = false }
+    currentAudio.play().catch(() => { audioPlaying = false })
+  } catch (e) {
+    audioPlaying = false
   }
 }
 
@@ -580,7 +598,12 @@ next()
               <p class="dict-label">例句</p>
               <ul class="sent-list">
                 <li v-for="(s, i) in dictModal.data.sentences" :key="i" class="sent-item">
-                  <p class="sent-en" v-html="highlightWord(dictModal.word, s.en)"></p>
+                  <div class="sent-line">
+                    <p class="sent-en" v-html="highlightWord(dictModal.word, s.en)"></p>
+                    <button class="sent-speak" @click="speakSentence(s.en)" title="朗读例句">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                    </button>
+                  </div>
                   <p v-if="s.zh" class="sent-zh">{{ s.zh }}</p>
                 </li>
               </ul>
@@ -1110,22 +1133,42 @@ next()
 .sent-item {
   padding: 10px 0;
 }
+.sent-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
 .sent-en {
+  flex: 1;
   font-size: 15px;
   color: var(--text-main);
   line-height: 1.6;
-  margin: 0 0 4px 0;
+  margin: 0;
   word-break: break-word;
 }
 .sent-zh {
   font-size: 13px;
   color: var(--text-sub);
   line-height: 1.5;
-  margin: 0;
+  margin: 4px 0 0 0;
   word-break: break-word;
 }
 .sent-hl {
   color: var(--primary);
   font-weight: 600;
+  background: rgba(7, 193, 96, 0.12);
+  border-radius: 3px;
+  padding: 0 2px;
+}
+.sent-speak {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  padding: 2px;
+  color: var(--text-sub);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 </style>
