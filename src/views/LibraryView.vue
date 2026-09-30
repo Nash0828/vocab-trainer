@@ -1104,7 +1104,7 @@ function formatTime(ts) {
   margin: 4px 0 0 0;
   word-break: break-word;
 }
-.sent-hl {
+.sent-en :deep(.sent-hl) {
   color: var(--primary);
   font-weight: 600;
   background: rgba(7, 193, 96, 0.12);
