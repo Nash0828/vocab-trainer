@@ -89,9 +89,24 @@ function speakSentence(sentence) {
   }
 }
 
-// 弹窗打开时禁止背景滚动
+// 弹窗打开时禁止背景滚动（iOS 全版本可靠的 body 滚动锁）
+let dictScrollY = 0
 watch(dictModal, (val) => {
-  document.body.style.overflow = val ? 'hidden' : ''
+  if (val) {
+    dictScrollY = window.scrollY
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${dictScrollY}px`
+    document.body.style.left = '0'
+    document.body.style.right = '0'
+    document.body.style.width = '100%'
+  } else {
+    document.body.style.position = ''
+    document.body.style.top = ''
+    document.body.style.left = ''
+    document.body.style.right = ''
+    document.body.style.width = ''
+    window.scrollTo(0, dictScrollY)
+  }
 })
 
 const threshold = computed(() => settings.value.masteryThreshold)

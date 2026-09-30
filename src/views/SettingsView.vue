@@ -254,7 +254,7 @@ function cancelMigrate() {
     </div>
 
     <!-- 确认弹层 -->
-    <div v-if="confirmResetAll" class="mask" @click.self="cancelResetAll">
+    <div v-if="confirmResetAll" class="mask" @click.self="cancelResetAll" @touchmove.prevent>
       <div class="dialog">
         <p class="dialog-title">重置全部背诵次数？</p>
         <p class="dialog-msg">将词库中全部 {{ totalCount }} 个单词的背诵次数归 0，此操作不可撤销。</p>
@@ -266,7 +266,7 @@ function cancelMigrate() {
     </div>
 
     <!-- 导入方式选择 -->
-    <div v-if="showImportMode" class="mask" @click.self="showImportMode = false">
+    <div v-if="showImportMode" class="mask" @click.self="showImportMode = false" @touchmove.prevent>
       <div class="action-sheet">
         <div class="action-sheet-title">选择导入方式</div>
         <button class="action-sheet-btn" @click="chooseImportMode('merge')">合并（跳过重复单词）</button>
@@ -275,7 +275,7 @@ function cancelMigrate() {
       </div>
     </div>
 
-    <div v-if="confirmOverwrite" class="mask" @click.self="cancelOverwrite">
+    <div v-if="confirmOverwrite" class="mask" @click.self="cancelOverwrite" @touchmove.prevent>
       <div class="dialog">
         <p class="dialog-title">覆盖导入？</p>
         <p class="dialog-msg">将清空当前 {{ totalCount }} 个单词并替换为导入数据，此操作不可撤销。</p>
@@ -373,6 +373,7 @@ function cancelMigrate() {
   display: flex;
   align-items: center;
   justify-content: center;
+  touch-action: none;
 }
 
 .dialog {

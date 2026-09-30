@@ -141,7 +141,7 @@ async function doLogout() {
     <div class="version">背单词助手 v2.0</div>
 
     <!-- 建议反馈弹窗 -->
-    <div v-if="showFeedbackModal" class="mask" @click.self="showFeedbackModal = false">
+    <div v-if="showFeedbackModal" class="mask" @click.self="showFeedbackModal = false" @touchmove.prevent>
       <div class="modal">
         <div class="modal-head">
           <h3>建议反馈</h3>
@@ -162,7 +162,7 @@ async function doLogout() {
     </div>
 
     <!-- 登录/注册弹窗 -->
-    <div v-if="showAuthModal" class="mask" @click.self="showAuthModal = false">
+    <div v-if="showAuthModal" class="mask" @click.self="showAuthModal = false" @touchmove.prevent>
       <div class="modal">
         <div class="modal-head">
           <h3>{{ authMode === 'login' ? '登录' : '注册新账号' }}</h3>
@@ -182,7 +182,7 @@ async function doLogout() {
     </div>
 
     <!-- 修改密码弹窗 -->
-    <div v-if="showPwdModal" class="mask" @click.self="showPwdModal = false">
+    <div v-if="showPwdModal" class="mask" @click.self="showPwdModal = false" @touchmove.prevent>
       <div class="modal">
         <div class="modal-head">
           <h3>修改密码</h3>
@@ -278,6 +278,7 @@ async function doLogout() {
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  touch-action: none;
 }
 .modal {
   background: #fff;

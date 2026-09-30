@@ -266,9 +266,24 @@ function closeDict() {
   dictModal.value = null
 }
 
-// 弹窗打开时禁止背景滚动
+// 弹窗打开时禁止背景滚动（iOS 全版本可靠的 body 滚动锁）
+let dictScrollY = 0
 watch(dictModal, (val) => {
-  document.body.style.overflow = val ? 'hidden' : ''
+  if (val) {
+    dictScrollY = window.scrollY
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${dictScrollY}px`
+    document.body.style.left = '0'
+    document.body.style.right = '0'
+    document.body.style.width = '100%'
+  } else {
+    document.body.style.position = ''
+    document.body.style.top = ''
+    document.body.style.left = ''
+    document.body.style.right = ''
+    document.body.style.width = ''
+    window.scrollTo(0, dictScrollY)
+  }
 })
 
 // 答错后重做当前题：清空答案与判定，重新聚焦输入框
@@ -519,8 +534,8 @@ next()
   </div>
 
     <!-- 今日记录弹窗 -->
-    <div v-if="showRecordsModal" class="modal-mask" @click.self="closeRecords">
-      <div class="modal">
+    <div v-if="showRecordsModal" class="modal-mask" @click.self="closeRecords" @touchmove.prevent>
+      <div class="modal" @touchmove.stop>
         <div class="modal-head">
           <h3>今日背诵记录</h3>
           <button class="modal-close" @click="closeRecords">✕</button>
@@ -885,6 +900,7 @@ next()
   align-items: flex-end;
   justify-content: center;
   z-index: 100;
+  touch-action: none;
 }
 
 .modal {
@@ -896,6 +912,7 @@ next()
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  touch-action: pan-y;
 }
 
 .modal-head {
@@ -957,6 +974,8 @@ next()
 .modal-body {
   padding: 12px 16px 16px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .empty-tip {

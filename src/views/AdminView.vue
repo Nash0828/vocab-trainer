@@ -123,7 +123,7 @@ onMounted(loadUsers)
     </template>
 
     <!-- 日志弹窗 -->
-    <div v-if="selectedLogs" class="mask" @click.self="selectedLogs = null">
+    <div v-if="selectedLogs" class="mask" @click.self="selectedLogs = null" @touchmove.prevent>
       <div class="modal">
         <div class="modal-head">
           <h3>{{ selectedLogs.user.username }} 登录日志</h3>
@@ -148,7 +148,7 @@ onMounted(loadUsers)
     </div>
 
     <!-- 重置密码结果弹窗 -->
-    <div v-if="resetPwdUser" class="mask" @click.self="resetPwdUser = null">
+    <div v-if="resetPwdUser" class="mask" @click.self="resetPwdUser = null" @touchmove.prevent>
       <div class="modal">
         <div class="modal-head">
           <h3>重置密码</h3>
@@ -164,7 +164,7 @@ onMounted(loadUsers)
     </div>
 
     <!-- 删除确认 -->
-    <div v-if="confirmDelete" class="mask" @click.self="confirmDelete = null">
+    <div v-if="confirmDelete" class="mask" @click.self="confirmDelete = null" @touchmove.prevent>
       <div class="modal">
         <div class="modal-head">
           <h3>确认删除</h3>
@@ -182,7 +182,7 @@ onMounted(loadUsers)
     </div>
 
     <!-- 重置密码确认 -->
-    <div v-if="confirmResetPwd" class="mask" @click.self="confirmResetPwd = null">
+    <div v-if="confirmResetPwd" class="mask" @click.self="confirmResetPwd = null" @touchmove.prevent>
       <div class="modal">
         <div class="modal-head">
           <h3>重置密码</h3>
@@ -200,7 +200,7 @@ onMounted(loadUsers)
     </div>
 
     <!-- 禁用/启用确认 -->
-    <div v-if="confirmToggle" class="mask" @click.self="confirmToggle = null">
+    <div v-if="confirmToggle" class="mask" @click.self="confirmToggle = null" @touchmove.prevent>
       <div class="modal">
         <div class="modal-head">
           <h3>{{ confirmToggle.isDisabled ? '启用用户' : '禁用用户' }}</h3>
@@ -325,6 +325,7 @@ onMounted(loadUsers)
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  touch-action: none;
 }
 .modal {
   background: #fff;
