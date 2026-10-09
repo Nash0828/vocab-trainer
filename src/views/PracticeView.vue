@@ -548,7 +548,7 @@ next()
             错误 ({{ todayStats.wrong }})
           </button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" @touchmove.stop>
           <p v-if="!modalRecords.length" class="empty-tip">
             今天还没有{{ modalTab === 'correct' ? '答对' : '答错' }}的单词记录
           </p>

@@ -129,7 +129,7 @@ onMounted(loadUsers)
           <h3>{{ selectedLogs.user.username }} 登录日志</h3>
           <button class="modal-close" @click="selectedLogs = null">✕</button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" @touchmove.stop>
           <div v-if="!selectedLogs.logs.length" class="empty-tip">暂无记录</div>
           <ul v-else class="log-list">
             <li v-for="l in selectedLogs.logs" :key="l.id">
@@ -154,7 +154,7 @@ onMounted(loadUsers)
           <h3>重置密码</h3>
           <button class="modal-close" @click="resetPwdUser = null">✕</button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" @touchmove.stop>
           <p class="result-text">已重置 <strong>{{ resetPwdUser.username }}</strong> 的密码</p>
           <div class="new-pwd-box">新密码：{{ resetPwdResult }}</div>
           <p class="muted small">请复制给用户并提醒其登录后修改密码</p>
@@ -170,7 +170,7 @@ onMounted(loadUsers)
           <h3>确认删除</h3>
           <button class="modal-close" @click="confirmDelete = null">✕</button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" @touchmove.stop>
           <p class="confirm-text">确定要删除用户 <strong>{{ confirmDelete.username }}</strong> 吗？</p>
           <p class="muted small">该用户的所有单词、记录、错题本都会被删除，不可恢复！</p>
           <div class="row">
@@ -188,7 +188,7 @@ onMounted(loadUsers)
           <h3>重置密码</h3>
           <button class="modal-close" @click="confirmResetPwd = null">✕</button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" @touchmove.stop>
           <p class="confirm-text">确定要重置 <strong>{{ confirmResetPwd.username }}</strong> 的密码吗？</p>
           <p class="muted small">重置后将生成新的随机密码，请提醒用户及时修改。</p>
           <div class="row">
@@ -206,7 +206,7 @@ onMounted(loadUsers)
           <h3>{{ confirmToggle.isDisabled ? '启用用户' : '禁用用户' }}</h3>
           <button class="modal-close" @click="confirmToggle = null">✕</button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" @touchmove.stop>
           <p class="confirm-text">
             确定要{{ confirmToggle.isDisabled ? '启用' : '禁用' }}用户 <strong>{{ confirmToggle.username }}</strong> 吗？
           </p>
@@ -336,6 +336,7 @@ onMounted(loadUsers)
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  touch-action: pan-y;
 }
 .modal-head {
   display: flex;
@@ -371,6 +372,8 @@ onMounted(loadUsers)
 .modal-body {
   padding: 16px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 .empty-tip {
   text-align: center;

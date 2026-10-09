@@ -147,7 +147,7 @@ async function doLogout() {
           <h3>建议反馈</h3>
           <button class="modal-close" @click="showFeedbackModal = false">✕</button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" @touchmove.stop>
           <div v-if="feedbackSent" class="feedback-done">
             <p>感谢您的反馈！</p>
           </div>
@@ -168,7 +168,7 @@ async function doLogout() {
           <h3>{{ authMode === 'login' ? '登录' : '注册新账号' }}</h3>
           <button class="modal-close" @click="showAuthModal = false">✕</button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" @touchmove.stop>
           <div class="auth-tabs">
             <button :class="{ active: authMode === 'login' }" @click="authMode = 'login'; authError = ''">登录</button>
             <button :class="{ active: authMode === 'register' }" @click="authMode = 'register'; authError = ''">注册</button>
@@ -188,7 +188,7 @@ async function doLogout() {
           <h3>修改密码</h3>
           <button class="modal-close" @click="showPwdModal = false">✕</button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" @touchmove.stop>
           <input v-model="pwdForm.oldPwd" type="password" placeholder="原密码" />
           <input v-model="pwdForm.newPwd" type="password" placeholder="新密码（至少6位）" />
           <input v-model="pwdForm.confirmPwd" type="password" placeholder="确认新密码" @keyup.enter="changePwd" />
@@ -289,6 +289,7 @@ async function doLogout() {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  touch-action: pan-y;
 }
 .modal-head {
   display: flex;
@@ -326,6 +327,9 @@ async function doLogout() {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 .auth-tabs {
   display: flex;
