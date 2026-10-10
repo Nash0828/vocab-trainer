@@ -242,6 +242,46 @@ const typeFilterOptions = [
   { value: 'sentence', label: '句子' },
 ]
 
+// ---- 筛选底部面板 ----
+const showFilterSheet = ref(false)
+const draftTypeFilter = ref('all')
+const draftStatusFilter = ref('all')
+
+// 按钮上显示当前生效的筛选摘要
+const filterSummary = computed(() => {
+  if (typeFilter.value !== 'all') {
+    return typeFilterOptions.find((o) => o.value === typeFilter.value)?.label || ''
+  }
+  if (statusFilter.value !== 'all') {
+    return filterOptions.find((o) => o.value === statusFilter.value)?.label || ''
+  }
+  return ''
+})
+
+function openFilterSheet() {
+  draftTypeFilter.value = typeFilter.value
+  draftStatusFilter.value = statusFilter.value
+  showFilterSheet.value = true
+}
+
+function closeFilterSheet() {
+  showFilterSheet.value = false
+}
+
+function resetFilterSheet() {
+  draftTypeFilter.value = 'all'
+  draftStatusFilter.value = 'all'
+  typeFilter.value = 'all'
+  statusFilter.value = 'all'
+  showFilterSheet.value = false
+}
+
+function applyFilterSheet() {
+  typeFilter.value = draftTypeFilter.value
+  statusFilter.value = draftStatusFilter.value
+  showFilterSheet.value = false
+}
+
 function resetFilters() {
   keyword.value = ''
   statusFilter.value = 'all'
@@ -434,32 +474,51 @@ function formatTime(ts) {
         <button v-if="keyword" class="search-clear" @click="keyword = ''">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
-      </div>
-      <div class="seg-filters">
-        <div class="seg-group">
-          <button
-            v-for="opt in typeFilterOptions"
-            :key="opt.value"
-            class="seg-btn"
-            :class="{ active: typeFilter === opt.value }"
-            @click="typeFilter = opt.value"
-          >
-            {{ opt.label }}
-          </button>
-        </div>
-        <div class="seg-group">
-          <button
-            v-for="opt in filterOptions"
-            :key="opt.value"
-            class="seg-btn"
-            :class="{ active: statusFilter === opt.value }"
-            @click="statusFilter = opt.value"
-          >
-            {{ opt.label }}
-          </button>
-        </div>
+        <button class="filter-btn" :class="{ active: filterSummary }" @click="openFilterSheet">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          <span>{{ filterSummary || '筛选' }}</span>
+        </button>
       </div>
     </div>
+
+    <!-- 筛选底部面板 -->
+    <transition name="sheet">
+      <div v-if="showFilterSheet" class="sheet-mask" @click.self="closeFilterSheet" @touchmove.prevent>
+        <div class="sheet" @touchmove.stop>
+          <div class="sheet-title">筛选</div>
+          <div class="sheet-body">
+            <div class="sheet-group">
+              <div class="sheet-group-title">类型</div>
+              <div class="sheet-opts">
+                <button
+                  v-for="opt in typeFilterOptions"
+                  :key="opt.value"
+                  class="sheet-opt"
+                  :class="{ active: draftTypeFilter === opt.value }"
+                  @click="draftTypeFilter = opt.value"
+                >{{ opt.label }}</button>
+              </div>
+            </div>
+            <div class="sheet-group">
+              <div class="sheet-group-title">背熟程度</div>
+              <div class="sheet-opts">
+                <button
+                  v-for="opt in filterOptions"
+                  :key="opt.value"
+                  class="sheet-opt"
+                  :class="{ active: draftStatusFilter === opt.value }"
+                  @click="draftStatusFilter = opt.value"
+                >{{ opt.label }}</button>
+              </div>
+            </div>
+          </div>
+          <div class="sheet-foot">
+            <button class="sheet-btn ghost" @click="resetFilterSheet">重置</button>
+            <button class="sheet-btn primary" @click="applyFilterSheet">确定</button>
+          </div>
+        </div>
+      </div>
+    </transition>
 
     <!-- 空状态：词句库为空 -->
     <div v-if="!totalCount" class="empty-state">
@@ -917,6 +976,133 @@ function formatTime(ts) {
   color: #b2b2b2;
 }
 
+.filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: #f2f2f2;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--text-sub);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.filter-btn.active {
+  background: rgba(7, 193, 96, 0.1);
+  color: var(--primary);
+}
+
+/* 筛选底部面板（微信风格） */
+.sheet-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  touch-action: none;
+}
+.sheet {
+  width: 100%;
+  max-width: 480px;
+  background: #f7f7f7;
+  border-radius: 12px 12px 0 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  touch-action: pan-y;
+}
+.sheet-title {
+  text-align: center;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 500;
+  background: #fff;
+  border-bottom: 1px solid #e5e5e5;
+}
+.sheet-body {
+  background: #fff;
+  padding: 0 16px;
+  max-height: 60vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+.sheet-group {
+  padding: 14px 0;
+}
+.sheet-group + .sheet-group {
+  border-top: 1px solid #f0f0f0;
+}
+.sheet-group-title {
+  font-size: 13px;
+  color: var(--text-sub);
+  margin-bottom: 10px;
+}
+.sheet-opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sheet-opt {
+  border: none;
+  background: #f2f2f2;
+  border-radius: 6px;
+  padding: 7px 16px;
+  font-size: 14px;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.sheet-opt.active {
+  background: rgba(7, 193, 96, 0.1);
+  color: var(--primary);
+  font-weight: 500;
+}
+.sheet-foot {
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #fff;
+  border-top: 1px solid #f0f0f0;
+}
+.sheet-btn {
+  flex: 1;
+  border: none;
+  border-radius: 8px;
+  padding: 11px 0;
+  font-size: 15px;
+  cursor: pointer;
+}
+.sheet-btn.primary {
+  background: var(--primary);
+  color: #fff;
+}
+.sheet-btn.ghost {
+  background: #f2f2f2;
+  color: var(--text-main);
+}
+
+.sheet-enter-active,
+.sheet-leave-active {
+  transition: transform 0.25s ease, opacity 0.25s;
+}
+.sheet-enter-from,
+.sheet-leave-to {
+  transform: translateY(100%);
+}
+.sheet-mask.sheet-enter-active,
+.sheet-mask.sheet-leave-active {
+  transition: opacity 0.25s;
+}
+.sheet-mask.sheet-enter-from,
+.sheet-mask.sheet-leave-to {
+  opacity: 0;
+}
+
 .search-clear {
   display: flex;
   align-items: center;
@@ -937,38 +1123,6 @@ function formatTime(ts) {
   font-size: 14px;
   background: transparent;
   color: var(--text-main);
-}
-
-.seg-filters {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.seg-group {
-  display: flex;
-  background: #f2f2f2;
-  border-radius: 8px;
-  padding: 2px;
-}
-
-.seg-btn {
-  flex: 1;
-  border: none;
-  background: transparent;
-  border-radius: 6px;
-  padding: 7px 0;
-  font-size: 13px;
-  color: var(--text-sub);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.seg-btn.active {
-  background: #fff;
-  color: var(--primary);
-  font-weight: 500;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
 }
 
 /* ===== 分页控件 ===== */
