@@ -1375,6 +1375,11 @@ function formatTime(ts) {
   margin: 0;
   color: var(--text-main);
   font-weight: 600;
+  max-width: 100%;
+  padding: 0 36px;
+  word-break: break-word;
+  line-height: 1.4;
+  text-align: center;
 }
 
 .dict-close {
