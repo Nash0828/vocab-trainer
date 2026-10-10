@@ -121,7 +121,7 @@ function formatDate(dateStr) {
         <div class="sum-divider"></div>
         <div class="sum-item">
           <span class="sum-num">{{ totals.totalWords }}</span>
-          <span class="sum-label">已背单词</span>
+          <span class="sum-label">已背</span>
         </div>
       </div>
 

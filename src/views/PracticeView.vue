@@ -122,7 +122,7 @@ const wrongState = computed(() => {
   return null
 })
 const totalMastered = computed(() => words.value.filter((w) => isMastered(w)).length)
-// 待练单词数：未背熟的单词总数
+// 待练数：未背熟的单词总数
 const pendingWords = computed(() => words.value.filter((w) => !isMastered(w)).length)
 // 今日正确率（与"今日背诵"统计条同口径）
 const accuracy = computed(() =>
@@ -547,7 +547,7 @@ next()
           </button>
           <div class="stat-item">
             <span class="stat-num">{{ todayUnique.totalWords }}</span>
-            <span class="stat-label">已背单词</span>
+            <span class="stat-label">已背</span>
           </div>
           <div class="stat-item">
             <span class="stat-num">{{ accuracy }}%</span>
@@ -555,7 +555,7 @@ next()
           </div>
           <div class="stat-item">
             <span class="stat-num">{{ pendingWords }}</span>
-            <span class="stat-label">待练单词</span>
+            <span class="stat-label">待练</span>
           </div>
         </div>
       </div>
