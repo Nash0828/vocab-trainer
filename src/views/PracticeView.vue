@@ -80,7 +80,7 @@ const todayStats = ref(getTodayStats())
 const todayUnique = ref(getTodayUniqueStats()) // 今日去重单词统计（重复单词只算一次）
 const todayRecords = ref([])
 const showRecordsModal = ref(false)
-const modalTab = ref('correct') // 'correct' | 'wrong'
+const modalTab = ref('correct') // 'all' | 'correct' | 'wrong'
 const todayTick = ref(0) // 用于跨零点时刷新今日统计
 let todayInterval = null
 
@@ -514,9 +514,9 @@ function closeRecords() {
 
 const modalRecords = computed(() => {
   const recs = todayRecords.value
-  return modalTab.value === 'correct'
-    ? recs.filter((r) => r.correct)
-    : recs.filter((r) => !r.correct)
+  if (modalTab.value === 'correct') return recs.filter((r) => r.correct)
+  if (modalTab.value === 'wrong') return recs.filter((r) => !r.correct)
+  return recs
 })
 
 // 答错后按回车键直接进入下一题；重做答对后按回车也进入下一题（焦点在输入框/页面空白处时生效；聚焦按钮时不拦截，避免与按钮回车激活冲突）
@@ -785,6 +785,9 @@ next()
           <button class="modal-close" @click="closeRecords">✕</button>
         </div>
         <div class="modal-tabs">
+          <button class="tab-btn" :class="{ active: modalTab === 'all' }" @click="modalTab = 'all'">
+            全部 ({{ todayStats.total }})
+          </button>
           <button class="tab-btn" :class="{ active: modalTab === 'correct' }" @click="modalTab = 'correct'">
             正确 ({{ todayStats.correct }})
           </button>
@@ -794,7 +797,7 @@ next()
         </div>
         <div class="modal-body" @touchmove.stop>
           <p v-if="!modalRecords.length" class="empty-tip">
-            今天还没有{{ modalTab === 'correct' ? '答对' : '答错' }}的单词记录
+            今天还没有{{ modalTab === 'all' ? '背诵记录' : (modalTab === 'correct' ? '答对' : '答错') + '的单词记录' }}
           </p>
           <ul v-else class="modal-list">
             <li v-for="(r, i) in modalRecords" :key="r.id" class="modal-item">
