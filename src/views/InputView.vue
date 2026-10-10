@@ -134,7 +134,15 @@ function clearAllFields() {
       <div class="form-group">
         <div class="form-item">
           <label>中文</label>
+          <input
+            v-if="form.type === 'word'"
+            v-model="form.chinese"
+            type="text"
+            placeholder="请输入中文"
+            autocomplete="off"
+          />
           <textarea
+            v-else
             v-model="form.chinese"
             rows="2"
             placeholder="请输入中文"
@@ -143,7 +151,15 @@ function clearAllFields() {
         </div>
         <div class="form-item">
           <label>英文</label>
+          <input
+            v-if="form.type === 'word'"
+            v-model="form.english"
+            type="text"
+            placeholder="请输入英文"
+            autocomplete="off"
+          />
           <textarea
+            v-else
             v-model="form.english"
             rows="2"
             placeholder="请输入英文"
