@@ -754,7 +754,12 @@ next()
             <div v-if="dictModal.data.translation" class="dict-meaning">
               <p class="dict-label">整句翻译</p>
               <div class="trans-block">
-                <p class="trans-src">{{ dictModal.word }}</p>
+                <div class="trans-src-row">
+                  <p class="trans-src">{{ dictModal.word }}</p>
+                  <button class="speak-mini" @click="speak(dictModal.word, 0)" title="朗读">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                  </button>
+                </div>
                 <p class="trans-dst">{{ dictModal.data.translation }}</p>
               </div>
             </div>
@@ -1515,11 +1520,20 @@ next()
   padding: 10px 12px;
 }
 
+.trans-src-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
 .trans-src {
   font-size: 15px;
   color: var(--text-main);
-  margin: 0 0 6px 0;
+  margin: 0;
   line-height: 1.5;
+  word-break: break-word;
 }
 
 .trans-dst {
