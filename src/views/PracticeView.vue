@@ -536,6 +536,7 @@ const modalRecords = computed(() => {
 // 跳转背诵指定单词（来自词句库/今日背诵记录的"背诵"按钮）
 function goPractice(word) {
   if (!word) return
+  closeRecords()
   router.push({ path: '/practice', query: { word } })
 }
 

@@ -1106,9 +1106,6 @@ function formatTime(ts) {
   transition: all 0.15s;
 }
 
-.op-btn.study {
-  color: var(--primary);
-}
 
 .op-btn:active { background: #f2f2f2; }
 
