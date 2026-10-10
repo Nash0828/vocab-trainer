@@ -579,6 +579,9 @@ function formatTime(ts) {
           <div class="word-main">
             <div class="word-left">
               <span class="word-en">{{ word.english }}</span>
+              <button class="speak-btn" title="发音" @click.stop="speak(word.english)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+              </button>
               <span v-if="word.type && word.type !== 'word'" class="type-tag">{{ word.type === 'phrase' ? '短语' : '句子' }}</span>
               <span v-if="word.pos" class="pos-tag">{{ word.pos }}</span>
             </div>
@@ -779,6 +782,25 @@ function formatTime(ts) {
   gap: 8px;
   flex: 1;
   min-width: 0;
+}
+
+.speak-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: #f2f2f2;
+  color: var(--text-main);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.speak-btn:active {
+  background: #e5e5e5;
 }
 
 .word-en {
