@@ -548,8 +548,14 @@ function setPendingFromQuery() {
   if (w) pendingWord.value = w
 }
 
-// 答错后按回车键直接进入下一题；重做答对后按回车也进入下一题（焦点在输入框/页面空白处时生效；聚焦按钮时不拦截，避免与按钮回车激活冲突）
+// 全局键盘：Ctrl+P 朗读当前单词（不触发浏览器打印、不夺走焦点）；答错/重做答对后回车进入下一题
 function onGlobalKeydown(e) {
+  // Ctrl+P（Mac 为 Cmd+P）：朗读当前单词，阻止浏览器打印对话框，焦点留在输入框
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) {
+    e.preventDefault()
+    if (current.value) speak(current.value.english)
+    return
+  }
   if (e.key !== 'Enter') return
   const canSkip = result.value === 'wrong' || (result.value === 'correct' && isRedo.value)
   if (!canSkip) return
