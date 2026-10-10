@@ -534,29 +534,33 @@ next()
         </div>
       </transition>
 
-      <!-- 今日统计 -->
-      <div class="today-card">
-        <div class="today-stats">
-          <button class="stat-item" @click="openRecords('correct')">
-            <span class="stat-num ok">{{ todayStats.correct }}</span>
-            <span class="stat-label">正确</span>
-          </button>
-          <button class="stat-item" @click="openRecords('wrong')">
-            <span class="stat-num bad">{{ todayStats.wrong }}</span>
-            <span class="stat-label">错误</span>
-          </button>
-          <div class="stat-item">
-            <span class="stat-num">{{ todayUnique.totalWords }}</span>
-            <span class="stat-label">已背</span>
+      <!-- 今日统计 + 待练（两卡片一行） -->
+      <div class="stats-row">
+        <div class="stats-card">
+          <div class="stats-title">今日背诵</div>
+          <div class="today-grid">
+            <button class="stat-item" @click="openRecords('correct')">
+              <span class="stat-num ok">{{ todayStats.correct }}</span>
+              <span class="stat-label">正确</span>
+            </button>
+            <button class="stat-item" @click="openRecords('wrong')">
+              <span class="stat-num bad">{{ todayStats.wrong }}</span>
+              <span class="stat-label">错误</span>
+            </button>
+            <div class="stat-item">
+              <span class="stat-num">{{ todayUnique.totalWords }}</span>
+              <span class="stat-label">已背</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-num">{{ accuracy }}%</span>
+              <span class="stat-label">正确率</span>
+            </div>
           </div>
-          <div class="stat-item">
-            <span class="stat-num">{{ accuracy }}%</span>
-            <span class="stat-label">正确率</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-num">{{ pendingWords }}</span>
-            <span class="stat-label">待练</span>
-          </div>
+        </div>
+        <div class="stats-card pending-card">
+          <div class="stats-title">待练</div>
+          <div class="pending-num">{{ pendingWords }}</div>
+          <div class="pending-desc">未背熟词句</div>
         </div>
       </div>
 
@@ -927,21 +931,35 @@ next()
   opacity: 0;
 }
 
-/* 今日统计卡片 */
-.today-card {
-  background: #fff;
+/* 今日统计 + 待练卡片（一行两组） */
+.stats-row {
+  display: flex;
+  gap: 8px;
   margin: 0 16px 8px;
-  border-radius: 12px;
-  padding: 16px 0;
 }
 
-.today-stats {
-  display: flex;
-  align-items: center;
+.stats-card {
+  flex: 1;
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px 10px 10px;
+  min-width: 0;
+}
+
+.stats-title {
+  font-size: 12px;
+  color: var(--text-sub);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.today-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  row-gap: 8px;
 }
 
 .stat-item {
-  flex: 1;
   text-align: center;
   border: none;
   background: transparent;
@@ -951,7 +969,7 @@ next()
 
 .stat-num {
   display: block;
-  font-size: 22px;
+  font-size: 19px;
   font-weight: 600;
   color: var(--text-main);
 }
@@ -961,8 +979,29 @@ next()
 
 .stat-label {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-sub);
+  margin-top: 2px;
+}
+
+.pending-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.pending-num {
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--primary);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.pending-desc {
+  font-size: 11px;
+  color: var(--text-sub);
+  text-align: center;
   margin-top: 2px;
 }
 
