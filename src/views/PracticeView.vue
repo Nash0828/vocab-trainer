@@ -548,10 +548,29 @@ function setPendingFromQuery() {
   if (w) pendingWord.value = w
 }
 
-// 全局键盘：Ctrl+P 朗读当前单词（不触发浏览器打印、不夺走焦点）；答错/重做答对后回车进入下一题
+// 全局键盘：Ctrl+P 朗读 / Ctrl+N 下一题 / Ctrl+A 显示答案 / Ctrl+Q 查词详情；答错/重做答对后回车进入下一题
 function onGlobalKeydown(e) {
+  const key = (e.key || '').toLowerCase()
+  // Ctrl+N：下一题（阻止浏览器新窗口）
+  if ((e.ctrlKey || e.metaKey) && key === 'n') {
+    e.preventDefault()
+    next()
+    return
+  }
+  // Ctrl+A：显示答案（阻止输入框全选）
+  if ((e.ctrlKey || e.metaKey) && key === 'a') {
+    e.preventDefault()
+    revealAnswer()
+    return
+  }
+  // Ctrl+Q：查询当前单词详情（阻止浏览器默认行为）
+  if ((e.ctrlKey || e.metaKey) && key === 'q') {
+    e.preventDefault()
+    if (current.value) lookupWord(current.value.english)
+    return
+  }
   // Ctrl+P（Mac 为 Cmd+P）：朗读当前单词，阻止浏览器打印对话框，焦点留在输入框
-  if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) {
+  if ((e.ctrlKey || e.metaKey) && key === 'p') {
     e.preventDefault()
     if (current.value) speak(current.value.english)
     return
