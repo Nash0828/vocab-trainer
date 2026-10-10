@@ -356,24 +356,40 @@ function onDictTextClick(e) {
   const el = e.target && e.target.closest ? e.target.closest('.word-link') : null
   if (!el) return
   const w = el.getAttribute('data-word')
-  if (w) openWordBubble(w, e)
+  if (w) openWordBubble(w, el)
 }
 
-// 单词气泡查询（微信风格小卡片）
+// 单词气泡查询（微信风格小卡片，定位在单词上方 10px，带指向箭头）
 const wordBubble = ref(null)
+const wbEl = ref(null)
 function closeWordBubble() {
   wordBubble.value = null
   document.removeEventListener('click', closeWordBubble)
 }
-async function openWordBubble(word, e) {
-  if (!word || !e) return
-  const bw = 250
-  const bh = 180
-  let left = Math.min(e.clientX + 10, window.innerWidth - bw - 8)
-  left = Math.max(8, left)
-  let top = e.clientY - bh - 12
-  if (top < 8) top = e.clientY + 16
-  wordBubble.value = { word, data: null, loading: true, error: null, left, top }
+function placeBubble(rect) {
+  const b = wordBubble.value
+  if (!b || !rect) return
+  const wb = wbEl.value
+  const h = wb ? wb.offsetHeight : 180
+  let top = rect.top - h - 10
+  b.flip = false
+  if (top < 8) {
+    top = rect.bottom + 10
+    b.flip = true
+  }
+  b.top = top
+  const center = rect.left + rect.width / 2
+  let arrowLeft = center - b.left - 6
+  arrowLeft = Math.max(12, Math.min(arrowLeft, b.width - 18))
+  b.arrowLeft = arrowLeft
+}
+async function openWordBubble(word, el) {
+  if (!word || !el) return
+  const rect = el.getBoundingClientRect()
+  const width = Math.min(340, window.innerWidth * 0.88)
+  let left = rect.left + rect.width / 2 - width / 2
+  left = Math.max(8, Math.min(left, window.innerWidth - width - 8))
+  wordBubble.value = { word, data: null, loading: true, error: null, top: 0, left, width, arrowLeft: 50, flip: false }
   document.removeEventListener('click', closeWordBubble)
   setTimeout(() => document.addEventListener('click', closeWordBubble), 0)
   try {
@@ -387,6 +403,7 @@ async function openWordBubble(word, e) {
     wordBubble.value.error = err.message || '查询失败，请稍后重试'
   } finally {
     wordBubble.value.loading = false
+    nextTick(() => placeBubble(rect))
   }
 }
 // 朗读例句（有道 dictvoice type=2 句子发音）
@@ -810,9 +827,9 @@ next()
           <div v-else-if="dictModal.data">
             <div v-if="dictModal.data.translation" class="dict-meaning">
               <p class="dict-label">整句翻译</p>
-              <div class="trans-block">
+              <div class="trans-block" @click="onDictTextClick">
                 <div class="trans-src-row">
-                  <p class="trans-src">{{ dictModal.word }}</p>
+                  <p class="trans-src" v-html="wordify(dictModal.word, '')"></p>
                   <button class="speak-mini" @click="speak(dictModal.word, 0)" title="朗读">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
                   </button>
@@ -867,11 +884,17 @@ next()
         </div>
 
         <!-- 单词气泡 -->
-        <div v-if="wordBubble" class="wb-pop" :style="{ top: wordBubble.top + 'px', left: wordBubble.left + 'px' }" @click.stop>
+        <div v-if="wordBubble" ref="wbEl" class="wb-pop" :style="{ top: wordBubble.top + 'px', left: wordBubble.left + 'px', width: wordBubble.width + 'px' }" @click.stop>
+          <div class="wb-arrow" :class="{ flip: wordBubble.flip }" :style="{ left: wordBubble.arrowLeft + 'px' }"></div>
           <div v-if="wordBubble.loading" class="wb-loading">查询中…</div>
           <div v-else-if="wordBubble.error" class="wb-error">{{ wordBubble.error }}</div>
           <template v-else-if="wordBubble.data">
-            <div class="wb-word">{{ wordBubble.word }}</div>
+            <div class="wb-head">
+              <div class="wb-word">{{ wordBubble.word }}</div>
+              <button class="speak-mini" @click="speak(wordBubble.word, 0)" title="朗读">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+              </button>
+            </div>
             <div v-if="wordBubble.data.usphone || wordBubble.data.ukphone" class="wb-phone">
               <span v-if="wordBubble.data.ukphone">英 [{{ wordBubble.data.ukphone }}]</span>
               <span v-if="wordBubble.data.usphone" style="margin-left:8px">美 [{{ wordBubble.data.usphone }}]</span>
@@ -1681,18 +1704,40 @@ next()
 .wb-pop {
   position: fixed;
   z-index: 600;
-  width: 250px;
-  max-width: 80vw;
+  max-width: 88vw;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   padding: 12px 14px;
   box-sizing: border-box;
 }
+.wb-arrow {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border: 6px solid transparent;
+  border-top: 0;
+  border-bottom-color: #fff;
+}
+.wb-arrow.flip {
+  top: auto;
+  bottom: -6px;
+  border-top: 6px solid #fff;
+  border-bottom: 0;
+}
+.wb-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
 .wb-word {
   font-size: 17px;
   font-weight: 600;
   color: var(--text-main);
+  word-break: break-word;
 }
 .wb-phone {
   font-size: 13px;
