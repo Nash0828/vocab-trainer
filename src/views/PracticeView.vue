@@ -568,6 +568,7 @@ todayInterval = setInterval(() => {
 onMounted(() => {
   document.addEventListener('keydown', onGlobalKeydown)
   setPendingFromQuery()
+  if (pendingWord.value) next()
 })
 
 watch(
