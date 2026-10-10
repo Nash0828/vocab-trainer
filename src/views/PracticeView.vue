@@ -726,7 +726,7 @@ next()
             <li v-for="(r, i) in modalRecords" :key="r.id" class="modal-item">
               <div class="m-main">
                 <span class="m-en">{{ r.english }}</span>
-                <span class="m-pos">{{ r.pos || '—' }}</span>
+                <span v-if="r.pos" class="m-pos">{{ r.pos }}</span>
               </div>
               <div class="m-sub">
                 <span class="m-zh">{{ r.chinese }}</span>
