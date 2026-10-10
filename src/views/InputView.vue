@@ -240,7 +240,7 @@ function clearAllFields() {
       </transition>
 
       <div class="form-actions">
-        <button type="submit" class="btn primary">保存单词</button>
+        <button type="submit" class="btn primary">保存</button>
       </div>
     </form>
   </div>
