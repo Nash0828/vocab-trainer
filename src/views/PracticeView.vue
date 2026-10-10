@@ -14,6 +14,13 @@ const { addWrong, removeWrong, getValidWrongWords } = useWrongBook()
 const sourceMode = ref('all')
 
 const current = ref(null)
+// 中文为短语/句子时自适应缩小字号
+const quizWordClass = computed(() => {
+  const len = (current.value?.chinese || '').length
+  if (len > 30) return 'xlong'
+  if (len > 12) return 'long'
+  return ''
+})
 const answer = ref('')
 const result = ref(null) // null | 'correct' | 'wrong'
 const revealed = ref(false) // 是否通过"显示答案"按钮作答
@@ -379,7 +386,7 @@ next()
       <div class="empty-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
       </div>
-      <p class="empty-title">词库还是空的</p>
+      <p class="empty-title">词句库还是空的</p>
       <p class="empty-desc">先去录入一些单词，再来这里练习吧</p>
       <button class="empty-btn" @click="router.push('/input')">去录入单词</button>
     </div>
@@ -391,7 +398,7 @@ next()
       </div>
       <p class="empty-title">错题本还是空的</p>
       <p class="empty-desc">在背单词中答错的单词会自动记入错题本</p>
-      <button class="empty-btn" @click="setSource('all')">切换到全部词库</button>
+      <button class="empty-btn" @click="setSource('all')">切换到全部词句库</button>
     </div>
 
     <!-- 错题本模式：错题本单词已全部背熟 -->
@@ -401,7 +408,7 @@ next()
       </div>
       <p class="empty-title">错题本都背熟了</p>
       <p class="empty-desc">错题本里的单词都已达到背熟阈值</p>
-      <button class="empty-btn" @click="setSource('all')">切换到全部词库</button>
+      <button class="empty-btn" @click="setSource('all')">切换到全部词句库</button>
     </div>
 
     <!-- 全部背熟 -->
@@ -410,7 +417,7 @@ next()
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
       </div>
       <p class="empty-title">全部背熟了</p>
-      <p class="empty-desc">词库中所有单词都已达到背熟阈值</p>
+      <p class="empty-desc">词句库中所有词句都已达到背熟阈值</p>
       <button class="empty-btn" @click="router.push('/settings')">去设置调整</button>
     </div>
 
@@ -462,8 +469,8 @@ next()
 
       <!-- 答题区 -->
       <div class="quiz-card">
-        <p class="quiz-label">中文释义</p>
-        <p class="quiz-word">{{ current.chinese }}</p>
+        <p class="quiz-label">中文</p>
+        <p class="quiz-word" :class="quizWordClass">{{ current.chinese }}</p>
         <p v-if="current.pos" class="quiz-pos">{{ current.pos }}</p>
 
         <div class="quiz-sound">
@@ -493,7 +500,7 @@ next()
             inputmode="text"
             enterkeyhint="go"
             autocorrect="off"
-            placeholder="输入英文单词"
+            placeholder="输入英文"
             :disabled="!!result"
             @focus="focusEnabled = true"
             @keyup.enter="submit"
@@ -755,7 +762,15 @@ next()
   font-weight: 700;
   color: var(--text-main);
   margin: 0 0 4px;
-  word-break: break-all;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+.quiz-word.long {
+  font-size: 24px;
+}
+.quiz-word.xlong {
+  font-size: 19px;
 }
 
 .quiz-pos {

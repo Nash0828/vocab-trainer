@@ -320,6 +320,10 @@ function saveEdit(word) {
     showTip('中文和英文不能为空', 'warn')
     return
   }
+  if (!/^[A-Za-z0-9][A-Za-z0-9\s.,!?;:'"()\-’'']*$/.test(editForm.english.trim())) {
+    showTip('英文只允许字母、数字、空格和常见标点', 'warn')
+    return
+  }
   // 重复校验：排除当前编辑的单词自身，避免把自己的旧值误判为重复
   const dup = checkDuplicate({
     chinese: editForm.chinese,
@@ -327,10 +331,10 @@ function saveEdit(word) {
     excludeId: word.id,
   })
   const parts = []
-  if (dup.duplicateChinese) parts.push(`中文释义「${editForm.chinese.trim()}」`)
-  if (dup.duplicateEnglish) parts.push(`英文单词「${editForm.english.trim()}」`)
+  if (dup.duplicateChinese) parts.push(`中文「${editForm.chinese.trim()}」`)
+  if (dup.duplicateEnglish) parts.push(`英文「${editForm.english.trim()}」`)
   if (parts.length) {
-    showTip(`⛔ ${parts.join(' 与 ')}与词库中其他单词重复，保存失败`, 'err')
+    showTip(`⛔ ${parts.join(' 与 ')}与词句库中其他词句重复，保存失败`, 'err')
     return
   }
   const ok = updateWord(word.id, {
@@ -425,13 +429,13 @@ function formatTime(ts) {
       </div>
     </div>
 
-    <!-- 空状态：词库为空 -->
+    <!-- 空状态：词句库为空 -->
     <div v-if="!totalCount" class="empty-state">
       <div class="empty-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
       </div>
-      <p class="empty-title">暂无单词</p>
-      <p class="empty-desc">去录入添加你的第一个单词吧</p>
+      <p class="empty-title">暂无词句</p>
+      <p class="empty-desc">去录入添加你的第一条词句吧</p>
       <button class="empty-btn" @click="router.push('/input')">去录入</button>
     </div>
 
@@ -440,7 +444,7 @@ function formatTime(ts) {
       <div class="empty-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </div>
-      <p class="empty-title">没有符合条件的单词</p>
+      <p class="empty-title">没有符合条件的词句</p>
       <p class="empty-desc">试试换一个关键词或切换筛选条件</p>
       <button class="empty-btn" @click="resetFilters">清除筛选</button>
     </div>
@@ -450,8 +454,8 @@ function formatTime(ts) {
       <div v-for="(word, index) in pagedWords" :key="word.id" class="word-item">
         <!-- 编辑态 -->
         <div v-if="editingId === word.id" class="edit-row">
-          <input v-model="editForm.chinese" class="cell-input" placeholder="中文" />
-          <input v-model="editForm.english" class="cell-input" placeholder="英文" />
+          <textarea v-model="editForm.chinese" class="cell-input area" placeholder="中文"></textarea>
+          <textarea v-model="editForm.english" class="cell-input area" placeholder="英文"></textarea>
           <input v-model="editForm.pos" class="cell-input pos" placeholder="词性" />
           <div class="case-row">
             <span class="case-label">区分大小写</span>
@@ -675,6 +679,8 @@ function formatTime(ts) {
   font-size: 17px;
   font-weight: 600;
   color: var(--text-main);
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .pos-tag {
@@ -708,6 +714,8 @@ function formatTime(ts) {
 .word-zh {
   font-size: 14px;
   color: var(--text-sub);
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .word-time {
@@ -946,6 +954,14 @@ function formatTime(ts) {
   font-size: 14px;
   outline: none;
   background: #fff;
+}
+
+.cell-input.area {
+  resize: none;
+  min-height: 48px;
+  line-height: 1.5;
+  font-family: inherit;
+  box-sizing: border-box;
 }
 
 .cell-input.pos {

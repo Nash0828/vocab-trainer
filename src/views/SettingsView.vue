@@ -131,7 +131,7 @@ function applyImport(data, mode) {
   const modeText = mode === 'merge' ? '合并' : '覆盖'
   const skipText = res.skipped ? `，跳过 ${res.skipped} 个（重复或无有效内容）` : ''
   showTip(
-    `${modeText}导入成功：新增 ${res.imported} 个单词${skipText}，当前词库共 ${res.total} 个`,
+    `${modeText}导入成功：新增 ${res.imported} 个单词${skipText}，当前词句库共 ${res.total} 个`,
     'ok'
   )
 }
@@ -257,7 +257,7 @@ function cancelMigrate() {
     <div v-if="confirmResetAll" class="mask" @click.self="cancelResetAll" @touchmove.prevent>
       <div class="dialog">
         <p class="dialog-title">重置全部背诵次数？</p>
-        <p class="dialog-msg">将词库中全部 {{ totalCount }} 个单词的背诵次数归 0，此操作不可撤销。</p>
+        <p class="dialog-msg">将词句库中全部 {{ totalCount }} 条词句的背诵次数归 0，此操作不可撤销。</p>
         <div class="dialog-btns">
           <button class="dialog-btn" @click="cancelResetAll">取消</button>
           <button class="dialog-btn danger" @click="doResetAll">确定重置</button>
@@ -270,7 +270,7 @@ function cancelMigrate() {
       <div class="action-sheet">
         <div class="action-sheet-title">选择导入方式</div>
         <button class="action-sheet-btn" @click="chooseImportMode('merge')">合并（跳过重复单词）</button>
-        <button class="action-sheet-btn" @click="chooseImportMode('overwrite')">覆盖（清空当前词库）</button>
+        <button class="action-sheet-btn" @click="chooseImportMode('overwrite')">覆盖（清空当前词句库）</button>
         <button class="action-sheet-cancel" @click="showImportMode = false">取消</button>
       </div>
     </div>

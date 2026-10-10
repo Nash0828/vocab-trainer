@@ -64,28 +64,28 @@ function showTip(text, kind = 'warn') {
 
 function validate() {
   if (!form.chinese.trim()) {
-    showTip('请填写中文释义')
+    showTip('请填写中文')
     return false
   }
   if (!form.english.trim()) {
-    showTip('请填写英文单词')
+    showTip('请填写英文')
     return false
   }
-  if (!/^[A-Za-z][A-Za-z\s\-'’]*$/.test(form.english.trim())) {
-    showTip('英文单词只允许字母（可含空格、连字符）')
+  if (!/^[A-Za-z0-9][A-Za-z0-9\s.,!?;:'"()\-’'']*$/.test(form.english.trim())) {
+    showTip('英文只允许字母、数字、空格和常见标点')
     return false
   }
   return true
 }
 
-// 重复校验：中文/英文与词库已有条目重复时阻止提交，并区分提示
+// 重复校验：中文/英文与词句库已有条目重复时阻止提交，并区分提示
 function duplicateTip() {
   const dup = checkDuplicate({ chinese: form.chinese, english: form.english })
   const parts = []
-  if (dup.duplicateChinese) parts.push(`中文释义「${form.chinese.trim()}」`)
-  if (dup.duplicateEnglish) parts.push(`英文单词「${form.english.trim()}」`)
+  if (dup.duplicateChinese) parts.push(`中文「${form.chinese.trim()}」`)
+  if (dup.duplicateEnglish) parts.push(`英文「${form.english.trim()}」`)
   if (!parts.length) return null
-  return `⛔ ${parts.join(' 与 ')}已在词库中，不能重复录入`
+  return `⛔ ${parts.join(' 与 ')}已在词句库中，不能重复录入`
 }
 
 function submit() {
@@ -119,22 +119,22 @@ function clearAllFields() {
     <form class="word-form" @submit.prevent="submit">
       <div class="form-group">
         <div class="form-item">
-          <label>中文释义</label>
-          <input
+          <label>中文</label>
+          <textarea
             v-model="form.chinese"
-            type="text"
-            placeholder="请输入中文释义"
+            rows="2"
+            placeholder="请输入中文"
             autocomplete="off"
-          />
+          ></textarea>
         </div>
         <div class="form-item">
-          <label>英文单词</label>
-          <input
+          <label>英文</label>
+          <textarea
             v-model="form.english"
-            type="text"
-            placeholder="请输入英文单词"
+            rows="2"
+            placeholder="请输入英文"
             autocomplete="off"
-          />
+          ></textarea>
         </div>
         <div class="form-item">
           <label>词性</label>
@@ -197,7 +197,7 @@ function clearAllFields() {
 
 .form-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   padding: 12px 16px;
   position: relative;
 }
@@ -216,9 +216,12 @@ function clearAllFields() {
   font-size: 15px;
   color: var(--text-main);
   flex-shrink: 0;
+  line-height: 1.5;
+  padding-top: 6px;
 }
 
-.form-item input {
+.form-item input,
+.form-item textarea {
   flex: 1;
   border: none;
   outline: none;
@@ -228,7 +231,16 @@ function clearAllFields() {
   padding: 4px 0;
 }
 
-.form-item input::placeholder {
+.form-item textarea {
+  min-height: 60px;
+  resize: none;
+  line-height: 1.5;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.form-item input::placeholder,
+.form-item textarea::placeholder {
   color: #b2b2b2;
 }
 

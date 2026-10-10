@@ -35,7 +35,7 @@ const router = createRouter({
       path: '/library',
       name: 'library',
       component: () => import('../views/LibraryView.vue'),
-      meta: { title: '词库管理' },
+      meta: { title: '词句库管理' },
     },
     {
       path: '/history',
