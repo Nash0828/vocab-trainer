@@ -1418,10 +1418,10 @@ next()
   color: var(--text-main);
   font-weight: 600;
   max-width: 100%;
-  padding: 0 36px;
+  padding: 0 40px 0 0;
   word-break: break-word;
   line-height: 1.4;
-  text-align: center;
+  text-align: left;
 }
 
 .dict-close {
