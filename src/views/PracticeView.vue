@@ -12,6 +12,51 @@ const { addWrong, removeWrong, getValidWrongWords } = useWrongBook()
 
 // 出题来源：'all' = 全部未背熟词库；'wrong' = 仅错题本
 const sourceMode = ref('all')
+// 类型筛选：'all' | 'word' | 'phrase' | 'sentence'
+const typeFilter = ref('all')
+const typeFilterOptions = [
+  { value: 'all', label: '全部' },
+  { value: 'word', label: '单词' },
+  { value: 'phrase', label: '短语' },
+  { value: 'sentence', label: '句子' },
+]
+
+// ---- 类型筛选底部面板 ----
+const showFilterSheet = ref(false)
+const draftTypeFilter = ref('all')
+const filterSummary = computed(() =>
+  typeFilter.value !== 'all'
+    ? (typeFilterOptions.find((o) => o.value === typeFilter.value)?.label || '')
+    : ''
+)
+function openFilterSheet() {
+  draftTypeFilter.value = typeFilter.value
+  showFilterSheet.value = true
+}
+function closeFilterSheet() {
+  showFilterSheet.value = false
+}
+function resetFilterSheet() {
+  draftTypeFilter.value = 'all'
+  typeFilter.value = 'all'
+  showFilterSheet.value = false
+  lastIndex.value = -1
+  clearAutoTimer()
+  next()
+}
+function applyFilterSheet() {
+  typeFilter.value = draftTypeFilter.value
+  showFilterSheet.value = false
+  lastIndex.value = -1
+  clearAutoTimer()
+  next()
+}
+function clearTypeFilter() {
+  typeFilter.value = 'all'
+  lastIndex.value = -1
+  clearAutoTimer()
+  next()
+}
 
 const current = ref(null)
 // 中文为短语/句子时自适应缩小字号
@@ -54,16 +99,21 @@ function resolveWord(item) {
     words.value.find((x) => x.english.trim().toLowerCase() === item.english.trim().toLowerCase()) || null
   )
 }
-// 出题池：全部模式 = 未背熟单词；错题本模式 = 错题本中且未背熟的单词（保持"已背熟不出题"规则）
+// 出题池：全部模式 = 未背熟单词 ∩ 类型筛选；错题本模式 = 错题本中且未背熟 ∩ 类型筛选（保持"已背熟不出题"规则）
 const available = computed(() => {
+  const matchType = (w) => typeFilter.value === 'all' || (w.type || 'word') === typeFilter.value
   if (sourceMode.value === 'wrong') {
     return wrongValid.value
       .map((item) => resolveWord(item))
-      .filter((w) => w && !isMastered(w))
+      .filter((w) => w && !isMastered(w) && matchType(w))
   }
-  return words.value.filter((w) => !isMastered(w))
+  return words.value.filter((w) => !isMastered(w) && matchType(w))
 })
 const allMastered = computed(() => hasWords.value && available.value.length === 0)
+// 类型筛选下无可用词句：类型筛选生效且出题池为空
+const filterEmpty = computed(
+  () => typeFilter.value !== 'all' && available.value.length === 0
+)
 // 错题本模式空状态：'empty'=错题本为空；'all-mastered'=错题本单词已全部背熟；null=正常
 const wrongState = computed(() => {
   if (sourceMode.value !== 'wrong') return null
@@ -412,7 +462,7 @@ next()
     </div>
 
     <!-- 全部背熟 -->
-    <div v-else-if="allMastered" class="empty-state">
+    <div v-else-if="allMastered && !filterEmpty" class="empty-state">
       <div class="empty-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
       </div>
@@ -421,25 +471,68 @@ next()
       <button class="empty-btn" @click="router.push('/settings')">去设置调整</button>
     </div>
 
+    <!-- 类型筛选下没有可练习词句 -->
+    <div v-else-if="filterEmpty" class="empty-state">
+      <div class="empty-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </div>
+      <p class="empty-title">「{{ filterSummary }}」下没有可练习的词句</p>
+      <p class="empty-desc">试试切换类型筛选，或先录入一些{{ filterSummary }}</p>
+      <button class="empty-btn" @click="clearTypeFilter">清除筛选</button>
+    </div>
+
     <!-- 有可练习单词 -->
     <template v-else>
-      <!-- 出题来源切换 -->
-      <div class="source-tabs">
-        <button
-          class="source-tab"
-          :class="{ active: sourceMode === 'all' }"
-          @click="setSource('all')"
-        >
-          全部未背熟
-        </button>
-        <button
-          class="source-tab"
-          :class="{ active: sourceMode === 'wrong' }"
-          @click="setSource('wrong')"
-        >
-          仅错题本
+      <!-- 出题来源切换 + 类型筛选 -->
+      <div class="source-row">
+        <div class="source-tabs">
+          <button
+            class="source-tab"
+            :class="{ active: sourceMode === 'all' }"
+            @click="setSource('all')"
+          >
+            全部未背熟
+          </button>
+          <button
+            class="source-tab"
+            :class="{ active: sourceMode === 'wrong' }"
+            @click="setSource('wrong')"
+          >
+            仅错题本
+          </button>
+        </div>
+        <button class="filter-btn" :class="{ active: filterSummary }" @click="openFilterSheet">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          <span>{{ filterSummary || '筛选' }}</span>
         </button>
       </div>
+
+      <!-- 类型筛选底部面板 -->
+      <transition name="sheet">
+        <div v-if="showFilterSheet" class="sheet-mask" @click.self="closeFilterSheet" @touchmove.prevent>
+          <div class="sheet" @touchmove.stop>
+            <div class="sheet-title">筛选</div>
+            <div class="sheet-body">
+              <div class="sheet-group">
+                <div class="sheet-group-title">类型</div>
+                <div class="sheet-opts">
+                  <button
+                    v-for="opt in typeFilterOptions"
+                    :key="opt.value"
+                    class="sheet-opt"
+                    :class="{ active: draftTypeFilter === opt.value }"
+                    @click="draftTypeFilter = opt.value"
+                  >{{ opt.label }}</button>
+                </div>
+              </div>
+            </div>
+            <div class="sheet-foot">
+              <button class="sheet-btn ghost" @click="resetFilterSheet">重置</button>
+              <button class="sheet-btn primary" @click="applyFilterSheet">确定</button>
+            </div>
+          </div>
+        </div>
+      </transition>
 
       <!-- 今日统计 -->
       <div class="today-card">
@@ -676,10 +769,17 @@ next()
 }
 
 /* 出题来源切换 */
+.source-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 16px 8px;
+}
+
 .source-tabs {
   display: flex;
+  flex: 1;
   background: #fff;
-  margin: 0 16px 8px;
   border-radius: 10px;
   padding: 3px;
   gap: 3px;
@@ -701,6 +801,130 @@ next()
   background: var(--primary);
   color: #fff;
   font-weight: 500;
+}
+
+.filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: #fff;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--text-sub);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.filter-btn.active {
+  background: rgba(7, 193, 96, 0.1);
+  color: var(--primary);
+}
+
+/* 筛选底部面板（微信风格） */
+.sheet-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  touch-action: none;
+}
+.sheet {
+  width: 100%;
+  max-width: 480px;
+  background: #f7f7f7;
+  border-radius: 12px 12px 0 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  touch-action: pan-y;
+}
+.sheet-title {
+  text-align: center;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 500;
+  background: #fff;
+  border-bottom: 1px solid #e5e5e5;
+}
+.sheet-body {
+  background: #fff;
+  padding: 0 16px;
+  max-height: 60vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+.sheet-group {
+  padding: 14px 0;
+}
+.sheet-group-title {
+  font-size: 13px;
+  color: var(--text-sub);
+  margin-bottom: 10px;
+}
+.sheet-opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sheet-opt {
+  border: none;
+  background: #f2f2f2;
+  border-radius: 6px;
+  padding: 7px 16px;
+  font-size: 14px;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.sheet-opt.active {
+  background: rgba(7, 193, 96, 0.1);
+  color: var(--primary);
+  font-weight: 500;
+}
+.sheet-foot {
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #fff;
+  border-top: 1px solid #f0f0f0;
+}
+.sheet-btn {
+  flex: 1;
+  border: none;
+  border-radius: 8px;
+  padding: 11px 0;
+  font-size: 15px;
+  cursor: pointer;
+}
+.sheet-btn.primary {
+  background: var(--primary);
+  color: #fff;
+}
+.sheet-btn.ghost {
+  background: #f2f2f2;
+  color: var(--text-main);
+}
+
+.sheet-enter-active,
+.sheet-leave-active {
+  transition: transform 0.25s ease, opacity 0.25s;
+}
+.sheet-enter-from,
+.sheet-leave-to {
+  transform: translateY(100%);
+}
+.sheet-mask.sheet-enter-active,
+.sheet-mask.sheet-leave-active {
+  transition: opacity 0.25s;
+}
+.sheet-mask.sheet-enter-from,
+.sheet-mask.sheet-leave-to {
+  opacity: 0;
 }
 
 /* 今日统计卡片 */
