@@ -551,8 +551,8 @@ function setPendingFromQuery() {
 // 全局键盘：Ctrl+P 朗读 / Ctrl+N 下一题 / Ctrl+A 显示答案 / Ctrl+Q 查词详情；答错/重做答对后回车进入下一题
 function onGlobalKeydown(e) {
   const key = (e.key || '').toLowerCase()
-  // Ctrl+N：下一题（阻止浏览器新窗口）
-  if ((e.ctrlKey || e.metaKey) && key === 'n') {
+  // Ctrl+↓：下一题（阻止页面滚动）
+  if ((e.ctrlKey || e.metaKey) && e.key === 'ArrowDown') {
     e.preventDefault()
     next()
     return
