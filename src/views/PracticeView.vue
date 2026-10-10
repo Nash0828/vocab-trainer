@@ -333,6 +333,62 @@ function highlightWord(word, sentence) {
     return esc
   }
 }
+
+// 把英文单词拆成可点击的词链接；hlWord 匹配的词额外高亮
+function wordify(text, hlWord) {
+  const esc = escapeHtml(text)
+  const w = String(hlWord || '').trim().toLowerCase()
+  try {
+    const base = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const suffixes = ['s', 'es', 'ed', 'ing', 'd', "'s"]
+    if (/[^aeiou]y$/i.test(w)) suffixes.push('ies')
+    const re = new RegExp(`^(?:${base})(?:${suffixes.join('|')})?$`, 'i')
+    return esc.replace(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g, (m) => {
+      const isHl = w && re.test(m.toLowerCase())
+      const cls = isHl ? 'word-link sent-hl' : 'word-link'
+      return `<span class="${cls}" data-word="${m}">${m}</span>`
+    })
+  } catch (e) { return esc }
+}
+
+// 例句/词形变化点击事件委托：点中词链接则弹气泡查询
+function onDictTextClick(e) {
+  const el = e.target && e.target.closest ? e.target.closest('.word-link') : null
+  if (!el) return
+  const w = el.getAttribute('data-word')
+  if (w) openWordBubble(w, e)
+}
+
+// 单词气泡查询（微信风格小卡片）
+const wordBubble = ref(null)
+function closeWordBubble() {
+  wordBubble.value = null
+  document.removeEventListener('click', closeWordBubble)
+}
+async function openWordBubble(word, e) {
+  if (!word || !e) return
+  const bw = 250
+  const bh = 180
+  let left = Math.min(e.clientX + 10, window.innerWidth - bw - 8)
+  left = Math.max(8, left)
+  let top = e.clientY - bh - 12
+  if (top < 8) top = e.clientY + 16
+  wordBubble.value = { word, data: null, loading: true, error: null, left, top }
+  document.removeEventListener('click', closeWordBubble)
+  setTimeout(() => document.addEventListener('click', closeWordBubble), 0)
+  try {
+    const res = await fetch(`/api/dict?word=${encodeURIComponent(word.trim().toLowerCase())}`)
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}))
+      throw new Error(j.error || '查询失败')
+    }
+    wordBubble.value.data = await res.json()
+  } catch (err) {
+    wordBubble.value.error = err.message || '查询失败，请稍后重试'
+  } finally {
+    wordBubble.value.loading = false
+  }
+}
 // 朗读例句（有道 dictvoice type=2 句子发音）
 function speakSentence(sentence) {
   if (!sentence || audioPlaying) return
@@ -469,6 +525,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onGlobalKeydown)
+  document.removeEventListener('click', closeWordBubble)
   clearAutoTimer()
   if (todayInterval) clearInterval(todayInterval)
 })
@@ -786,18 +843,18 @@ next()
                 <li v-for="(tr, i) in dictModal.data.trs" :key="i">{{ tr }}</li>
               </ul>
             </div>
-            <div v-if="dictModal.data.wfs && dictModal.data.wfs.length" class="dict-meaning">
+            <div v-if="dictModal.data.wfs && dictModal.data.wfs.length" class="dict-meaning" @click="onDictTextClick">
               <p class="dict-label">词形变化</p>
               <ul>
-                <li v-for="(wf, i) in dictModal.data.wfs" :key="i">{{ wf }}</li>
+                <li v-for="(wf, i) in dictModal.data.wfs" :key="i" v-html="wordify(wf, '')"></li>
               </ul>
             </div>
-            <div v-if="dictModal.data.sentences && dictModal.data.sentences.length" class="dict-meaning">
+            <div v-if="dictModal.data.sentences && dictModal.data.sentences.length" class="dict-meaning" @click="onDictTextClick">
               <p class="dict-label">例句</p>
               <ul class="sent-list">
                 <li v-for="(s, i) in dictModal.data.sentences" :key="i" class="sent-item">
                   <div class="sent-line">
-                    <p class="sent-en" v-html="highlightWord(dictModal.word, s.en)"></p>
+                    <p class="sent-en" v-html="wordify(s.en, dictModal.word)"></p>
                     <button class="sent-speak" @click="speakSentence(s.en)" title="朗读例句">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
                     </button>
@@ -807,6 +864,23 @@ next()
               </ul>
             </div>
           </div>
+        </div>
+
+        <!-- 单词气泡 -->
+        <div v-if="wordBubble" class="wb-pop" :style="{ top: wordBubble.top + 'px', left: wordBubble.left + 'px' }" @click.stop>
+          <div v-if="wordBubble.loading" class="wb-loading">查询中…</div>
+          <div v-else-if="wordBubble.error" class="wb-error">{{ wordBubble.error }}</div>
+          <template v-else-if="wordBubble.data">
+            <div class="wb-word">{{ wordBubble.word }}</div>
+            <div v-if="wordBubble.data.usphone || wordBubble.data.ukphone" class="wb-phone">
+              <span v-if="wordBubble.data.ukphone">英 [{{ wordBubble.data.ukphone }}]</span>
+              <span v-if="wordBubble.data.usphone" style="margin-left:8px">美 [{{ wordBubble.data.usphone }}]</span>
+            </div>
+            <ul v-if="wordBubble.data.trs && wordBubble.data.trs.length" class="wb-trs">
+              <li v-for="(tr, i) in wordBubble.data.trs.slice(0, 3)" :key="i">{{ tr }}</li>
+            </ul>
+            <div v-else-if="wordBubble.data.translation" class="wb-trans">{{ wordBubble.data.translation }}</div>
+          </template>
         </div>
       </div>
     </div>
@@ -1590,6 +1664,62 @@ next()
   background: rgba(7, 193, 96, 0.12);
   border-radius: 3px;
   padding: 0 2px;
+}
+.dict-meaning :deep(.word-link) {
+  color: #576b95;
+  cursor: pointer;
+}
+.dict-meaning :deep(.word-link.sent-hl) {
+  color: var(--primary);
+  font-weight: 600;
+  background: rgba(7, 193, 96, 0.12);
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+/* 单词气泡（微信风格） */
+.wb-pop {
+  position: fixed;
+  z-index: 600;
+  width: 250px;
+  max-width: 80vw;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 12px 14px;
+  box-sizing: border-box;
+}
+.wb-word {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+.wb-phone {
+  font-size: 13px;
+  color: var(--text-sub);
+  margin-top: 4px;
+}
+.wb-trs {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  color: var(--text-main);
+  line-height: 1.6;
+}
+.wb-trs li + li {
+  margin-top: 2px;
+}
+.wb-trans {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--text-sub);
+  line-height: 1.5;
+}
+.wb-loading,
+.wb-error {
+  font-size: 14px;
+  color: var(--text-sub);
 }
 .sent-speak {
   flex-shrink: 0;
