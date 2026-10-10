@@ -1,11 +1,13 @@
 ﻿<script setup>
 import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useWords, weightedPickIndex } from '../composables/useWords'
 import { useHistory } from '../composables/useHistory'
 import { useWrongBook } from '../composables/useWrongBook'
 
 const router = useRouter()
+const route = useRoute()
+const pendingWord = ref(null) // 从词句库/今日记录跳转来的指定背诵词
 const { words, settings, incrementCount, isMastered } = useWords()
 const { getTodayStats, getTodayRecords, getTodayUniqueStats, addRecord } = useHistory()
 const { addWrong, removeWrong, getValidWrongWords } = useWrongBook()
@@ -182,6 +184,18 @@ function focusInput() {
 
 function next() {
   clearAutoTimer()
+  // 优先背诵指定词（从词句库/今日记录跳转）
+  if (pendingWord.value) {
+    const w = pendingWord.value
+    pendingWord.value = null
+    current.value = w
+    answer.value = ''
+    result.value = null
+    revealed.value = false
+    isRedo.value = false
+    focusInput()
+    return
+  }
   if (!available.value.length) {
     current.value = null
     return
@@ -519,6 +533,20 @@ const modalRecords = computed(() => {
   return recs
 })
 
+// 跳转背诵指定单词（来自词句库/今日背诵记录的"背诵"按钮）
+function goPractice(word) {
+  if (!word) return
+  router.push({ path: '/practice', query: { word } })
+}
+
+// 从路由 query 解析指定背诵词
+function setPendingFromQuery() {
+  const q = route.query.word
+  if (!q) return
+  const w = words.value.find((x) => x.english.trim().toLowerCase() === String(q).trim().toLowerCase())
+  if (w) pendingWord.value = w
+}
+
 // 答错后按回车键直接进入下一题；重做答对后按回车也进入下一题（焦点在输入框/页面空白处时生效；聚焦按钮时不拦截，避免与按钮回车激活冲突）
 function onGlobalKeydown(e) {
   if (e.key !== 'Enter') return
@@ -538,7 +566,16 @@ todayInterval = setInterval(() => {
 
 onMounted(() => {
   document.addEventListener('keydown', onGlobalKeydown)
+  setPendingFromQuery()
 })
+
+watch(
+  () => route.query.word,
+  () => {
+    setPendingFromQuery()
+    next()
+  }
+)
 
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onGlobalKeydown)
@@ -804,6 +841,9 @@ next()
               <div class="m-main">
                 <span class="m-en">{{ r.english }}</span>
                 <span v-if="r.pos" class="m-pos">{{ r.pos }}</span>
+                <button class="study-btn" @click="goPractice(r.english)" title="背诵">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                </button>
               </div>
               <div class="m-sub">
                 <span class="m-zh">{{ r.chinese }}</span>
@@ -1476,6 +1516,23 @@ next()
   align-items: center;
   gap: 8px;
   margin-bottom: 4px;
+}
+
+/* "背诵"按钮（跳转背诵该词） */
+.study-btn {
+  border: none;
+  background: #f5f5f5;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  padding: 0;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .m-en { font-size: 16px; font-weight: 600; color: var(--text-main); }
