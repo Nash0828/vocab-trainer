@@ -162,9 +162,10 @@ const sortedWords = computed(() => {
 
 const totalCount = computed(() => words.value.length)
 
-// ---- 筛选：关键字 + 背熟状态（可组合） ----
+// ---- 筛选：关键字 + 类型 + 背熟状态（可组合） ----
 const keyword = ref('')
 const statusFilter = ref('all') // 'all' | 'mastered' | 'notMastered'
+const typeFilter = ref('all') // 'all' | 'word' | 'phrase' | 'sentence'
 
 const filteredWords = computed(() => {
   const kw = keyword.value.trim().toLowerCase()
@@ -173,12 +174,15 @@ const filteredWords = computed(() => {
       !kw ||
       w.chinese.toLowerCase().includes(kw) ||
       w.english.toLowerCase().includes(kw)
+    const type = w.type || 'word'
+    const matchType =
+      typeFilter.value === 'all' || type === typeFilter.value
     const mastered = isMastered(w)
     const matchStatus =
       statusFilter.value === 'all' ||
       (statusFilter.value === 'mastered' && mastered) ||
       (statusFilter.value === 'notMastered' && !mastered)
-    return matchKw && matchStatus
+    return matchKw && matchType && matchStatus
   })
 })
 
@@ -216,7 +220,7 @@ const pageNumbers = computed(() => {
 })
 
 // 筛选/排序条件变化时回到第 1 页
-watch([keyword, statusFilter, sortField, sortDir], () => {
+watch([keyword, statusFilter, typeFilter, sortField, sortDir], () => {
   currentPage.value = 1
 })
 
@@ -231,9 +235,17 @@ const filterOptions = [
   { value: 'notMastered', label: '未背熟' },
 ]
 
+const typeFilterOptions = [
+  { value: 'all', label: '全部' },
+  { value: 'word', label: '单词' },
+  { value: 'phrase', label: '短语' },
+  { value: 'sentence', label: '句子' },
+]
+
 function resetFilters() {
   keyword.value = ''
   statusFilter.value = 'all'
+  typeFilter.value = 'all'
 }
 
 // ---- 列宽拖拽（colgroup + col 方案，表头与单元格自动对齐） ----
@@ -423,16 +435,29 @@ function formatTime(ts) {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
-      <div class="status-filters">
-        <button
-          v-for="opt in filterOptions"
-          :key="opt.value"
-          class="filter-btn"
-          :class="{ active: statusFilter === opt.value }"
-          @click="statusFilter = opt.value"
-        >
-          {{ opt.label }}
-        </button>
+      <div class="seg-filters">
+        <div class="seg-group">
+          <button
+            v-for="opt in typeFilterOptions"
+            :key="opt.value"
+            class="seg-btn"
+            :class="{ active: typeFilter === opt.value }"
+            @click="typeFilter = opt.value"
+          >
+            {{ opt.label }}
+          </button>
+        </div>
+        <div class="seg-group">
+          <button
+            v-for="opt in filterOptions"
+            :key="opt.value"
+            class="seg-btn"
+            :class="{ active: statusFilter === opt.value }"
+            @click="statusFilter = opt.value"
+          >
+            {{ opt.label }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -914,25 +939,36 @@ function formatTime(ts) {
   color: var(--text-main);
 }
 
-.status-filters {
+.seg-filters {
   display: flex;
-  gap: 6px;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.filter-btn {
+.seg-group {
+  display: flex;
+  background: #f2f2f2;
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.seg-btn {
+  flex: 1;
   border: none;
-  background: #fff;
-  color: var(--text-sub);
+  background: transparent;
   border-radius: 6px;
-  padding: 7px 14px;
+  padding: 7px 0;
   font-size: 13px;
+  color: var(--text-sub);
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.filter-btn.active {
-  background: var(--primary);
-  color: #fff;
+.seg-btn.active {
+  background: #fff;
+  color: var(--primary);
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
 }
 
 /* ===== 分页控件 ===== */
