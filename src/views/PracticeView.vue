@@ -167,21 +167,17 @@ function clearAutoTimer() {
 
 function focusInput() {
   if (!focusEnabled.value) return
-  const tryFocus = (retries = 3) => {
-    nextTick(() => {
-      const el = answerInput.value
-      if (!el) return
-      el.focus()
-      // 手机上可能需要第二次 focus 才弹出键盘
-      if (retries > 0) {
-        setTimeout(() => {
-          el.focus()
-          tryFocus(retries - 1)
-        }, 80)
-      }
-    })
-  }
-  tryFocus()
+  const el = answerInput.value
+  if (!el) return
+  // 同步聚焦：必须在用户手势内执行，iOS 才会弹出键盘
+  try { el.focus() } catch (e) {}
+  // 兜底：等 Vue 更新 disabled 等属性后再聚焦一次
+  nextTick(() => {
+    const el2 = answerInput.value
+    if (el2 && document.activeElement !== el2) {
+      try { el2.focus() } catch (e) {}
+    }
+  })
 }
 
 function next() {
@@ -224,9 +220,9 @@ function submit() {
   } else {
     addWrong(current.value)
   }
-  result.value = isCorrect ? 'correct' : 'wrong'
   revealed.value = false
-  speak(current.value.english)
+  const answeredWord = current.value.english
+  speak(answeredWord)
 
   addRecord({
     chinese: current.value.chinese,
@@ -239,8 +235,25 @@ function submit() {
 
   clearAutoTimer()
   if (isCorrect) {
-    autoTimer = setTimeout(next, 1000)
+    // 答对：在用户手势内立即换题并聚焦（iOS 才会弹出键盘），反馈用 toast 提示
+    const masteredNow = isMastered(current.value)
+    next()
+    focusInput()
+    showToast(masteredNow ? '回答正确 · 已背熟' : '回答正确')
+  } else {
+    result.value = 'wrong'
   }
+}
+
+// 轻提示（微信风格）
+const toastMsg = ref('')
+let toastTimer = null
+function showToast(msg) {
+  toastMsg.value = msg
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => {
+    toastMsg.value = ''
+  }, 1500)
 }
 
 function skip() {
@@ -431,6 +444,10 @@ next()
 
 <template>
   <div class="practice">
+    <!-- 轻提示 -->
+    <transition name="toast">
+      <div v-if="toastMsg" class="toast">{{ toastMsg }}</div>
+    </transition>
     <!-- 今日统计 + 待练（两卡片一行，全局数据不受筛选影响，置顶显示） -->
     <div class="stats-row">
       <div class="stats-card">
@@ -928,6 +945,31 @@ next()
 }
 .sheet-mask.sheet-enter-from,
 .sheet-mask.sheet-leave-to {
+  opacity: 0;
+}
+
+/* 轻提示 */
+.toast {
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  font-size: 14px;
+  padding: 9px 18px;
+  border-radius: 8px;
+  z-index: 300;
+  max-width: 70vw;
+  text-align: center;
+  pointer-events: none;
+}
+.toast-enter-active,
+.toast-leave-active {
+  transition: opacity 0.25s;
+}
+.toast-enter-from,
+.toast-leave-to {
   opacity: 0;
 }
 
