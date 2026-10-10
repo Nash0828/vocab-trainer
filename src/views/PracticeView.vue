@@ -481,6 +481,36 @@ next()
       <button class="empty-btn" @click="clearTypeFilter">清除筛选</button>
     </div>
 
+    <!-- 今日统计 + 待练（两卡片一行，全局数据不受筛选影响，置顶显示） -->
+    <div class="stats-row">
+      <div class="stats-card">
+        <div class="stats-title">今日背诵</div>
+        <div class="today-grid">
+          <button class="stat-item" @click="openRecords('correct')">
+            <span class="stat-num ok">{{ todayStats.correct }}</span>
+            <span class="stat-label">正确</span>
+          </button>
+          <button class="stat-item" @click="openRecords('wrong')">
+            <span class="stat-num bad">{{ todayStats.wrong }}</span>
+            <span class="stat-label">错误</span>
+          </button>
+          <div class="stat-item">
+            <span class="stat-num">{{ todayUnique.totalWords }}</span>
+            <span class="stat-label">已背</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-num">{{ accuracy }}%</span>
+            <span class="stat-label">正确率</span>
+          </div>
+        </div>
+      </div>
+      <div class="stats-card pending-card">
+        <div class="stats-title">待练</div>
+        <div class="pending-num">{{ pendingWords }}</div>
+        <div class="pending-desc">未背熟词句</div>
+      </div>
+    </div>
+
     <!-- 有可练习单词 -->
     <template v-else>
       <!-- 出题来源切换 + 类型筛选 -->
@@ -533,36 +563,6 @@ next()
           </div>
         </div>
       </transition>
-
-      <!-- 今日统计 + 待练（两卡片一行） -->
-      <div class="stats-row">
-        <div class="stats-card">
-          <div class="stats-title">今日背诵</div>
-          <div class="today-grid">
-            <button class="stat-item" @click="openRecords('correct')">
-              <span class="stat-num ok">{{ todayStats.correct }}</span>
-              <span class="stat-label">正确</span>
-            </button>
-            <button class="stat-item" @click="openRecords('wrong')">
-              <span class="stat-num bad">{{ todayStats.wrong }}</span>
-              <span class="stat-label">错误</span>
-            </button>
-            <div class="stat-item">
-              <span class="stat-num">{{ todayUnique.totalWords }}</span>
-              <span class="stat-label">已背</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-num">{{ accuracy }}%</span>
-              <span class="stat-label">正确率</span>
-            </div>
-          </div>
-        </div>
-        <div class="stats-card pending-card">
-          <div class="stats-title">待练</div>
-          <div class="pending-num">{{ pendingWords }}</div>
-          <div class="pending-desc">未背熟词句</div>
-        </div>
-      </div>
 
       <!-- 答题区 -->
       <div class="quiz-card">
