@@ -1613,19 +1613,19 @@ function formatTime(ts) {
 }
 .wb-arrow {
   position: absolute;
-  top: -6px;
+  bottom: -6px;
   left: 50%;
   width: 0;
   height: 0;
   border: 6px solid transparent;
-  border-top: 0;
-  border-bottom-color: #fff;
+  border-bottom: 0;
+  border-top: 6px solid #fff;
 }
 .wb-arrow.flip {
-  top: auto;
-  bottom: -6px;
-  border-top: 6px solid #fff;
-  border-bottom: 0;
+  bottom: auto;
+  top: -6px;
+  border-top: 0;
+  border-bottom: 6px solid #fff;
 }
 .wb-head {
   display: flex;
