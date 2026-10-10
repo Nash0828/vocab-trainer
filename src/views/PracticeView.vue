@@ -638,7 +638,9 @@ next()
         </div>
 
         <div class="quiz-input">
+          <!-- 单词：单行输入框；短语/句子：多行文本框 -->
           <input
+            v-if="current.type === 'word'"
             ref="answerInput"
             v-model="answer"
             type="text"
@@ -654,6 +656,21 @@ next()
             autocapitalize="off"
             spellcheck="false"
           />
+          <textarea
+            v-else
+            ref="answerInput"
+            v-model="answer"
+            lang="en"
+            inputmode="text"
+            rows="2"
+            autocorrect="off"
+            placeholder="输入英文"
+            :disabled="!!result"
+            @focus="focusEnabled = true"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+          ></textarea>
         </div>
 
         <!-- 判定反馈 -->
@@ -1154,7 +1171,8 @@ next()
   transition: width 0.3s ease;
 }
 
-.quiz-input input {
+.quiz-input input,
+.quiz-input textarea {
   width: 100%;
   padding: 12px 16px;
   font-size: 18px;
@@ -1165,11 +1183,19 @@ next()
   box-sizing: border-box;
 }
 
-.quiz-input input:focus {
+.quiz-input textarea {
+  resize: none;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
+.quiz-input input:focus,
+.quiz-input textarea:focus {
   border-color: var(--primary);
 }
 
-.quiz-input input:disabled {
+.quiz-input input:disabled,
+.quiz-input textarea:disabled {
   background: #f5f5f5;
   color: var(--text-sub);
 }
