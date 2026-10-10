@@ -454,11 +454,11 @@ next()
           </div>
         </div>
       </div>
-      <div class="stats-card pending-card">
+      <button class="stats-card pending-card" @click="router.push('/library')">
         <div class="stats-title">待练</div>
         <div class="pending-num">{{ pendingWords }}</div>
         <div class="pending-desc">未背熟词句</div>
-      </div>
+      </button>
     </div>
 
     <!-- 空词库 -->
@@ -988,6 +988,11 @@ next()
   display: flex;
   flex-direction: column;
   justify-content: center;
+  border: none;
+  width: 100%;
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
 }
 
 .pending-num {
