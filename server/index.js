@@ -28,6 +28,7 @@ if (!existingAdmin) {
 
 // ============ 工具函数 ============
 function genToken() { return crypto.randomBytes(32).toString('hex') }
+const ttsCache = new Map()
 function genId(prefix = '') { return `${prefix}${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }
 function rowToWord(row) {
   return { id: String(row.id), chinese: row.chinese, english: row.english, pos: row.pos || '', type: row.type || 'word', count: row.count || 0, createdAt: row.created_at, caseSensitive: !!row.case_sensitive }
@@ -363,38 +364,92 @@ app.delete('/api/wrongbook', (req, res) => {
   res.json({ ok: true })
 })
 
+// 百度翻译开放平台（整句翻译）
+const BAIDU_APPID = '20261010002698344'
+const BAIDU_KEY = 'rZ9HkdaEImD2KGoVLeCV'
+async function baiduTranslate(text) {
+  const q = String(text || '').trim().slice(0, 2000)
+  if (!q) return null
+  const salt = String(Math.floor(Math.random() * 1e9))
+  const sign = crypto.createHash('md5').update(BAIDU_APPID + q + salt + BAIDU_KEY).digest('hex')
+  const url = `https://fanyi-api.baidu.com/api/trans/vip/translate?q=${encodeURIComponent(q)}&from=auto&to=zh&appid=${BAIDU_APPID}&salt=${salt}&sign=${sign}`
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(6000) })
+    if (!r.ok) return null
+    const j = await r.json()
+    if (j.error_code) return null
+    const dst = (j.trans_result || []).map((x) => x.dst || '').join('')
+    return dst || null
+  } catch (e) { return null }
+}
+
 app.get('/api/dict', async (req, res) => {
   const word = (req.query.word || '').trim()
   if (!word) return res.status(400).json({ error: '缺少 word 参数' })
+  // 1) 有道词典（单词/短语详情）
   try {
     const r = await fetch(`https://dict.youdao.com/jsonapi?q=${encodeURIComponent(word)}`, { signal: AbortSignal.timeout(6000) })
-    if (!r.ok) return res.status(502).json({ error: '词典服务异常' })
-    const data = await r.json()
-    const ec = data.ec
-    if (!ec || !ec.word || !ec.word.length) return res.status(404).json({ error: '未找到该单词的释义' })
-    const w = ec.word[0]
-    // 双语例句（blng_sents_part / media_sents_part 兜底）
-    let sentences = []
-    const blng = data.blng_sents_part
-    if (blng && Array.isArray(blng['sentence-pair'])) {
-      sentences = blng['sentence-pair'].map((s) => ({
-        en: String(s.sentence || s['sentence-eng'] || '').trim(),
-        zh: String(s['sentence-translation'] || '').trim(),
-      })).filter((s) => s.en)
+    if (r.ok) {
+      const data = await r.json()
+      const ec = data.ec
+      if (ec && ec.word && ec.word.length) {
+        const w = ec.word[0]
+        // 双语例句（blng_sents_part / media_sents_part 兜底）
+        let sentences = []
+        const blng = data.blng_sents_part
+        if (blng && Array.isArray(blng['sentence-pair'])) {
+          sentences = blng['sentence-pair'].map((s) => ({
+            en: String(s.sentence || s['sentence-eng'] || '').trim(),
+            zh: String(s['sentence-translation'] || '').trim(),
+          })).filter((s) => s.en)
+        }
+        if (!sentences.length && data.media_sents_part && Array.isArray(data.media_sents_part['sentence-pair'])) {
+          sentences = data.media_sents_part['sentence-pair'].map((s) => ({
+            en: String(s.sentence || s['sentence-eng'] || '').trim(),
+            zh: String(s['sentence-translation'] || '').trim(),
+          })).filter((s) => s.en)
+        }
+        return res.json({
+          usphone: w.usphone||'', ukphone: w.ukphone||'', examType: ec.exam_type||[],
+          trs: (w.trs||[]).map(t => t.tr[0].l.i[0]),
+          wfs: (w.wfs||[]).map(wf => `${wf.wf.name}：${wf.wf.value}`),
+          sentences: sentences.slice(0, 5),
+        })
+      }
     }
-    if (!sentences.length && data.media_sents_part && Array.isArray(data.media_sents_part['sentence-pair'])) {
-      sentences = data.media_sents_part['sentence-pair'].map((s) => ({
-        en: String(s.sentence || s['sentence-eng'] || '').trim(),
-        zh: String(s['sentence-translation'] || '').trim(),
-      })).filter((s) => s.en)
-    }
-    res.json({
-      usphone: w.usphone||'', ukphone: w.ukphone||'', examType: ec.exam_type||[],
-      trs: (w.trs||[]).map(t => t.tr[0].l.i[0]),
-      wfs: (w.wfs||[]).map(wf => `${wf.wf.name}：${wf.wf.value}`),
-      sentences: sentences.slice(0, 5),
+  } catch (e) { /* 有道失败则走翻译 */ }
+  // 2) 回退：百度翻译（整句/短语翻译）
+  const translation = await baiduTranslate(word)
+  if (translation) return res.json({ translation })
+  res.status(404).json({ error: '未找到该内容的释义或翻译' })
+})
+
+app.get('/api/tts', async (req, res) => {
+  const text = String(req.query.text || '').trim().slice(0, 300)
+  if (!text) return res.status(400).json({ error: '缺少 text 参数' })
+  const cached = ttsCache.get(text)
+  if (cached) {
+    res.set('Content-Type', 'audio/mpeg')
+    res.set('Cache-Control', 'public, max-age=86400')
+    return res.send(cached)
+  }
+  try {
+    const url = `https://fanyi.baidu.com/gettts?lan=en&text=${encodeURIComponent(text)}&spd=3&source=web`
+    const r = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+      signal: AbortSignal.timeout(8000),
     })
-  } catch (e) { res.status(502).json({ error: '词典查询超时或失败' }) }
+    if (!r.ok) return res.status(502).json({ error: 'TTS 上游服务异常' })
+    const buf = Buffer.from(await r.arrayBuffer())
+    if (buf.length < 1000) return res.status(502).json({ error: 'TTS 未生成音频' })
+    if (ttsCache.size > 2000) ttsCache.clear()
+    ttsCache.set(text, buf)
+    res.set('Content-Type', 'audio/mpeg')
+    res.set('Cache-Control', 'public, max-age=86400')
+    res.send(buf)
+  } catch (e) {
+    res.status(502).json({ error: 'TTS 请求失败' })
+  }
 })
 
 app.get('/api/export', (req, res) => {

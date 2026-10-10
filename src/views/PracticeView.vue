@@ -261,17 +261,13 @@ function skip() {
   next()
 }
 
-// 播放发音（有道优先，失败如普通句子自动回退系统 TTS）
+// 播放发音（有道优先，失败回退百度 TTS，再失败回退系统 TTS）
 let currentAudio = null
 let audioPlaying = false
 function speak(word, type = 0) {
   if (!word || audioPlaying) return
   const text = String(word).trim()
   audioPlaying = true
-  const fallback = () => {
-    audioPlaying = false
-    speakViaSpeechSynthesis(text)
-  }
   try {
     const url = `https://dict.youdao.com/dictvoice?type=${type}&audio=${encodeURIComponent(text)}`
     currentAudio = new Audio(url)
@@ -279,20 +275,40 @@ function speak(word, type = 0) {
     const once = () => {
       if (fallbacked) return
       fallbacked = true
-      fallback()
+      speakBaidu(text)
     }
     currentAudio.onended = () => { audioPlaying = false }
     currentAudio.onpause = () => { audioPlaying = false }
     currentAudio.onerror = once
     currentAudio.play().catch(once)
   } catch (e) {
-    fallback()
+    speakBaidu(text)
   }
 }
 
-// 系统 TTS 朗读（支持任意文本，无需网络）
+// 百度 TTS（走本服务代理 /api/tts，支持任意句子）
+function speakBaidu(text) {
+  try {
+    const url = `/api/tts?text=${encodeURIComponent(text)}`
+    currentAudio = new Audio(url)
+    let fallbacked = false
+    const once = () => {
+      if (fallbacked) return
+      fallbacked = true
+      speakViaSpeechSynthesis(text)
+    }
+    currentAudio.onended = () => { audioPlaying = false }
+    currentAudio.onpause = () => { audioPlaying = false }
+    currentAudio.onerror = once
+    currentAudio.play().catch(once)
+  } catch (e) {
+    speakViaSpeechSynthesis(text)
+  }
+}
+
+// 系统 TTS 朗读（保底）
 function speakViaSpeechSynthesis(text) {
-  if (!('speechSynthesis' in window)) return
+  if (!('speechSynthesis' in window)) { audioPlaying = false; return }
   try {
     window.speechSynthesis.cancel()
     const u = new SpeechSynthesisUtterance(text)
@@ -734,6 +750,13 @@ next()
           <div v-if="dictModal.loading" class="dict-loading">查询中…</div>
           <div v-else-if="dictModal.error" class="dict-error">{{ dictModal.error }}</div>
           <div v-else-if="dictModal.data">
+            <div v-if="dictModal.data.translation" class="dict-meaning">
+              <p class="dict-label">整句翻译</p>
+              <div class="trans-block">
+                <p class="trans-src">{{ dictModal.word }}</p>
+                <p class="trans-dst">{{ dictModal.data.translation }}</p>
+              </div>
+            </div>
             <div v-if="dictModal.data.usphone || dictModal.data.ukphone" class="dict-phonetic">
               <span v-if="dictModal.data.ukphone" class="phonetic-item">
                 英 [{{ dictModal.data.ukphone }}]
@@ -1494,6 +1517,26 @@ next()
 
 .dict-meaning {
   margin-bottom: 16px;
+}
+
+.trans-block {
+  background: #f7f7f7;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.trans-src {
+  font-size: 15px;
+  color: var(--text-main);
+  margin: 0 0 6px 0;
+  line-height: 1.5;
+}
+
+.trans-dst {
+  font-size: 14px;
+  color: var(--text-sub);
+  margin: 0;
+  line-height: 1.5;
 }
 
 .dict-meaning ul {
