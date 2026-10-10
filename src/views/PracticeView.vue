@@ -1530,7 +1530,7 @@ next()
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--primary);
+  color: #888;
   padding: 0;
   flex-shrink: 0;
   margin-left: auto;
