@@ -167,8 +167,8 @@ function clearAutoTimer() {
   }
 }
 
-function focusInput() {
-  if (!focusEnabled.value) return
+function focusInput(force = false) {
+  if (!force && !focusEnabled.value) return
   const el = answerInput.value
   if (!el) return
   // 同步聚焦：必须在用户手势内执行，iOS 才会弹出键盘
@@ -193,7 +193,7 @@ function next() {
     result.value = null
     revealed.value = false
     isRedo.value = false
-    focusInput()
+    focusInput(true) // 指定背诵场景强制聚焦
     return
   }
   if (!available.value.length) {
