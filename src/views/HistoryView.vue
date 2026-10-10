@@ -97,8 +97,8 @@ function formatDate(dateStr) {
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       </div>
       <p class="empty-title">暂无背诵记录</p>
-      <p class="empty-desc">去背单词练习后，这里会按天记录你的背诵情况</p>
-      <button class="empty-btn" @click="router.push('/practice')">去背单词</button>
+      <p class="empty-desc">去背诵练习后，这里会按天记录你的背诵情况</p>
+      <button class="empty-btn" @click="router.push('/practice')">去背诵</button>
     </div>
 
     <template v-else>

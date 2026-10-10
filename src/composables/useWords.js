@@ -52,23 +52,25 @@ export function weightedPickIndex(counts, threshold, lastIndex = -1) {
 }
 
 export function useWords() {
-  function addWord({ chinese, english, pos, caseSensitive }) {
+  function addWord({ chinese, english, pos, type, caseSensitive }) {
     const c = (chinese || '').trim()
     const e = (english || '').trim()
     const p = (pos || '').trim()
+    const t = ['word', 'phrase', 'sentence'].includes(type) ? type : 'word'
     if (!c || !e) return null
     const word = {
       id: `temp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       chinese: c,
       english: e,
       pos: p,
+      type: t,
       caseSensitive: !!caseSensitive,
       count: 0,
       createdAt: Date.now(),
     }
     words.value.push(word)
     // 异步同步到后端，成功后用真实 id 替换临时 id
-    api.addWord({ chinese: c, english: e, pos: p, caseSensitive: !!caseSensitive })
+    api.addWord({ chinese: c, english: e, pos: p, type: t, caseSensitive: !!caseSensitive })
       .then((real) => {
         const idx = words.value.findIndex((w) => w.id === word.id)
         if (idx !== -1) words.value[idx] = { ...real, count: 0 }
@@ -87,7 +89,7 @@ export function useWords() {
     if (idx === -1) return false
     words.value[idx] = { ...words.value[idx], ...patch }
     const w = words.value[idx]
-    api.updateWord(id, { chinese: w.chinese, english: w.english, pos: w.pos, caseSensitive: !!w.caseSensitive }).catch((err) =>
+    api.updateWord(id, { chinese: w.chinese, english: w.english, pos: w.pos, type: w.type || 'word', caseSensitive: !!w.caseSensitive }).catch((err) =>
       console.error('updateWord 同步失败', err)
     )
     return true

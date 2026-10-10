@@ -46,6 +46,7 @@ db.exec(`
     chinese TEXT NOT NULL,
     english TEXT NOT NULL,
     pos TEXT DEFAULT '',
+    type TEXT DEFAULT 'word',
     count INTEGER DEFAULT 0,
     created_at INTEGER NOT NULL
   );
@@ -105,6 +106,7 @@ function tryMigrate(sql) {
 
 tryMigrate("ALTER TABLE words ADD COLUMN user_id INTEGER DEFAULT 0")
 tryMigrate("ALTER TABLE words ADD COLUMN case_sensitive INTEGER DEFAULT 0")
+tryMigrate("ALTER TABLE words ADD COLUMN type TEXT DEFAULT 'word'")
 tryMigrate("ALTER TABLE records ADD COLUMN user_id INTEGER DEFAULT 0")
 tryMigrate("ALTER TABLE records ADD COLUMN user_answer TEXT DEFAULT ''")
 tryMigrate("ALTER TABLE wrongbook ADD COLUMN user_id INTEGER DEFAULT 0")

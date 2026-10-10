@@ -23,7 +23,7 @@ const router = createRouter({
       path: '/practice',
       name: 'practice',
       component: () => import('../views/PracticeView.vue'),
-      meta: { title: '背单词' },
+      meta: { title: '背诵' },
     },
     {
       path: '/wrongbook',

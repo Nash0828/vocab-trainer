@@ -30,7 +30,7 @@ if (!existingAdmin) {
 function genToken() { return crypto.randomBytes(32).toString('hex') }
 function genId(prefix = '') { return `${prefix}${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }
 function rowToWord(row) {
-  return { id: String(row.id), chinese: row.chinese, english: row.english, pos: row.pos || '', count: row.count || 0, createdAt: row.created_at, caseSensitive: !!row.case_sensitive }
+  return { id: String(row.id), chinese: row.chinese, english: row.english, pos: row.pos || '', type: row.type || 'word', count: row.count || 0, createdAt: row.created_at, caseSensitive: !!row.case_sensitive }
 }
 function getThreshold(uid) {
   const row = db.prepare("SELECT value FROM settings WHERE user_id = ? AND key = 'masteryThreshold'").get(uid)
@@ -281,19 +281,21 @@ app.get('/api/state', (req, res) => {
 })
 
 app.post('/api/words', (req, res) => {
-  const { chinese, english, pos, caseSensitive } = req.body || {}
+  const { chinese, english, pos, type, caseSensitive } = req.body || {}
   const c = (chinese||'').trim(), e = (english||'').trim(), p = (pos||'').trim()
+  const t = ['word', 'phrase', 'sentence'].includes(type) ? type : 'word'
   if (!c || !e) return res.status(400).json({ error: '中文和英文不能为空' })
-  const info = db.prepare('INSERT INTO words (user_id, chinese, english, pos, count, created_at, case_sensitive) VALUES (?, ?, ?, ?, 0, ?, ?)').run(req.userId, c, e, p, Date.now(), caseSensitive ? 1 : 0)
+  const info = db.prepare('INSERT INTO words (user_id, chinese, english, pos, type, count, created_at, case_sensitive) VALUES (?, ?, ?, ?, ?, 0, ?, ?)').run(req.userId, c, e, p, t, Date.now(), caseSensitive ? 1 : 0)
   res.json(rowToWord(db.prepare('SELECT * FROM words WHERE id = ?').get(info.lastInsertRowid)))
 })
 
 app.put('/api/words/:id', (req, res) => {
   const id = Number(req.params.id)
-  const { chinese, english, pos, caseSensitive } = req.body || {}
+  const { chinese, english, pos, type, caseSensitive } = req.body || {}
   const c = (chinese||'').trim(), e = (english||'').trim(), p = (pos||'').trim()
+  const t = ['word', 'phrase', 'sentence'].includes(type) ? type : 'word'
   if (!c || !e) return res.status(400).json({ error: '中文和英文不能为空' })
-  const info = db.prepare('UPDATE words SET chinese = ?, english = ?, pos = ?, case_sensitive = ? WHERE id = ? AND user_id = ?').run(c, e, p, caseSensitive ? 1 : 0, id, req.userId)
+  const info = db.prepare('UPDATE words SET chinese = ?, english = ?, pos = ?, type = ?, case_sensitive = ? WHERE id = ? AND user_id = ?').run(c, e, p, t, caseSensitive ? 1 : 0, id, req.userId)
   if (!info.changes) return res.status(404).json({ error: '单词不存在' })
   db.prepare('UPDATE wrongbook SET chinese = ?, english = ?, pos = ? WHERE word_id = ? AND user_id = ?').run(c, e, p, String(id), req.userId)
   res.json({ ok: true })
@@ -417,9 +419,10 @@ app.post('/api/import', (req, res) => {
   const valid = list.filter(w => String(w.chinese||'').trim() && String(w.english||'').trim())
   if (!valid.length) return res.status(400).json({ ok:false, reason:'文件中没有可导入的单词' })
   const uid = req.userId
-  const insertStmt = db.prepare('INSERT INTO words (user_id, chinese, english, pos, count, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+  const insertStmt = db.prepare('INSERT INTO words (user_id, chinese, english, pos, type, count, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
   const normalize = (w) => ({
     chinese: String(w.chinese||'').trim(), english: String(w.english||'').trim(), pos: String(w.pos||'').trim(),
+    type: ['word', 'phrase', 'sentence'].includes(w.type) ? w.type : 'word',
     count: Number.isFinite(Number(w.count)) && Number(w.count)>=0 ? Math.floor(Number(w.count)) : 0,
     createdAt: Number.isFinite(Number(w.createdAt)) ? Number(w.createdAt) : Date.now(),
   })
@@ -429,7 +432,7 @@ app.post('/api/import', (req, res) => {
       db.prepare('DELETE FROM words WHERE user_id = ?').run(uid)
       db.prepare('DELETE FROM records WHERE user_id = ?').run(uid)
       db.prepare('DELETE FROM wrongbook WHERE user_id = ?').run(uid)
-      for (const w of valid) { const n = normalize(w); insertStmt.run(uid, n.chinese, n.english, n.pos, n.count, n.createdAt); imported++ }
+      for (const w of valid) { const n = normalize(w); insertStmt.run(uid, n.chinese, n.english, n.pos, n.type, n.count, n.createdAt); imported++ }
       skipped = list.length - valid.length
       if (Array.isArray(data.records)) {
         const insRec = db.prepare('INSERT OR REPLACE INTO records (id, user_id, date, chinese, english, pos, correct, user_answer, ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
@@ -452,7 +455,7 @@ app.post('/api/import', (req, res) => {
         if (!c || !e) { skipped++; continue }
         if (setC.has(c.toLowerCase()) || setE.has(e.toLowerCase())) { skipped++; continue }
         const n = normalize(w)
-        insertStmt.run(uid, n.chinese, n.english, n.pos, n.count, n.createdAt)
+        insertStmt.run(uid, n.chinese, n.english, n.pos, n.type, n.count, n.createdAt)
         setC.add(n.chinese.toLowerCase()); setE.add(n.english.toLowerCase()); imported++
       }
     }

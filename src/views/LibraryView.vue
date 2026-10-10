@@ -8,7 +8,12 @@ const { words, updateWord, removeWord, checkDuplicate, resetCount, isMastered, s
   useWords()
 
 const editingId = ref(null)
-const editForm = reactive({ chinese: '', english: '', pos: '', caseSensitive: false })
+const editForm = reactive({ chinese: '', english: '', pos: '', type: 'word', caseSensitive: false })
+const typeOptions = [
+  { value: 'word', label: '单词' },
+  { value: 'phrase', label: '短语' },
+  { value: 'sentence', label: '句子' },
+]
 const confirmDeleteId = ref(null)
 const confirmResetId = ref(null)
 const tip = ref(null) // { text, kind: 'ok' | 'warn' | 'err' }
@@ -308,6 +313,7 @@ function startEdit(word) {
   editForm.chinese = word.chinese
   editForm.english = word.english
   editForm.pos = word.pos || ''
+  editForm.type = ['word', 'phrase', 'sentence'].includes(word.type) ? word.type : 'word'
   editForm.caseSensitive = !!word.caseSensitive
 }
 
@@ -340,8 +346,9 @@ function saveEdit(word) {
   const ok = updateWord(word.id, {
     chinese: editForm.chinese.trim(),
     english: editForm.english.trim(),
-    pos: editForm.pos.trim(),
-    caseSensitive: editForm.caseSensitive,
+    pos: editForm.type === 'word' ? editForm.pos.trim() : '',
+    type: editForm.type,
+    caseSensitive: editForm.type === 'word' ? editForm.caseSensitive : false,
   })
   if (ok) {
     showTip(`已保存修改：${editForm.english}`, 'ok')
@@ -456,13 +463,27 @@ function formatTime(ts) {
         <div v-if="editingId === word.id" class="edit-row">
           <textarea v-model="editForm.chinese" class="cell-input area" placeholder="中文"></textarea>
           <textarea v-model="editForm.english" class="cell-input area" placeholder="英文"></textarea>
-          <input v-model="editForm.pos" class="cell-input pos" placeholder="词性" />
-          <div class="case-row">
-            <span class="case-label">区分大小写</span>
-            <div class="mini-switch" :class="{ on: editForm.caseSensitive }" @click="editForm.caseSensitive = !editForm.caseSensitive">
-              <div class="mini-switch-knob"></div>
+          <div class="type-row">
+            <span class="type-label">类型</span>
+            <div class="type-seg">
+              <button
+                v-for="opt in typeOptions"
+                :key="opt.value"
+                class="type-seg-btn"
+                :class="{ active: editForm.type === opt.value }"
+                @click="editForm.type = opt.value"
+              >{{ opt.label }}</button>
             </div>
           </div>
+          <template v-if="editForm.type === 'word'">
+            <input v-model="editForm.pos" class="cell-input pos" placeholder="词性" />
+            <div class="case-row">
+              <span class="case-label">区分大小写</span>
+              <div class="mini-switch" :class="{ on: editForm.caseSensitive }" @click="editForm.caseSensitive = !editForm.caseSensitive">
+                <div class="mini-switch-knob"></div>
+              </div>
+            </div>
+          </template>
           <div class="edit-btns">
             <button class="btn primary mini" @click="saveEdit(word)">保存</button>
             <button class="btn ghost mini" @click="cancelEdit">取消</button>
@@ -474,6 +495,7 @@ function formatTime(ts) {
           <div class="word-main">
             <div class="word-left">
               <span class="word-en">{{ word.english }}</span>
+              <span v-if="word.type && word.type !== 'word'" class="type-tag">{{ word.type === 'phrase' ? '短语' : '句子' }}</span>
               <span v-if="word.pos" class="pos-tag">{{ word.pos }}</span>
             </div>
             <span class="word-count" :class="{ mastered: isMastered(word) }">
@@ -691,6 +713,52 @@ function formatTime(ts) {
   color: var(--text-sub);
   font-size: 12px;
   flex-shrink: 0;
+}
+
+.type-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 4px;
+  background: rgba(7, 193, 96, 0.1);
+  color: var(--primary);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.type-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.type-label {
+  font-size: 14px;
+  color: var(--text-sub);
+  flex-shrink: 0;
+}
+.type-seg {
+  display: flex;
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+  flex: 1;
+}
+.type-seg-btn {
+  flex: 1;
+  padding: 6px 0;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+.type-seg-btn.active {
+  background: #fff;
+  color: var(--primary);
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
 }
 
 .word-count {

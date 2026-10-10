@@ -7,9 +7,21 @@ const { words, addWord, checkDuplicate } = useWords()
 const form = reactive({
   chinese: '',
   english: '',
+  type: 'word',
   pos: '',
   caseSensitive: false,
 })
+
+const typeOptions = [
+  { value: 'word', label: '单词' },
+  { value: 'phrase', label: '短语' },
+  { value: 'sentence', label: '句子' },
+]
+const showTypePicker = ref(false)
+function pickType(t) {
+  form.type = t
+  showTypePicker.value = false
+}
 
 const posOptions = ['n.', 'v.', 'adj.', 'adv.', 'prep.', 'pron.', 'conj.', 'num.', 'art.']
 const showPosPicker = ref(false)
@@ -100,6 +112,7 @@ function submit() {
     showTip(`已保存：${word.english}（${word.chinese}）`, 'ok')
     form.chinese = ''
     form.english = ''
+    form.type = 'word'
     form.pos = ''
     posInput.value = ''
   } else {
@@ -110,6 +123,7 @@ function submit() {
 function clearAllFields() {
   form.chinese = ''
   form.english = ''
+  form.type = 'word'
   form.pos = ''
 }
 </script>
@@ -136,6 +150,16 @@ function clearAllFields() {
             autocomplete="off"
           ></textarea>
         </div>
+        <div class="form-item">
+          <label>类型</label>
+          <div class="type-row" @click="showTypePicker = true">
+            <span class="type-value" :class="{ placeholder: !form.type }">
+              {{ typeOptions.find((o) => o.value === form.type)?.label || '请选择' }}
+            </span>
+            <svg class="type-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b2b2b2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </div>
+        <template v-if="form.type === 'word'">
         <div class="form-item">
           <label>词性</label>
           <div class="pos-row" style="position: relative;" @click.stop>
@@ -171,7 +195,29 @@ function clearAllFields() {
             </div>
           </div>
         </div>
+        </template>
       </div>
+
+      <!-- 类型选择底部弹层 -->
+      <transition name="sheet">
+        <div v-if="showTypePicker" class="sheet-mask" @click.self="showTypePicker = false" @touchmove.prevent>
+          <div class="sheet" @touchmove.stop>
+            <div class="sheet-title">选择类型</div>
+            <div class="sheet-options">
+              <div
+                v-for="opt in typeOptions"
+                :key="opt.value"
+                class="sheet-option"
+                :class="{ active: form.type === opt.value }"
+                @click="pickType(opt.value)"
+              >
+                {{ opt.label }}
+              </div>
+            </div>
+            <div class="sheet-cancel" @click="showTypePicker = false">取消</div>
+          </div>
+        </div>
+      </transition>
 
       <transition name="fade">
         <p v-if="showMessage && message" class="tip" :class="message.kind">{{ message.text }}</p>
@@ -256,6 +302,25 @@ function clearAllFields() {
   color: var(--text-main);
   background: transparent;
   padding: 4px 0;
+}
+
+.type-row {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+  cursor: pointer;
+}
+.type-value {
+  font-size: 15px;
+  color: var(--text-main);
+}
+.type-value.placeholder {
+  color: #b2b2b2;
+}
+.type-arrow {
+  flex-shrink: 0;
 }
 
 .pos-suggest {

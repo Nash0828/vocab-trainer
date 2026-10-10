@@ -103,8 +103,8 @@ function formatTime(ts) {
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       </div>
       <p class="empty-title">错题本是空的</p>
-      <p class="empty-desc">去背单词练习，答错的单词会自动记入这里</p>
-      <button class="empty-btn" @click="router.push('/practice')">去背单词</button>
+      <p class="empty-desc">去背诵练习，答错的单词会自动记入这里</p>
+      <button class="empty-btn" @click="router.push('/practice')">去背诵</button>
     </div>
 
     <template v-else>
