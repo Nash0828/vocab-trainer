@@ -41,19 +41,51 @@ function closeDict() {
   dictModal.value = null
 }
 
-// 播放发音
+// 播放发音：有道优先，失败（如普通句子有道不支持）自动回退系统 TTS
 let currentAudio = null
 let audioPlaying = false
 function speak(word, type = 0) {
   if (!word || audioPlaying) return
+  const text = String(word).trim()
+  audioPlaying = true
+  const fallback = () => {
+    audioPlaying = false
+    speakViaSpeechSynthesis(text)
+  }
   try {
-    audioPlaying = true
-    const url = `https://dict.youdao.com/dictvoice?type=${type}&audio=${encodeURIComponent(String(word).trim())}`
+    const url = `https://dict.youdao.com/dictvoice?type=${type}&audio=${encodeURIComponent(text)}`
     currentAudio = new Audio(url)
+    let fallbacked = false
+    const once = () => {
+      if (fallbacked) return
+      fallbacked = true
+      fallback()
+    }
     currentAudio.onended = () => { audioPlaying = false }
     currentAudio.onpause = () => { audioPlaying = false }
-    currentAudio.onerror = () => { audioPlaying = false }
-    currentAudio.play().catch(() => { audioPlaying = false })
+    currentAudio.onerror = once
+    currentAudio.play().catch(once)
+  } catch (e) {
+    fallback()
+  }
+}
+
+// 系统 TTS 朗读（支持任意文本，无需网络）
+function speakViaSpeechSynthesis(text) {
+  if (!('speechSynthesis' in window)) return
+  try {
+    window.speechSynthesis.cancel()
+    const u = new SpeechSynthesisUtterance(text)
+    u.lang = 'en-US'
+    u.rate = 1
+    const voices = window.speechSynthesis.getVoices()
+    const enVoice =
+      voices.find((v) => /^en(-|_)?US/i.test(v.lang)) ||
+      voices.find((v) => /^en/i.test(v.lang))
+    if (enVoice) u.voice = enVoice
+    u.onend = () => { audioPlaying = false }
+    u.onerror = () => { audioPlaying = false }
+    window.speechSynthesis.speak(u)
   } catch (e) {
     audioPlaying = false
   }
