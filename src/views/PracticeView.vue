@@ -987,12 +987,15 @@ next()
 .pending-card {
   display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: center;
   border: none;
   width: 100%;
   font: inherit;
   cursor: pointer;
   text-align: center;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .pending-num {
