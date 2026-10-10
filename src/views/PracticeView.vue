@@ -446,10 +446,11 @@ const modalRecords = computed(() => {
     : recs.filter((r) => !r.correct)
 })
 
-// 答错后按回车键直接进入下一题（焦点在输入框/页面空白处时生效；聚焦按钮时不拦截，避免与按钮回车激活冲突）
+// 答错后按回车键直接进入下一题；重做答对后按回车也进入下一题（焦点在输入框/页面空白处时生效；聚焦按钮时不拦截，避免与按钮回车激活冲突）
 function onGlobalKeydown(e) {
   if (e.key !== 'Enter') return
-  if (result.value !== 'wrong') return
+  const canSkip = result.value === 'wrong' || (result.value === 'correct' && isRedo.value)
+  if (!canSkip) return
   const tag = e.target && e.target.tagName
   if (tag === 'BUTTON' || tag === 'A' || tag === 'INPUT' || tag === 'TEXTAREA') return
   e.preventDefault()
