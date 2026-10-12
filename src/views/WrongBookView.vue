@@ -90,6 +90,12 @@ function formatTime(ts) {
   const pad = (n) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
+
+// 跳转背诵页并直接背诵该词
+function goPractice(word) {
+  if (!word) return
+  router.push({ path: '/practice', query: { word } })
+}
 </script>
 
 <template>
@@ -123,6 +129,14 @@ function formatTime(ts) {
             <div class="w-line1">
               <span class="w-en">{{ w.english }}</span>
               <span v-if="w.pos" class="w-pos">{{ w.pos }}</span>
+              <button
+                v-if="confirmRemoveId !== (w.id || w.english)"
+                class="study-btn"
+                title="背诵"
+                @click="goPractice(w.english)"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              </button>
               <button
                 v-if="confirmRemoveId !== (w.id || w.english)"
                 class="w-remove"
@@ -311,6 +325,22 @@ function formatTime(ts) {
   background: #f2f2f2;
   padding: 1px 8px;
   border-radius: 4px;
+}
+
+/* "背诵"按钮（微信风格，跳转背诵该词） */
+.study-btn {
+  border: none;
+  background: #f5f5f5;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  padding: 0;
+  flex-shrink: 0;
 }
 
 .w-remove {
