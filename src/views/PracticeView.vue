@@ -72,6 +72,7 @@ const answer = ref('')
 const result = ref(null) // null | 'correct' | 'wrong'
 const revealed = ref(false) // 是否通过"显示答案"按钮作答
 const isRedo = ref(false) // 是否处于重做模式（重做答对不算答对、不移除错题本）
+const answeredLock = ref(false) // 答对后等待发音播报期间锁定输入框
 const lastIndex = ref(-1)
 const answerInput = ref(null)
 const focusEnabled = ref(false)
@@ -183,7 +184,9 @@ function focusInput(force = false) {
 }
 
 function next() {
+  if (answeredLock.value) return // 等发音播报完成，禁止手动换题
   clearAutoTimer()
+  answeredLock.value = false
   // 优先背诵指定词（从词句库/今日记录跳转）
   if (pendingWord.value) {
     const w = pendingWord.value
@@ -249,9 +252,13 @@ function submit() {
 
   clearAutoTimer()
   if (isCorrect) {
-    // 答对：在用户手势内立即换题并聚焦（iOS 才会弹出键盘）
-    next()
-    focusInput()
+    // 答对：锁定输入，等正确发音播报完成后自动切换下一题并聚焦
+    answeredLock.value = true
+    speak(answeredWord, 0, () => {
+      answeredLock.value = false
+      next()
+      focusInput()
+    })
   } else {
     result.value = 'wrong'
   }
@@ -262,11 +269,22 @@ function skip() {
   next()
 }
 
-// 播放发音（有道优先，失败回退百度 TTS，再失败回退系统 TTS）
+// 播放发音（有道优先，失败回退百度 TTS，再失败回退系统 TTS）；onDone 为播放最终结束时回调（只触发一次）
 let currentAudio = null
 let audioPlaying = false
-function speak(word, type = 0) {
+let audioDone = null
+
+function fireDone() {
+  if (audioDone) {
+    const fn = audioDone
+    audioDone = null
+    try { fn() } catch (e) {}
+  }
+}
+
+function speak(word, type = 0, onDone = null) {
   if (!word || audioPlaying) return
+  if (onDone) audioDone = onDone
   const text = String(word).trim()
   audioPlaying = true
   try {
@@ -278,8 +296,8 @@ function speak(word, type = 0) {
       fallbacked = true
       speakBaidu(text)
     }
-    currentAudio.onended = () => { audioPlaying = false }
-    currentAudio.onpause = () => { audioPlaying = false }
+    currentAudio.onended = () => { audioPlaying = false; fireDone() }
+    currentAudio.onpause = () => { audioPlaying = false; fireDone() }
     currentAudio.onerror = once
     currentAudio.play().catch(once)
   } catch (e) {
@@ -298,8 +316,8 @@ function speakBaidu(text) {
       fallbacked = true
       speakViaSpeechSynthesis(text)
     }
-    currentAudio.onended = () => { audioPlaying = false }
-    currentAudio.onpause = () => { audioPlaying = false }
+    currentAudio.onended = () => { audioPlaying = false; fireDone() }
+    currentAudio.onpause = () => { audioPlaying = false; fireDone() }
     currentAudio.onerror = once
     currentAudio.play().catch(once)
   } catch (e) {
@@ -309,7 +327,7 @@ function speakBaidu(text) {
 
 // 系统 TTS 朗读（保底）
 function speakViaSpeechSynthesis(text) {
-  if (!('speechSynthesis' in window)) { audioPlaying = false; return }
+  if (!('speechSynthesis' in window)) { audioPlaying = false; fireDone(); return }
   try {
     window.speechSynthesis.cancel()
     const u = new SpeechSynthesisUtterance(text)
@@ -320,11 +338,12 @@ function speakViaSpeechSynthesis(text) {
       voices.find((v) => /^en(-|_)?US/i.test(v.lang)) ||
       voices.find((v) => /^en/i.test(v.lang))
     if (enVoice) u.voice = enVoice
-    u.onend = () => { audioPlaying = false }
-    u.onerror = () => { audioPlaying = false }
+    u.onend = () => { audioPlaying = false; fireDone() }
+    u.onerror = () => { audioPlaying = false; fireDone() }
     window.speechSynthesis.speak(u)
   } catch (e) {
     audioPlaying = false
+    fireDone()
   }
 }
 
@@ -795,7 +814,7 @@ next()
             enterkeyhint="go"
             autocorrect="off"
             placeholder="输入英文"
-            :disabled="!!result"
+            :disabled="!!result || answeredLock"
             @focus="focusEnabled = true"
             @keyup.enter="submit"
             autocomplete="off"
@@ -811,7 +830,7 @@ next()
             rows="2"
             autocorrect="off"
             placeholder="输入英文"
-            :disabled="!!result"
+            :disabled="!!result || answeredLock"
             @focus="focusEnabled = true"
             autocomplete="off"
             autocapitalize="off"
