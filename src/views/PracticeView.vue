@@ -239,7 +239,6 @@ function submit() {
   }
   revealed.value = false
   const answeredWord = current.value.english
-  speak(answeredWord)
 
   addRecord({
     chinese: current.value.chinese,
@@ -260,6 +259,7 @@ function submit() {
       focusInput()
     })
   } else {
+    speak(answeredWord)
     result.value = 'wrong'
   }
 }
