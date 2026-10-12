@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, watch, onBeforeUnmount, nextTick } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWords } from '../composables/useWords'
 
@@ -48,8 +48,21 @@ function closeDict() {
   closeWordBubble()
 }
 
+// Esc 关闭查词弹框 / 单词气泡
+function onKeydown(e) {
+  if (e.key === 'Escape') {
+    if (dictModal.value) closeDict()
+    else if (wordBubble.value) closeWordBubble()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', onKeydown)
+})
+
 onBeforeUnmount(() => {
   document.removeEventListener('click', closeWordBubble)
+  document.removeEventListener('keydown', onKeydown)
 })
 
 // 播放发音：有道优先，失败回退百度 TTS，再失败回退系统 TTS
