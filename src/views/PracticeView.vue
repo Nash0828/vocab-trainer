@@ -396,6 +396,7 @@ function placeBubble(rect) {
   let arrowLeft = center - b.left - 6
   arrowLeft = Math.max(12, Math.min(arrowLeft, b.width - 18))
   b.arrowLeft = arrowLeft
+  b.ready = true
 }
 async function openWordBubble(word, el) {
   if (!word || !el) return
@@ -403,7 +404,8 @@ async function openWordBubble(word, el) {
   const width = Math.min(340, window.innerWidth * 0.88)
   let left = rect.left + rect.width / 2 - width / 2
   left = Math.max(8, Math.min(left, window.innerWidth - width - 8))
-  wordBubble.value = { word, data: null, loading: true, error: null, top: 0, left, width, arrowLeft: 50, flip: false }
+  wordBubble.value = { word, data: null, loading: true, error: null, top: 0, left, width, arrowLeft: 50, flip: false, ready: false }
+  nextTick(() => placeBubble(rect))
   document.removeEventListener('click', closeWordBubble)
   setTimeout(() => document.addEventListener('click', closeWordBubble), 0)
   try {
@@ -954,7 +956,7 @@ next()
         </div>
 
         <!-- 单词气泡 -->
-        <div v-if="wordBubble" ref="wbEl" class="wb-pop" :style="{ top: wordBubble.top + 'px', left: wordBubble.left + 'px', width: wordBubble.width + 'px' }" @click.stop>
+        <div v-if="wordBubble" ref="wbEl" class="wb-pop" :style="{ top: wordBubble.top + 'px', left: wordBubble.left + 'px', width: wordBubble.width + 'px', opacity: wordBubble.ready ? 1 : 0 }" @click.stop>
           <div class="wb-arrow" :class="{ flip: wordBubble.flip }" :style="{ left: wordBubble.arrowLeft + 'px' }"></div>
           <div v-if="wordBubble.loading" class="wb-loading">查询中…</div>
           <div v-else-if="wordBubble.error" class="wb-error">{{ wordBubble.error }}</div>
@@ -1792,6 +1794,7 @@ next()
   position: fixed;
   z-index: 600;
   max-width: 88vw;
+  transition: opacity 0.15s;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
