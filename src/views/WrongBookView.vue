@@ -135,9 +135,10 @@ function goPractice(word) {
               <button
                 v-if="confirmRemoveId !== (w.id || w.english)"
                 class="w-remove"
+                title="移除"
                 @click="askRemove(w.id || w.english)"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
               </button>
             </div>
             <div class="w-zh">{{ w.chinese }}</div>
@@ -324,6 +325,7 @@ function goPractice(word) {
 
 .wrong-item {
   background: #fff;
+  border-radius: 12px;
   padding: 12px 16px;
   position: relative;
 }
@@ -350,6 +352,7 @@ function goPractice(word) {
 
 /* "背诵"按钮（微信风格，跳转背诵该词） */
 .study-btn {
+  margin-left: auto;
   border: none;
   background: #f5f5f5;
   border-radius: 50%;
@@ -364,21 +367,30 @@ function goPractice(word) {
   flex-shrink: 0;
 }
 
-.w-remove {
-  margin-left: auto;
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: transparent;
-  color: #c8c8c8;
-  cursor: pointer;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.study-btn:active {
+  background: #ebebeb;
 }
 
-.w-remove:active { color: var(--danger); }
+/* "移除"按钮（微信风格，垃圾桶图标，与背诵按钮同一行） */
+.w-remove {
+  border: none;
+  background: #f5f5f5;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.w-remove:active {
+  background: #ebebeb;
+  color: #666;
+}
 
 .w-zh {
   font-size: 14px;
