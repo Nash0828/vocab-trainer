@@ -144,3 +144,29 @@ html, body {
     font-size: 13px;
   }
 }
+
+/* ===== 发音按钮"播放中"动画（微信风格声波涟漪） ===== */
+.speak-btn.is-playing,
+.sound-btn.is-playing,
+.speak-mini.is-playing,
+.sent-speak.is-playing {
+  position: relative;
+  color: var(--primary) !important;
+}
+.speak-btn.is-playing::after,
+.sound-btn.is-playing::after,
+.speak-mini.is-playing::after,
+.sent-speak.is-playing::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 2px solid var(--primary);
+  opacity: 0;
+  animation: spk-ring 1.1s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes spk-ring {
+  0%   { transform: scale(1);   opacity: 0.55; }
+  100% { transform: scale(1.75); opacity: 0; }
+}

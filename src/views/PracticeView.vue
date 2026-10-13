@@ -271,7 +271,7 @@ function skip() {
 
 // 播放发音（有道优先，失败回退百度 TTS，再失败回退系统 TTS）；onDone 为播放最终结束时回调（只触发一次）
 let currentAudio = null
-let audioPlaying = false
+const audioPlaying = ref(false)
 let audioDone = null
 
 function fireDone() {
@@ -283,10 +283,10 @@ function fireDone() {
 }
 
 function speak(word, type = 0, onDone = null) {
-  if (!word || audioPlaying) return
+  if (!word || audioPlaying.value) return
   if (onDone) audioDone = onDone
   const text = String(word).trim()
-  audioPlaying = true
+  audioPlaying.value = true
   try {
     const url = `https://dict.youdao.com/dictvoice?type=${type}&audio=${encodeURIComponent(text)}`
     currentAudio = new Audio(url)
@@ -296,8 +296,8 @@ function speak(word, type = 0, onDone = null) {
       fallbacked = true
       speakBaidu(text)
     }
-    currentAudio.onended = () => { audioPlaying = false; fireDone() }
-    currentAudio.onpause = () => { audioPlaying = false; fireDone() }
+    currentAudio.onended = () => { audioPlaying.value = false; fireDone() }
+    currentAudio.onpause = () => { audioPlaying.value = false; fireDone() }
     currentAudio.onerror = once
     currentAudio.play().catch(once)
   } catch (e) {
@@ -316,8 +316,8 @@ function speakBaidu(text) {
       fallbacked = true
       speakViaSpeechSynthesis(text)
     }
-    currentAudio.onended = () => { audioPlaying = false; fireDone() }
-    currentAudio.onpause = () => { audioPlaying = false; fireDone() }
+    currentAudio.onended = () => { audioPlaying.value = false; fireDone() }
+    currentAudio.onpause = () => { audioPlaying.value = false; fireDone() }
     currentAudio.onerror = once
     currentAudio.play().catch(once)
   } catch (e) {
@@ -327,7 +327,7 @@ function speakBaidu(text) {
 
 // 系统 TTS 朗读（保底）
 function speakViaSpeechSynthesis(text) {
-  if (!('speechSynthesis' in window)) { audioPlaying = false; fireDone(); return }
+  if (!('speechSynthesis' in window)) { audioPlaying.value = false; fireDone(); return }
   try {
     window.speechSynthesis.cancel()
     const u = new SpeechSynthesisUtterance(text)
@@ -338,11 +338,11 @@ function speakViaSpeechSynthesis(text) {
       voices.find((v) => /^en(-|_)?US/i.test(v.lang)) ||
       voices.find((v) => /^en/i.test(v.lang))
     if (enVoice) u.voice = enVoice
-    u.onend = () => { audioPlaying = false; fireDone() }
-    u.onerror = () => { audioPlaying = false; fireDone() }
+    u.onend = () => { audioPlaying.value = false; fireDone() }
+    u.onerror = () => { audioPlaying.value = false; fireDone() }
     window.speechSynthesis.speak(u)
   } catch (e) {
-    audioPlaying = false
+    audioPlaying.value = false
     fireDone()
   }
 }
@@ -443,17 +443,17 @@ async function openWordBubble(word, el) {
 }
 // 朗读例句（有道 dictvoice type=2 句子发音）
 function speakSentence(sentence) {
-  if (!sentence || audioPlaying) return
+  if (!sentence || audioPlaying.value) return
   try {
-    audioPlaying = true
+    audioPlaying.value = true
     const url = `https://dict.youdao.com/dictvoice?type=2&audio=${encodeURIComponent(String(sentence).trim())}`
     currentAudio = new Audio(url)
-    currentAudio.onended = () => { audioPlaying = false }
-    currentAudio.onpause = () => { audioPlaying = false }
-    currentAudio.onerror = () => { audioPlaying = false }
-    currentAudio.play().catch(() => { audioPlaying = false })
+    currentAudio.onended = () => { audioPlaying.value = false }
+    currentAudio.onpause = () => { audioPlaying.value = false }
+    currentAudio.onerror = () => { audioPlaying.value = false }
+    currentAudio.play().catch(() => { audioPlaying.value = false })
   } catch (e) {
-    audioPlaying = false
+    audioPlaying.value = false
   }
 }
 
@@ -785,7 +785,7 @@ next()
         <p v-if="current.pos" class="quiz-pos">{{ current.pos }}</p>
 
         <div class="quiz-sound">
-          <button class="sound-btn" @click="speak(current.english)">
+          <button class="sound-btn" :class="{ 'is-playing': audioPlaying }" @click="speak(current.english)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
             发音
           </button>
@@ -848,7 +848,7 @@ next()
             <span class="fb-text">{{ revealed ? '已显示答案' : '回答错误' }}</span>
             <strong class="correct-word">{{ current.english }}</strong>
           </template>
-          <button class="speak-btn" @click="speak(current.english)">
+          <button class="speak-btn" :class="{ 'is-playing': audioPlaying }" @click="speak(current.english)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
             重听
           </button>
@@ -927,7 +927,7 @@ next()
               <div class="trans-block" @click="onDictTextClick">
                 <div class="trans-src-row">
                   <p class="trans-src" v-html="wordify(dictModal.word, '')"></p>
-                  <button class="speak-mini" @click="speak(dictModal.word, 0)" title="朗读">
+                  <button class="speak-mini" :class="{ 'is-playing': audioPlaying }" @click="speak(dictModal.word, 0)" title="朗读">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
                   </button>
                 </div>
@@ -937,13 +937,13 @@ next()
             <div v-if="dictModal.data.usphone || dictModal.data.ukphone" class="dict-phonetic">
               <span v-if="dictModal.data.ukphone" class="phonetic-item">
                 英 [{{ dictModal.data.ukphone }}]
-                <button class="speak-mini" @click="speak(dictModal.word, 1)" title="英式发音">
+                <button class="speak-mini" :class="{ 'is-playing': audioPlaying }" @click="speak(dictModal.word, 1)" title="英式发音">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
                 </button>
               </span>
               <span v-if="dictModal.data.usphone" class="phonetic-item" style="margin-left:12px">
                 美 [{{ dictModal.data.usphone }}]
-                <button class="speak-mini" @click="speak(dictModal.word, 0)" title="美式发音">
+                <button class="speak-mini" :class="{ 'is-playing': audioPlaying }" @click="speak(dictModal.word, 0)" title="美式发音">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
                 </button>
               </span>
@@ -969,7 +969,7 @@ next()
                 <li v-for="(s, i) in dictModal.data.sentences" :key="i" class="sent-item">
                   <div class="sent-line">
                     <p class="sent-en" v-html="wordify(s.en, dictModal.word)"></p>
-                    <button class="sent-speak" @click="speakSentence(s.en)" title="朗读例句">
+                    <button class="sent-speak" :class="{ 'is-playing': audioPlaying }" @click="speakSentence(s.en)" title="朗读例句">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
                     </button>
                   </div>
@@ -988,7 +988,7 @@ next()
           <template v-else-if="wordBubble.data">
             <div class="wb-head">
               <div class="wb-word">{{ wordBubble.word }}</div>
-              <button class="speak-mini" @click="speak(wordBubble.word, 0)" title="朗读">
+              <button class="speak-mini" :class="{ 'is-playing': audioPlaying }" @click="speak(wordBubble.word, 0)" title="朗读">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
               </button>
             </div>
