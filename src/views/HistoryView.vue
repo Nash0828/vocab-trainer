@@ -157,6 +157,7 @@ function formatDate(dateStr) {
               <span class="day-stats">
                 <span class="stat-ok">对 {{ day.correct }}</span>
                 <span class="stat-bad">错 {{ day.wrong }}</span>
+                <span class="stat-rate">正确率 {{ day.correct + day.wrong ? Math.round(day.correct * 100 / (day.correct + day.wrong)) : 0 }}%</span>
                 <span class="stat-total">{{ day.totalWords }} 词</span>
               </span>
             </div>
@@ -391,6 +392,7 @@ function formatDate(dateStr) {
 
 .stat-ok { color: var(--primary); }
 .stat-bad { color: var(--danger); }
+.stat-rate { color: var(--primary); }
 .stat-total { color: var(--text-sub); }
 
 .expand-icon {
