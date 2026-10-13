@@ -333,7 +333,7 @@ function formatDate(dateStr) {
 .day-item {
   background: #fff;
   border-radius: 12px;
-  overflow: hidden;
+  /* 不能设 overflow:hidden：会破坏展开卡片头部的 position:sticky 吸顶 */
 }
 
 .day-head {
