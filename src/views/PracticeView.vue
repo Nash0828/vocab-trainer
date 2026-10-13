@@ -861,9 +861,9 @@ next()
         </div>
 
         <div class="quiz-actions">
-          <button v-if="!result" class="btn ghost" @click="skip">换一题</button>
-          <button v-if="!result" class="btn ghost" @click="revealAnswer">显示答案</button>
-          <button v-if="!result" class="btn primary" :disabled="!answer.trim()" @click="submit">提交</button>
+          <button v-if="!result" class="btn ghost" :disabled="answeredLock" @click="skip">换一题</button>
+          <button v-if="!result" class="btn ghost" :disabled="answeredLock" @click="revealAnswer">显示答案</button>
+          <button v-if="!result" class="btn primary" :disabled="!answer.trim() || answeredLock" @click="submit">提交</button>
           <button v-else-if="result === 'correct'" class="btn ghost" @click="skip">下一题</button>
           <template v-else>
             <button class="btn primary" @click="redo">重做这一题</button>
