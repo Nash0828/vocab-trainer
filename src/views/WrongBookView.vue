@@ -116,11 +116,6 @@ function goPractice(word) {
     <template v-else>
       <div class="toolbar">
         <span class="count-badge">共 {{ wrongList.length }} 个错题</span>
-        <button v-if="!confirmClearAll" class="clear-btn" @click="askClearAll">清空</button>
-        <span v-else class="clear-confirm">
-          <button class="clear-yes" @click="doClearAll">确认清空</button>
-          <button class="clear-no" @click="cancelClearAll">取消</button>
-        </span>
       </div>
 
       <div class="wrong-list">
@@ -178,6 +173,15 @@ function goPractice(word) {
           </select>
         </div>
       </div>
+
+      <!-- 清空错题本（底部，微信风格：白底圆角卡片内红色文字按钮） -->
+      <div class="clear-bar">
+        <button v-if="!confirmClearAll" class="clear-btn" @click="askClearAll">清空错题本</button>
+        <div v-else class="clear-confirm">
+          <button class="clear-yes" @click="doClearAll">确认清空</button>
+          <button class="clear-no" @click="cancelClearAll">取消</button>
+        </div>
+      </div>
     </template>
   </div>
 </template>
@@ -199,39 +203,56 @@ function goPractice(word) {
   color: var(--text-sub);
 }
 
-.clear-btn {
-  border: none;
+/* 清空错题本（微信风格：底部白底圆角卡片内红色文字按钮） */
+.clear-bar {
+  margin: 12px 16px 8px;
   background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.clear-btn {
+  width: 100%;
+  border: none;
+  background: transparent;
   color: var(--danger);
-  font-size: 14px;
-  padding: 6px 14px;
-  border-radius: 6px;
+  font-size: 15px;
+  padding: 13px 16px;
   cursor: pointer;
+}
+
+.clear-btn:active {
+  background: #f7f7f7;
 }
 
 .clear-confirm {
   display: flex;
-  gap: 8px;
+  align-items: center;
 }
 
-.clear-yes {
+.clear-confirm .clear-yes,
+.clear-confirm .clear-no {
+  flex: 1;
   border: none;
-  background: var(--danger);
-  color: #fff;
-  font-size: 13px;
-  padding: 6px 12px;
-  border-radius: 6px;
+  background: transparent;
+  font-size: 15px;
+  padding: 13px 16px;
   cursor: pointer;
+  border-radius: 0;
 }
 
-.clear-no {
-  border: none;
-  background: #fff;
-  color: var(--text-sub);
-  font-size: 13px;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
+.clear-confirm .clear-yes {
+  color: var(--danger);
+}
+
+.clear-confirm .clear-no {
+  color: var(--text-main);
+  border-left: 0.5px solid #f2f2f2;
+}
+
+.clear-confirm .clear-yes:active,
+.clear-confirm .clear-no:active {
+  background: #f7f7f7;
 }
 
 .wrong-list {
