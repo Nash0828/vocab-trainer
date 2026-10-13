@@ -1006,7 +1006,6 @@ function formatTime(ts) {
 .word-en:active {
   opacity: 0.6;
 }
-}
 
 .pos-tag {
   display: inline-block;
