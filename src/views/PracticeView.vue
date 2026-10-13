@@ -608,6 +608,14 @@ function onGlobalKeydown(e) {
     if (current.value) speak(current.value.english)
     return
   }
+  // Ctrl+R：答错后重做这一题（答错时阻止浏览器默认刷新并重做；未答错时放行）
+  if ((e.ctrlKey || e.metaKey) && key === 'r') {
+    if (result.value === 'wrong') {
+      e.preventDefault()
+      redo()
+    }
+    return
+  }
   if (e.key !== 'Enter') return
   const canSkip = result.value === 'wrong' || (result.value === 'correct' && isRedo.value)
   if (!canSkip) return
