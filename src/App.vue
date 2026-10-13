@@ -35,7 +35,7 @@ onMounted(async () => {
         <span class="brand-logo">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
         </span>
-        <span class="brand-name">背单词助手</span>
+        <span class="brand-name">词句助手</span>
       </div>
       <nav class="side-nav">
         <RouterLink v-for="item in navItems" :key="item.to" :to="item.to">

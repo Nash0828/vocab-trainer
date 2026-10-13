@@ -138,7 +138,7 @@ async function doLogout() {
       </div>
     </div>
 
-    <div class="version">背单词助手 v2.0</div>
+    <div class="version">词句助手 v2.0</div>
 
     <!-- 建议反馈弹窗 -->
     <div v-if="showFeedbackModal" class="mask" @click.self="showFeedbackModal = false" @touchmove.prevent>

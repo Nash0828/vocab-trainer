@@ -82,7 +82,7 @@ router.beforeEach((to) => {
 })
 
 router.afterEach((to) => {
-  const base = '背单词助手'
+  const base = '词句助手'
   document.title = to.meta?.title ? `${to.meta.title} - ${base}` : base
 })
 
