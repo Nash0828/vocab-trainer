@@ -133,6 +133,15 @@ function clearAllFields() {
     <form class="word-form" @submit.prevent="submit">
       <div class="form-group">
         <div class="form-item">
+          <label>类型</label>
+          <div class="type-row" @click="showTypePicker = true">
+            <span class="type-value" :class="{ placeholder: !form.type }">
+              {{ typeOptions.find((o) => o.value === form.type)?.label || '请选择' }}
+            </span>
+            <svg class="type-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b2b2b2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </div>
+        <div class="form-item">
           <label>中文</label>
           <input
             v-if="form.type === 'word'"
@@ -165,15 +174,6 @@ function clearAllFields() {
             placeholder="请输入英文"
             autocomplete="off"
           ></textarea>
-        </div>
-        <div class="form-item">
-          <label>类型</label>
-          <div class="type-row" @click="showTypePicker = true">
-            <span class="type-value" :class="{ placeholder: !form.type }">
-              {{ typeOptions.find((o) => o.value === form.type)?.label || '请选择' }}
-            </span>
-            <svg class="type-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b2b2b2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-          </div>
         </div>
         <template v-if="form.type === 'word'">
         <div class="form-item">
