@@ -125,15 +125,6 @@ function formatDate(dateStr) {
         </div>
       </div>
 
-      <!-- 清空按钮 -->
-      <div class="clear-bar">
-        <button v-if="!confirmClearAll" class="clear-btn" @click="askClearAll">清空全部历史</button>
-        <span v-else class="clear-confirm">
-          <button class="clear-yes" @click="doClearAll">确认清空</button>
-          <button class="clear-no" @click="cancelClearAll">取消</button>
-        </span>
-      </div>
-
       <!-- 按天列表 -->
       <div class="day-list">
         <div v-for="day in days" :key="day.date" class="day-item" @click="toggle(day.date)">
@@ -182,6 +173,15 @@ function formatDate(dateStr) {
             </div>
           </transition>
         </div>
+      </div>
+
+      <!-- 清空按钮（底部，微信风格：白底圆角卡片内红色文字按钮） -->
+      <div class="clear-bar">
+        <button v-if="!confirmClearAll" class="clear-btn" @click="askClearAll">清空全部历史</button>
+        <span v-else class="clear-confirm">
+          <button class="clear-yes" @click="doClearAll">确认清空</button>
+          <button class="clear-no" @click="cancelClearAll">取消</button>
+        </span>
       </div>
     </template>
   </div>
@@ -264,46 +264,56 @@ function formatDate(dateStr) {
   background: #e5e5e5;
 }
 
-/* 清空按钮 */
+/* 清空按钮（微信风格：底部白底圆角卡片内红色文字按钮） */
 .clear-bar {
-  padding: 0 16px 10px;
-  text-align: center;
+  margin: 12px 16px 8px;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .clear-btn {
+  width: 100%;
   border: none;
-  background: #fff;
+  background: transparent;
   color: var(--danger);
-  font-size: 14px;
-  padding: 8px 16px;
-  border-radius: 6px;
+  font-size: 15px;
+  padding: 13px 16px;
   cursor: pointer;
+}
+
+.clear-btn:active {
+  background: #f7f7f7;
 }
 
 .clear-confirm {
   display: flex;
-  gap: 8px;
-  justify-content: center;
+  align-items: center;
 }
 
-.clear-yes {
+.clear-confirm .clear-yes,
+.clear-confirm .clear-no {
+  flex: 1;
   border: none;
-  background: var(--danger);
-  color: #fff;
-  font-size: 13px;
-  padding: 7px 14px;
-  border-radius: 6px;
+  background: transparent;
+  font-size: 15px;
+  padding: 13px 16px;
   cursor: pointer;
+  border-radius: 0;
 }
 
-.clear-no {
-  border: none;
-  background: #fff;
-  color: var(--text-sub);
-  font-size: 13px;
-  padding: 7px 14px;
-  border-radius: 6px;
-  cursor: pointer;
+.clear-confirm .clear-yes {
+  color: var(--danger);
+}
+
+.clear-confirm .clear-no {
+  color: var(--text-main);
+  border-left: 0.5px solid #f2f2f2;
+}
+
+.clear-confirm .clear-yes:active,
+.clear-confirm .clear-no:active {
+  background: #f7f7f7;
 }
 
 /* 按天列表 */
