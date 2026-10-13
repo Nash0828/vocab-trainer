@@ -127,7 +127,13 @@ function formatDate(dateStr) {
 
       <!-- 按天列表 -->
       <div class="day-list">
-        <div v-for="day in days" :key="day.date" class="day-item" @click="toggle(day.date)">
+        <div
+          v-for="day in days"
+          :key="day.date"
+          class="day-item"
+          :class="{ expanded: expanded === day.date }"
+          @click="toggle(day.date)"
+        >
           <div class="day-head">
             <div class="day-info">
               <span class="day-date">{{ formatDate(day.date) }}</span>
@@ -336,6 +342,15 @@ function formatDate(dateStr) {
   justify-content: space-between;
   padding: 12px 16px;
   cursor: pointer;
+}
+
+/* 展开时卡片头部吸顶：滚动到顶部后固定，随时可点击折叠 */
+.day-item.expanded .day-head {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #fff;
+  border-bottom: 0.5px solid #f2f2f2;
 }
 
 .day-info {
