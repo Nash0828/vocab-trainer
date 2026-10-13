@@ -368,6 +368,7 @@ function formatDate(dateStr) {
   z-index: 5;
   background: #fff;
   border-bottom: 0.5px solid #f2f2f2;
+  border-radius: 12px 12px 0 0;
 }
 
 .day-info {
