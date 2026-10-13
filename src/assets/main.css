@@ -1,14 +1,17 @@
 @import './base.css';
 
-/* ========== 全局防止横向滚动 ========== */
+/* ========== 全局防止横向滚动 ==========
+   ⚠️ 不能用 overflow-x:hidden（html/body/#app 会变成滚动容器，
+   导致 iOS Safari 内核下 position:sticky 吸顶失效）。
+   用 overflow-x:clip —— 裁剪但不产生滚动容器，sticky 正常。 */
 html, body {
   max-width: 100vw;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 #app {
   max-width: 100vw;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* ========== 通用卡片（微信风格） ========== */
