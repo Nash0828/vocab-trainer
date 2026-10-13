@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHistory } from '../composables/useHistory'
 
@@ -46,8 +46,25 @@ function showTip(text, kind = 'ok') {
   tipTimer = setTimeout(() => (tip.value = ''), 2600)
 }
 
-function toggle(date) {
-  expanded.value = expanded.value === date ? null : date
+function toggle(date, e) {
+  if (expanded.value === date) {
+    // 折叠：若头部正吸顶在视口顶部，折叠后内容骤减会把卡片顶出视口，
+    // 需把该卡片滚回视口顶部，保持可见可再次操作
+    const el = e && e.currentTarget
+    let headTop = 999
+    if (el) {
+      const head = el.querySelector('.day-head')
+      if (head) headTop = head.getBoundingClientRect().top
+    }
+    expanded.value = null
+    if (headTop <= 2) {
+      nextTick(() => {
+        if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start' })
+      })
+    }
+  } else {
+    expanded.value = date
+  }
 }
 
 function askClearDay(date) {
@@ -132,7 +149,7 @@ function formatDate(dateStr) {
           :key="day.date"
           class="day-item"
           :class="{ expanded: expanded === day.date }"
-          @click="toggle(day.date)"
+          @click="toggle(day.date, $event)"
         >
           <div class="day-head">
             <div class="day-info">
