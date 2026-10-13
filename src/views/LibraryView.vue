@@ -68,10 +68,12 @@ onBeforeUnmount(() => {
 // 播放发音：有道优先，失败回退百度 TTS，再失败回退系统 TTS
 let currentAudio = null
 const audioPlaying = ref(false)
-function speak(word, type = 0) {
+const playingKey = ref('') // 当前正在播放的按钮标识
+function speak(word, type = 0, onDone = null, key = '') {
   if (!word || audioPlaying.value) return
   const text = String(word).trim()
   audioPlaying.value = true
+  playingKey.value = key
   try {
     const url = `https://dict.youdao.com/dictvoice?type=${type}&audio=${encodeURIComponent(text)}`
     currentAudio = new Audio(url)
@@ -81,8 +83,8 @@ function speak(word, type = 0) {
       fallbacked = true
       speakBaidu(text)
     }
-    currentAudio.onended = () => { audioPlaying.value = false }
-    currentAudio.onpause = () => { audioPlaying.value = false }
+    currentAudio.onended = () => { audioPlaying.value = false; playingKey.value = '' }
+    currentAudio.onpause = () => { audioPlaying.value = false; playingKey.value = '' }
     currentAudio.onerror = once
     currentAudio.play().catch(once)
   } catch (e) {
@@ -101,8 +103,8 @@ function speakBaidu(text) {
       fallbacked = true
       speakViaSpeechSynthesis(text)
     }
-    currentAudio.onended = () => { audioPlaying.value = false }
-    currentAudio.onpause = () => { audioPlaying.value = false }
+    currentAudio.onended = () => { audioPlaying.value = false; playingKey.value = '' }
+    currentAudio.onpause = () => { audioPlaying.value = false; playingKey.value = '' }
     currentAudio.onerror = once
     currentAudio.play().catch(once)
   } catch (e) {
@@ -123,11 +125,12 @@ function speakViaSpeechSynthesis(text) {
       voices.find((v) => /^en(-|_)?US/i.test(v.lang)) ||
       voices.find((v) => /^en/i.test(v.lang))
     if (enVoice) u.voice = enVoice
-    u.onend = () => { audioPlaying.value = false }
-    u.onerror = () => { audioPlaying.value = false }
+    u.onend = () => { audioPlaying.value = false; playingKey.value = '' }
+    u.onerror = () => { audioPlaying.value = false; playingKey.value = '' }
     window.speechSynthesis.speak(u)
   } catch (e) {
     audioPlaying.value = false
+    playingKey.value = ''
   }
 }
 
@@ -226,18 +229,21 @@ async function openWordBubble(word, el) {
   }
 }
 // 朗读例句（有道 dictvoice type=2 句子发音）
-function speakSentence(sentence) {
+function speakSentence(sentence, key = '') {
   if (!sentence || audioPlaying.value) return
   try {
     audioPlaying.value = true
+    playingKey.value = key
     const url = `https://dict.youdao.com/dictvoice?type=2&audio=${encodeURIComponent(String(sentence).trim())}`
     currentAudio = new Audio(url)
-    currentAudio.onended = () => { audioPlaying.value = false }
-    currentAudio.onpause = () => { audioPlaying.value = false }
-    currentAudio.onerror = () => { audioPlaying.value = false }
-    currentAudio.play().catch(() => { audioPlaying.value = false })
+    const done = () => { audioPlaying.value = false; if (playingKey.value === key) playingKey.value = '' }
+    currentAudio.onended = done
+    currentAudio.onpause = done
+    currentAudio.onerror = done
+    currentAudio.play().catch(done)
   } catch (e) {
     audioPlaying.value = false
+    if (playingKey.value === key) playingKey.value = ''
   }
 }
 
@@ -726,7 +732,7 @@ function formatTime(ts) {
           <div class="word-main">
             <div class="word-left">
               <span class="word-en">{{ word.english }}</span>
-              <button class="speak-btn" :class="{ 'is-playing': audioPlaying }" title="发音" @click.stop="speak(word.english)">
+              <button class="speak-btn" :class="{ 'is-playing': playingKey === 'card' + word.id }" title="发音" @click.stop="speak(word.english, 0, null, 'card' + word.id)">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
               </button>
               <span v-if="word.type && word.type !== 'word'" class="type-tag">{{ word.type === 'phrase' ? '短语' : '句子' }}</span>
@@ -816,7 +822,7 @@ function formatTime(ts) {
               <div class="trans-block" @click="onDictTextClick">
                 <div class="trans-src-row">
                   <p class="trans-src" v-html="wordify(dictModal.word, '')"></p>
-                  <button class="speak-mini" :class="{ 'is-playing': audioPlaying }" @click="speak(dictModal.word, 0)" title="朗读">
+                  <button class="speak-mini" :class="{ 'is-playing': playingKey === 'read' }" @click="speak(dictModal.word, 0, null, 'read')" title="朗读">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
                   </button>
                 </div>
@@ -826,13 +832,13 @@ function formatTime(ts) {
             <div v-if="dictModal.data.usphone || dictModal.data.ukphone" class="dict-phonetic">
               <span v-if="dictModal.data.ukphone" class="phonetic-item">
                 英 [{{ dictModal.data.ukphone }}]
-                <button class="speak-mini" :class="{ 'is-playing': audioPlaying }" @click="speak(dictModal.word, 1)" title="英式发音">
+                <button class="speak-mini" :class="{ 'is-playing': playingKey === 'uk' }" @click="speak(dictModal.word, 1, null, 'uk')" title="英式发音">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
                 </button>
               </span>
               <span v-if="dictModal.data.usphone" class="phonetic-item" style="margin-left:12px">
                 美 [{{ dictModal.data.usphone }}]
-                <button class="speak-mini" :class="{ 'is-playing': audioPlaying }" @click="speak(dictModal.word, 0)" title="美式发音">
+                <button class="speak-mini" :class="{ 'is-playing': playingKey === 'us' }" @click="speak(dictModal.word, 0, null, 'us')" title="美式发音">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
                 </button>
               </span>
@@ -858,7 +864,7 @@ function formatTime(ts) {
                 <li v-for="(s, i) in dictModal.data.sentences" :key="i" class="sent-item">
                   <div class="sent-line">
                     <p class="sent-en" v-html="wordify(s.en, dictModal.word)"></p>
-                    <button class="sent-speak" :class="{ 'is-playing': audioPlaying }" @click="speakSentence(s.en)" title="朗读例句">
+                    <button class="sent-speak" :class="{ 'is-playing': playingKey === 's' + i }" @click="speakSentence(s.en, 's' + i)" title="朗读例句">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
                     </button>
                   </div>
@@ -877,7 +883,7 @@ function formatTime(ts) {
           <template v-else-if="wordBubble.data">
             <div class="wb-head">
               <div class="wb-word">{{ wordBubble.word }}</div>
-              <button class="speak-mini" :class="{ 'is-playing': audioPlaying }" @click="speak(wordBubble.word, 0)" title="朗读">
+              <button class="speak-mini" :class="{ 'is-playing': playingKey === 'bubble' }" @click="speak(wordBubble.word, 0, null, 'bubble')" title="朗读">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
               </button>
             </div>
