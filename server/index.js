@@ -751,7 +751,21 @@ app.get('/api/admin/feedbacks', (req, res) => {
 
 // ============ 静态文件 ============
 if (fs.existsSync(DIST_DIR)) {
-  app.use(express.static(DIST_DIR))
+  // index.html 不缓存，确保每次部署后用户刷新即拿到最新版本
+  app.use((req, res, next) => {
+    if (req.path === '/' || req.path === '/index.html') {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+    }
+    next()
+  })
+  // 带 hash 的静态资源可长缓存
+  app.use(
+    express.static(DIST_DIR, {
+      setHeaders(res, filePath) {
+        if (/[0-9a-f]{8}-/.test(filePath)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+      },
+    })
+  )
   app.get(/^\/(?!api\/).*/, (req, res) => res.sendFile(join(DIST_DIR, 'index.html')))
 }
 
