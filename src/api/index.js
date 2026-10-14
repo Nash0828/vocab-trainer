@@ -45,6 +45,10 @@ export const api = {
   // 设置
   setThreshold: (value) => req('/api/settings/threshold', { method: 'PUT', body: { value } }),
 
+  // 分组
+  getGroups: () => req('/api/groups'),
+  saveGroups: (groups) => req('/api/groups/save', { method: 'POST', body: { groups } }),
+
   // 背诵记录
   addRecord: (data) => req('/api/records', { method: 'POST', body: data }),
   clearDay: (date) => req(`/api/records/${date}`, { method: 'DELETE' }),

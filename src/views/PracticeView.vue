@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useWords, weightedPickIndex } from '../composables/useWords'
 import { useHistory } from '../composables/useHistory'
 import { useWrongBook } from '../composables/useWrongBook'
+import { api } from '../api/index.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -14,6 +15,31 @@ const { addWrong, removeWrong, getValidWrongWords } = useWrongBook()
 
 // 出题来源：'all' = 全部未背熟词库；'wrong' = 仅错题本
 const sourceMode = ref('all')
+// 背诵模式：'random' = 随机背诵（整词库）；'group' = 分组背诵（按组出题）
+const practiceMode = ref(localStorage.getItem('vt_practice_mode') === 'group' ? 'group' : 'random')
+const groups = ref([]) // { id, name, seq, size, mastered }
+const groupTotal = ref(0) // 当前词库总词数
+const selectedGroupId = ref(null)
+const showGroupModal = ref(false) // 分组设置弹框
+const draftGroups = ref([]) // 弹框编辑副本
+const groupError = ref('')
+watch(practiceMode, (m) => localStorage.setItem('vt_practice_mode', m))
+
+async function loadGroups() {
+  try {
+    const r = await api.getGroups()
+    groups.value = r.groups
+    groupTotal.value = r.total
+    if (practiceMode.value === 'group' && groups.value.length) {
+      if (!selectedGroupId.value || !groups.value.some((g) => g.id === selectedGroupId.value)) {
+        selectedGroupId.value = groups.value[0].id
+      }
+      if (groups.value.length && !current.value) next()
+    }
+  } catch (e) {}
+}
+// 词库变化（录入/删除/背诵次数）时刷新分组统计
+watch(() => words.value, loadGroups, { deep: true })
 // 类型筛选：'all' | 'word' | 'phrase' | 'sentence'
 const typeFilter = ref('all')
 const typeFilterOptions = [
@@ -102,17 +128,28 @@ function resolveWord(item) {
     words.value.find((x) => x.english.trim().toLowerCase() === item.english.trim().toLowerCase()) || null
   )
 }
-// 出题池：全部模式 = 未背熟单词 ∩ 类型筛选；错题本模式 = 错题本中且未背熟 ∩ 类型筛选（保持"已背熟不出题"规则）
+// 出题池：随机模式 = 未背熟单词 ∩ 类型筛选；分组模式 = 所选组内未背熟 ∩ 类型筛选；错题本模式 = 错题本中且未背熟 ∩ 类型筛选（组内错题）
 const available = computed(() => {
   const matchType = (w) => typeFilter.value === 'all' || (w.type || 'word') === typeFilter.value
+  let base
+  if (practiceMode.value === 'group') {
+    if (!selectedGroupId.value) return []
+    const gid = String(selectedGroupId.value)
+    base = words.value.filter((w) => String(w.groupId || '') === gid)
+  } else {
+    base = words.value
+  }
   if (sourceMode.value === 'wrong') {
+    const ids = new Set(base.map((w) => String(w.id)))
     return wrongValid.value
       .map((item) => resolveWord(item))
-      .filter((w) => w && !isMastered(w) && matchType(w))
+      .filter((w) => w && !isMastered(w) && matchType(w) && ids.has(String(w.id)))
   }
-  return words.value.filter((w) => !isMastered(w) && matchType(w))
+  return base.filter((w) => !isMastered(w) && matchType(w))
 })
 const allMastered = computed(() => hasWords.value && available.value.length === 0)
+// 分组模式：尚未设置任何分组
+const groupEmpty = computed(() => practiceMode.value === 'group' && !groups.value.length)
 // 类型筛选下无可用词句：类型筛选生效且出题池为空
 const filterEmpty = computed(
   () => typeFilter.value !== 'all' && available.value.length === 0
@@ -168,6 +205,20 @@ function clearAutoTimer() {
   }
 }
 
+// 分组模式：当前组背完自动切到下一组（按序号顺序，跳过无可用词的组；找不到返回 null）
+function findNextGroupWithWords() {
+  const ordered = [...groups.value].sort((a, b) => a.seq - b.seq)
+  const curIdx = ordered.findIndex((g) => g.id === selectedGroupId.value)
+  const matchType = (w) => typeFilter.value === 'all' || (w.type || 'word') === typeFilter.value
+  const ids = new Set(
+    words.value.filter((w) => !isMastered(w) && matchType(w)).map((w) => String(w.groupId || ''))
+  )
+  for (let i = curIdx + 1; i < ordered.length; i++) {
+    if (ids.has(String(ordered[i].id))) return ordered[i]
+  }
+  return null
+}
+
 function focusInput(force = false) {
   if (!force && !focusEnabled.value) return
   const el = answerInput.value
@@ -200,6 +251,16 @@ function next() {
     return
   }
   if (!available.value.length) {
+    // 分组模式：当前组背完自动切到下一组（一组一组来背）
+    if (practiceMode.value === 'group' && groups.value.length) {
+      const nxt = findNextGroupWithWords()
+      if (nxt) {
+        selectedGroupId.value = nxt.id
+        lastIndex.value = -1
+        next()
+        return
+      }
+    }
     current.value = null
     return
   }
@@ -542,6 +603,93 @@ function setSource(mode) {
   next()
 }
 
+// ===== 背诵模式切换（随机 / 分组） =====
+function setMode(m) {
+  if (practiceMode.value === m) return
+  practiceMode.value = m
+  lastIndex.value = -1
+  clearAutoTimer()
+  if (m === 'group') {
+    if (!groups.value.length) {
+      current.value = null
+      result.value = null
+      openGroupModal()
+      return
+    }
+    if (!selectedGroupId.value || !groups.value.some((g) => g.id === selectedGroupId.value)) {
+      selectedGroupId.value = groups.value[0].id
+    }
+  }
+  next()
+}
+// 分组下拉切换
+function onSelectGroup(e) {
+  const v = e.target.value
+  selectedGroupId.value = /^\d+$/.test(v) ? Number(v) : v
+  lastIndex.value = -1
+  clearAutoTimer()
+  current.value = null
+  result.value = null
+  answer.value = ''
+  next()
+}
+
+// ===== 分组设置弹框 =====
+function openGroupModal() {
+  draftGroups.value = groups.value.map((g) => ({ id: g.id, name: g.name, seq: g.seq, size: g.size, mastered: g.mastered }))
+  groupError.value = ''
+  showGroupModal.value = true
+}
+function closeGroupModal() {
+  showGroupModal.value = false
+}
+function addGroupDraft() {
+  const used = draftGroups.value.reduce((a, g) => a + (Number(g.size) || 0), 0)
+  const size = Math.max(0, groupTotal.value - used)
+  draftGroups.value.push({ id: null, name: '组' + (draftGroups.value.length + 1), seq: draftGroups.value.length + 1, size, mastered: 0 })
+}
+function removeGroupDraft(idx) {
+  const g = draftGroups.value[idx]
+  draftGroups.value.splice(idx, 1)
+  // 被删组的数量随机分摊到其他组（保持总和 = 词库总数）
+  if (g && Number(g.size) > 0 && draftGroups.value.length) {
+    for (let i = 0; i < Number(g.size); i++) {
+      const t = draftGroups.value[Math.floor(Math.random() * draftGroups.value.length)]
+      t.size = (Number(t.size) || 0) + 1
+    }
+  }
+  draftGroups.value.forEach((x, i) => (x.seq = i + 1))
+}
+const draftAssigned = computed(() => draftGroups.value.reduce((a, g) => a + (Number(g.size) || 0), 0))
+const draftValid = computed(
+  () =>
+    draftGroups.value.length > 0 &&
+    draftAssigned.value === groupTotal.value &&
+    draftGroups.value.every(
+      (g) => String(g.name || '').trim() && Number.isFinite(Number(g.size)) && Number(g.size) >= 0
+    )
+)
+async function saveGroupsDraft() {
+  if (!draftValid.value) return
+  try {
+    // 按用户设定的序号排序保存（决定背诵组出现顺序）
+    const ordered = [...draftGroups.value].sort((a, b) => a.seq - b.seq)
+    const r = await api.saveGroups(
+      ordered.map((g) => ({ id: g.id, name: String(g.name).trim(), seq: g.seq, size: Number(g.size) }))
+    )
+    groups.value = r.groups
+    if (!selectedGroupId.value || !groups.value.some((g) => g.id === selectedGroupId.value)) {
+      selectedGroupId.value = groups.value[0]?.id || null
+    }
+    showGroupModal.value = false
+    lastIndex.value = -1
+    clearAutoTimer()
+    next()
+  } catch (e) {
+    groupError.value = e.message || '保存失败'
+  }
+}
+
 // 打开今日记录弹窗（正确/错误）
 function openRecords(tab) {
   refreshToday()
@@ -635,6 +783,7 @@ onMounted(() => {
   document.addEventListener('keydown', onGlobalKeydown)
   setPendingFromQuery()
   if (pendingWord.value) next()
+  loadGroups()
 })
 
 watch(
@@ -689,6 +838,26 @@ next()
       </button>
     </div>
 
+    <!-- 背诵模式切换（随机背诵 / 分组背诵） -->
+    <div class="mode-row">
+      <div class="mode-tabs">
+        <button class="mode-tab" :class="{ active: practiceMode === 'random' }" @click="setMode('random')">随机背诵</button>
+        <button class="mode-tab" :class="{ active: practiceMode === 'group' }" @click="setMode('group')">分组背诵</button>
+      </div>
+    </div>
+
+    <!-- 分组模式：组下拉选框 + 分组设置 -->
+    <div v-if="practiceMode === 'group'" class="group-row">
+      <select v-if="groups.length" class="group-select" :value="selectedGroupId" @change="onSelectGroup">
+        <option v-for="g in groups" :key="g.id" :value="g.id">{{ g.name }}（已背熟 {{ g.mastered }}/{{ g.size }}）</option>
+      </select>
+      <span v-else class="group-empty-hint">尚未设置分组</span>
+      <button class="group-set-btn" @click="openGroupModal">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+        分组设置
+      </button>
+    </div>
+
     <!-- 空词库 -->
     <div v-if="!hasWords" class="empty-state">
       <div class="empty-icon">
@@ -697,6 +866,16 @@ next()
       <p class="empty-title">词句库还是空的</p>
       <p class="empty-desc">先去录入一些单词，再来这里练习吧</p>
       <button class="empty-btn" @click="router.push('/input')">去录入单词</button>
+    </div>
+
+    <!-- 分组模式：尚未设置分组 -->
+    <div v-else-if="groupEmpty" class="empty-state">
+      <div class="empty-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+      </div>
+      <p class="empty-title">尚未设置分组</p>
+      <p class="empty-desc">点击上方「分组设置」把词句分成若干组，一组一组来背</p>
+      <button class="empty-btn" @click="openGroupModal">去设置分组</button>
     </div>
 
     <!-- 错题本模式：错题本为空 -->
@@ -719,13 +898,13 @@ next()
       <button class="empty-btn" @click="setSource('all')">切换到全部词句库</button>
     </div>
 
-    <!-- 全部背熟 -->
+    <!-- 全部背熟 / 所有分组都背完 -->
     <div v-else-if="allMastered && !filterEmpty" class="empty-state">
       <div class="empty-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
       </div>
-      <p class="empty-title">全部背熟了</p>
-      <p class="empty-desc">词句库中所有词句都已达到背熟阈值</p>
+      <p class="empty-title">{{ practiceMode === 'group' ? '所有分组都背完了' : '全部背熟了' }}</p>
+      <p class="empty-desc">{{ practiceMode === 'group' ? '所选分组中的词句都已达到背熟阈值' : '词句库中所有词句都已达到背熟阈值' }}</p>
       <button class="empty-btn" @click="router.push('/settings')">去设置调整</button>
     </div>
 
@@ -1018,6 +1197,52 @@ next()
         </div>
       </div>
     </div>
+
+    <!-- 分组设置弹框 -->
+    <div v-if="showGroupModal" class="modal-mask" @click.self="closeGroupModal" @touchmove.prevent>
+      <div class="modal group-modal" @touchmove.stop>
+        <div class="modal-head">
+          <h3>分组设置</h3>
+          <button class="modal-close" @click="closeGroupModal">✕</button>
+        </div>
+        <div class="group-modal-tip">
+          <span :class="{ over: draftAssigned !== groupTotal }">已分配 {{ draftAssigned }} / 总词数 {{ groupTotal }}</span>
+          <span v-if="draftAssigned !== groupTotal" class="group-tip-diff">还需 {{ groupTotal - draftAssigned }} 词才能保存</span>
+        </div>
+        <div class="modal-body group-modal-body" @touchmove.stop>
+          <div v-if="!draftGroups.length" class="empty-tip">还没有分组，点击下方「添加一组」开始</div>
+          <div v-for="(g, i) in draftGroups" :key="i" class="group-card">
+            <div class="g-fields">
+              <label class="g-field g-seq">
+                <span class="g-label">序号</span>
+                <input class="g-input" type="number" min="1" v-model.number="g.seq" />
+              </label>
+              <label class="g-field g-name">
+                <span class="g-label">名称</span>
+                <input class="g-input" type="text" v-model="g.name" placeholder="组名" />
+              </label>
+              <label class="g-field g-size">
+                <span class="g-label">数量</span>
+                <input class="g-input" type="number" min="0" v-model.number="g.size" />
+              </label>
+              <button class="g-del" title="删除该组" @click="removeGroupDraft(i)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            </div>
+            <div class="g-progress">已背熟 {{ g.mastered }} / 组内 {{ g.size }}</div>
+          </div>
+          <button class="g-add" @click="addGroupDraft">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            添加一组
+          </button>
+          <p v-if="groupError" class="group-error">{{ groupError }}</p>
+        </div>
+        <div class="group-modal-foot">
+          <button class="btn ghost group-cancel" @click="closeGroupModal">取消</button>
+          <button class="btn primary group-save" :disabled="!draftValid" @click="saveGroupsDraft">保存</button>
+        </div>
+      </div>
+    </div>
 </template>
 
 <style scoped>
@@ -1111,6 +1336,223 @@ next()
 .filter-btn.active {
   background: rgba(7, 193, 96, 0.1);
   color: var(--primary);
+}
+
+/* 背诵模式切换（微信风格：白底圆角分段控件） */
+.mode-row {
+  margin: 0 16px 10px;
+}
+
+.mode-tabs {
+  display: flex;
+  background: #fff;
+  border-radius: 10px;
+  padding: 3px;
+  gap: 3px;
+}
+
+.mode-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 8px 0;
+  font-size: 14px;
+  color: var(--text-sub);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mode-tab.active {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 500;
+}
+
+/* 分组模式：组下拉 + 分组设置按钮 */
+.group-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 16px 8px;
+}
+
+.group-select {
+  flex: 1;
+  border: none;
+  background: #fff;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 14px;
+  color: var(--text-main);
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  min-width: 0;
+}
+
+.group-empty-hint {
+  flex: 1;
+  background: #fff;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 14px;
+  color: var(--text-sub);
+}
+
+.group-set-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: #fff;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--text-main);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.group-set-btn:active {
+  background: #f5f5f5;
+}
+
+/* 分组设置弹框 */
+.group-modal {
+  max-width: 480px;
+}
+
+.group-modal-tip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px 0;
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+.group-modal-tip .over {
+  color: var(--danger);
+}
+
+.group-tip-diff {
+  color: var(--danger);
+}
+
+.group-modal-body {
+  padding: 12px 16px 16px;
+}
+
+.group-card {
+  background: #f7f7f7;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.g-fields {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.g-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.g-field.g-seq {
+  flex: 0 0 56px;
+}
+
+.g-field.g-name {
+  flex: 1.4;
+}
+
+.g-label {
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+.g-input {
+  border: none;
+  background: #fff;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  color: var(--text-main);
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.g-del {
+  align-self: flex-end;
+  border: none;
+  background: #f5f5f5;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  flex-shrink: 0;
+}
+
+.g-del:active {
+  background: #ebebeb;
+}
+
+.g-progress {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--primary);
+}
+
+.g-add {
+  width: 100%;
+  border: none;
+  background: #fff;
+  border-radius: 10px;
+  padding: 11px 12px;
+  font-size: 14px;
+  color: var(--primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.g-add:active {
+  background: #f5f5f5;
+}
+
+.group-error {
+  color: var(--danger);
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.group-modal-foot {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px 16px;
+  border-top: 0.5px solid #f0f0f0;
+}
+
+.group-modal-foot .btn {
+  flex: 1;
 }
 
 /* 筛选底部面板（微信风格） */

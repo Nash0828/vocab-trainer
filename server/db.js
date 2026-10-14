@@ -97,6 +97,21 @@ db.exec(`
     contact TEXT DEFAULT '',
     created_at INTEGER NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    seq INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS word_groups (
+    word_id INTEGER PRIMARY KEY,
+    group_id INTEGER NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_word_groups_group ON word_groups(group_id);
 `)
 
 // 迁移：旧表加列（已存在则忽略）

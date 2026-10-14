@@ -108,6 +108,7 @@ app.post('/api/register', (req, res) => {
     db.prepare("UPDATE records SET user_id = ? WHERE user_id = ?").run(userId, oldUid)
     db.prepare("UPDATE wrongbook SET user_id = ? WHERE user_id = ?").run(userId, oldUid)
     db.prepare("UPDATE settings SET user_id = ? WHERE user_id = ?").run(userId, oldUid)
+    db.prepare("UPDATE groups SET user_id = ? WHERE user_id = ?").run(userId, oldUid)
   }
   const token = genToken()
   db.prepare("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)").run(token, userId, Date.now())
@@ -131,6 +132,7 @@ app.post('/api/login', (req, res) => {
     db.prepare("UPDATE records SET user_id = ? WHERE user_id = ?").run(user.id, oldUid)
     db.prepare("UPDATE wrongbook SET user_id = ? WHERE user_id = ?").run(user.id, oldUid)
     db.prepare("UPDATE settings SET user_id = ? WHERE user_id = ?").run(user.id, oldUid)
+    db.prepare("UPDATE groups SET user_id = ? WHERE user_id = ?").run(user.id, oldUid)
   }
   const token = genToken()
   db.prepare("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)").run(token, user.id, Date.now())
@@ -251,7 +253,10 @@ app.delete('/api/admin/users/:id', (req, res) => {
   const user = db.prepare("SELECT * FROM users WHERE id = ?").get(id)
   if (!user) return res.status(404).json({ error: '用户不存在' })
   if (user.is_admin) return res.status(400).json({ error: '不能删除管理员' })
+  const wids = db.prepare("SELECT id FROM words WHERE user_id = ?").all(id).map((r) => r.id)
+  if (wids.length) db.prepare(`DELETE FROM word_groups WHERE word_id IN (${wids.map(() => '?').join(',')})`).run(...wids)
   db.prepare("DELETE FROM words WHERE user_id = ?").run(id)
+  db.prepare("DELETE FROM groups WHERE user_id = ?").run(id)
   db.prepare("DELETE FROM records WHERE user_id = ?").run(id)
   db.prepare("DELETE FROM wrongbook WHERE user_id = ?").run(id)
   db.prepare("DELETE FROM settings WHERE user_id = ?").run(id)
@@ -266,9 +271,25 @@ app.get('/api/me', (req, res) => {
 })
 
 // ============ 业务 API ============
+function getWordGroupMap(uid) {
+  // 该用户所有词的组归属：word_id -> group_id
+  const map = {}
+  const rows = db.prepare(`
+    SELECT wg.word_id, wg.group_id FROM word_groups wg
+    JOIN words w ON w.id = wg.word_id AND w.user_id = ?
+  `).all(uid)
+  for (const r of rows) map[r.word_id] = r.group_id
+  return map
+}
+
 app.get('/api/state', (req, res) => {
   const uid = req.userId
-  const words = db.prepare('SELECT * FROM words WHERE user_id = ? ORDER BY created_at ASC').all(uid).map(rowToWord)
+  const groupMap = getWordGroupMap(uid)
+  const words = db.prepare('SELECT * FROM words WHERE user_id = ? ORDER BY created_at ASC').all(uid).map((row) => {
+    const w = rowToWord(row)
+    w.groupId = groupMap[row.id] || null
+    return w
+  })
   const records = db.prepare('SELECT * FROM records WHERE user_id = ? ORDER BY ts ASC').all(uid).map((r) => ({
     id: r.id, date: r.date, chinese: r.chinese, english: r.english, pos: r.pos||'', correct: !!r.correct, userAnswer: r.user_answer||'', ts: r.ts,
   }))
@@ -281,13 +302,176 @@ app.get('/api/state', (req, res) => {
   })
 })
 
+// ============ 分组 API ============
+// 读取分组配置（含每组实际数量与已背熟数）
+app.get('/api/groups', (req, res) => {
+  const uid = req.userId
+  const threshold = getThreshold(uid)
+  const groups = db.prepare('SELECT * FROM groups WHERE user_id = ? ORDER BY seq ASC, id ASC').all(uid).map((g) => {
+    const size = db.prepare('SELECT COUNT(*) c FROM word_groups wg JOIN words w ON w.id = wg.word_id WHERE wg.group_id = ? AND w.user_id = ?').get(g.id, uid).c
+    const mastered = db.prepare('SELECT COUNT(*) c FROM word_groups wg JOIN words w ON w.id = wg.word_id WHERE wg.group_id = ? AND w.user_id = ? AND w.count >= ?').get(g.id, uid, threshold).c
+    return { id: g.id, name: g.name, seq: g.seq, size, mastered }
+  })
+  const total = db.prepare('SELECT COUNT(*) c FROM words WHERE user_id = ?').get(uid).c
+  res.json({ groups, total, threshold })
+})
+
+// 保存分组配置：至少 1 组；Σ数量 = 当前词库总数；按目标数量随机分配（尽量保留已有归属）
+app.post('/api/groups/save', (req, res) => {
+  const uid = req.userId
+  const list = (req.body?.groups || []).filter((g) => g && typeof g === 'object')
+  const total = db.prepare('SELECT COUNT(*) c FROM words WHERE user_id = ?').get(uid).c
+  // 校验
+  if (!list.length) return res.status(400).json({ error: '至少需要保留一个分组' })
+  const sum = list.reduce((a, g) => a + (Number.isFinite(Number(g.size)) ? Math.floor(Number(g.size)) : NaN), 0)
+  if (!Number.isFinite(sum)) return res.status(400).json({ error: '分组数量必须是正整数' })
+  if (sum !== total) return res.status(400).json({ error: `所有分组数量之和(${sum})必须等于词句总数(${total})` })
+  for (const g of list) {
+    if (!String(g.name || '').trim()) return res.status(400).json({ error: '分组名称不能为空' })
+    const s = Number(g.size)
+    if (!Number.isFinite(s) || s < 0 || Math.floor(s) !== s) return res.status(400).json({ error: '分组数量必须是正整数' })
+  }
+
+  const tx = db.transaction(() => {
+    const oldGroups = db.prepare('SELECT * FROM groups WHERE user_id = ?').all(uid)
+    const oldIds = oldGroups.map((g) => g.id)
+    const newIds = []
+    list.forEach((g, i) => {
+      const name = String(g.name).trim()
+      if (g.id && oldIds.includes(Number(g.id))) {
+        db.prepare('UPDATE groups SET name = ?, seq = ? WHERE id = ? AND user_id = ?').run(name, i + 1, Number(g.id), uid)
+        newIds.push(Number(g.id))
+      } else {
+        const r = db.prepare('INSERT INTO groups (user_id, name, seq, created_at) VALUES (?, ?, ?, ?)').run(uid, name, i + 1, Date.now())
+        newIds.push(Number(r.lastInsertRowid))
+      }
+    })
+    // 被删组的 id（其词进入待分配池）
+    const removedIds = oldIds.filter((id) => !newIds.includes(id))
+
+    const allWords = db.prepare('SELECT id FROM words WHERE user_id = ?').all(uid).map((w) => w.id)
+    const wordSet = new Set(allWords)
+    const target = list.map((g, i) => ({ id: newIds[i], size: Math.floor(Number(g.size)) }))
+
+    // 已有归属：保留仍在词库且组仍存在的词
+    const assign = new Map() // word_id -> group_id
+    const groupCount = new Map() // group_id -> 已分配数
+    const pool = []
+    const poolSet = new Set()
+    const pushPool = (wid) => {
+      if (!poolSet.has(wid)) {
+        poolSet.add(wid)
+        pool.push(wid)
+      }
+    }
+    const inClause = oldIds.length ? oldIds.map(() => '?').join(',') : '0'
+    const existing = oldIds.length
+      ? db.prepare(`SELECT word_id, group_id FROM word_groups WHERE group_id IN (${inClause})`).all(...oldIds)
+      : []
+    for (const row of existing) {
+      if (!wordSet.has(row.word_id)) continue
+      if (newIds.includes(row.group_id)) {
+        assign.set(row.word_id, row.group_id)
+        groupCount.set(row.group_id, (groupCount.get(row.group_id) || 0) + 1)
+      } else {
+        pushPool(row.word_id) // 被删组的词进池
+      }
+    }
+    // 未分配词进池（池已去重，避免重复词导致覆盖）
+    for (const w of allWords) if (!assign.has(w)) pushPool(w)
+
+    // 超出目标数量的组：多出的词移入池
+    for (const g of target) {
+      const cnt = groupCount.get(g.id) || 0
+      if (cnt > g.size) {
+        const members = [...assign.entries()].filter(([, gid]) => gid === g.id).map(([wid]) => wid)
+        shuffle(members)
+        for (let i = 0; i < cnt - g.size; i++) {
+          const w = members[i]
+          assign.delete(w)
+          pushPool(w)
+        }
+        groupCount.set(g.id, g.size)
+      }
+    }
+
+    // 按配置顺序补足；池优先，池空则从富余组借
+    shuffle(pool)
+    let pi = 0
+    const membersOf = (gid) => [...assign.entries()].filter(([, g]) => g === gid).map(([wid]) => wid)
+    for (const g of target) {
+      let need = g.size - (groupCount.get(g.id) || 0)
+      while (need > 0) {
+        let w = null
+        if (pi < pool.length) {
+          w = pool[pi++]
+        } else {
+          // 从词数最多的其他组随机借一个
+          let best = null
+          for (const tg of target) {
+            const m = membersOf(tg.id)
+            if (m.length > (tg.size || 0)) {
+              if (!best || m.length - tg.size > best.over) best = { id: tg.id, over: m.length - tg.size }
+            }
+          }
+          if (best) {
+            const m = membersOf(best.id)
+            w = m[Math.floor(Math.random() * m.length)]
+          }
+        }
+        if (w == null) break
+        assign.set(w, g.id)
+        need--
+      }
+    }
+
+    // 写库
+    if (oldIds.length) db.prepare(`DELETE FROM word_groups WHERE group_id IN (${inClause})`).run(...oldIds)
+    for (const rid of removedIds) db.prepare('DELETE FROM groups WHERE id = ? AND user_id = ?').run(rid, uid)
+    const ins = db.prepare('INSERT OR REPLACE INTO word_groups (word_id, group_id) VALUES (?, ?)')
+    for (const [wid, gid] of assign) ins.run(wid, gid)
+  })
+  tx()
+
+  const threshold = getThreshold(uid)
+  const groups = db.prepare('SELECT * FROM groups WHERE user_id = ? ORDER BY seq ASC, id ASC').all(uid).map((g) => {
+    const size = db.prepare('SELECT COUNT(*) c FROM word_groups wg JOIN words w ON w.id = wg.word_id WHERE wg.group_id = ? AND w.user_id = ?').get(g.id, uid).c
+    const mastered = db.prepare('SELECT COUNT(*) c FROM word_groups wg JOIN words w ON w.id = wg.word_id WHERE wg.group_id = ? AND w.user_id = ? AND w.count >= ?').get(g.id, uid, threshold).c
+    return { id: g.id, name: g.name, seq: g.seq, size, mastered }
+  })
+  res.json({ ok: true, groups, total })
+})
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
+}
+
+// 新词自动分到数量最少的组（用户无分组时不入组）
+function assignWordToSmallestGroup(uid, wordId) {
+  const g = db.prepare(`
+    SELECT g.id FROM groups g
+    LEFT JOIN word_groups wg ON wg.group_id = g.id
+    WHERE g.user_id = ?
+    GROUP BY g.id
+    ORDER BY COUNT(wg.word_id) ASC, g.id ASC LIMIT 1
+  `).get(uid)
+  if (g) db.prepare('INSERT OR IGNORE INTO word_groups (word_id, group_id) VALUES (?, ?)').run(wordId, g.id)
+}
+
 app.post('/api/words', (req, res) => {
   const { chinese, english, pos, type, caseSensitive } = req.body || {}
   const c = (chinese||'').trim(), e = (english||'').trim(), p = (pos||'').trim()
   const t = ['word', 'phrase', 'sentence'].includes(type) ? type : 'word'
   if (!c || !e) return res.status(400).json({ error: '中文和英文不能为空' })
   const info = db.prepare('INSERT INTO words (user_id, chinese, english, pos, type, count, created_at, case_sensitive) VALUES (?, ?, ?, ?, ?, 0, ?, ?)').run(req.userId, c, e, p, t, Date.now(), caseSensitive ? 1 : 0)
-  res.json(rowToWord(db.prepare('SELECT * FROM words WHERE id = ?').get(info.lastInsertRowid)))
+  const word = rowToWord(db.prepare('SELECT * FROM words WHERE id = ?').get(info.lastInsertRowid))
+  assignWordToSmallestGroup(req.userId, info.lastInsertRowid)
+  word.groupId = db.prepare('SELECT group_id FROM word_groups WHERE word_id = ?').get(info.lastInsertRowid)?.group_id || null
+  res.json(word)
 })
 
 app.put('/api/words/:id', (req, res) => {
@@ -306,6 +490,7 @@ app.delete('/api/words/:id', (req, res) => {
   const id = Number(req.params.id)
   db.prepare('DELETE FROM words WHERE id = ? AND user_id = ?').run(id, req.userId)
   db.prepare('DELETE FROM wrongbook WHERE word_id = ? AND user_id = ?').run(String(id), req.userId)
+  db.prepare('DELETE FROM word_groups WHERE word_id = ?').run(id)
   res.json({ ok: true })
 })
 
@@ -484,10 +669,18 @@ app.post('/api/import', (req, res) => {
   let imported = 0, skipped = 0
   const tx = db.transaction(() => {
     if (mode === 'overwrite') {
+      // 清空旧分组归属
+      const oldIds = db.prepare('SELECT id FROM words WHERE user_id = ?').all(uid).map((r) => r.id)
+      if (oldIds.length) db.prepare(`DELETE FROM word_groups WHERE word_id IN (${oldIds.map(() => '?').join(',')})`).run(...oldIds)
       db.prepare('DELETE FROM words WHERE user_id = ?').run(uid)
       db.prepare('DELETE FROM records WHERE user_id = ?').run(uid)
       db.prepare('DELETE FROM wrongbook WHERE user_id = ?').run(uid)
-      for (const w of valid) { const n = normalize(w); insertStmt.run(uid, n.chinese, n.english, n.pos, n.type, n.count, n.createdAt); imported++ }
+      for (const w of valid) {
+        const n = normalize(w)
+        const r = insertStmt.run(uid, n.chinese, n.english, n.pos, n.type, n.count, n.createdAt)
+        assignWordToSmallestGroup(uid, r.lastInsertRowid)
+        imported++
+      }
       skipped = list.length - valid.length
       if (Array.isArray(data.records)) {
         const insRec = db.prepare('INSERT OR REPLACE INTO records (id, user_id, date, chinese, english, pos, correct, user_answer, ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
@@ -510,7 +703,8 @@ app.post('/api/import', (req, res) => {
         if (!c || !e) { skipped++; continue }
         if (setC.has(c.toLowerCase()) || setE.has(e.toLowerCase())) { skipped++; continue }
         const n = normalize(w)
-        insertStmt.run(uid, n.chinese, n.english, n.pos, n.type, n.count, n.createdAt)
+        const r = insertStmt.run(uid, n.chinese, n.english, n.pos, n.type, n.count, n.createdAt)
+        assignWordToSmallestGroup(uid, r.lastInsertRowid)
         setC.add(n.chinese.toLowerCase()); setE.add(n.english.toLowerCase()); imported++
       }
     }
