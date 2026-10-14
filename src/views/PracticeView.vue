@@ -1300,12 +1300,6 @@ next()
         <div class="modal-body group-modal-body" @touchmove.stop>
           <div v-if="!draftGroups.length" class="empty-tip">还没有分组，点击下方「添加一组」开始</div>
           <div v-for="(g, i) in draftGroups" :key="i" class="group-card">
-            <div class="g-head">
-              <span class="g-head-progress">已背熟 {{ g.mastered }}</span>
-              <button class="g-del" title="删除该组" @click="removeGroupDraft(i)">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-              </button>
-            </div>
             <div class="g-inputs">
               <div class="g-cell">
                 <span class="g-cell-label">序号</span>
@@ -1319,7 +1313,11 @@ next()
                 <span class="g-cell-label">数量</span>
                 <input class="g-cell-input" type="number" min="0" v-model.number="g.size" />
               </div>
+              <button class="g-del" title="删除该组" @click="removeGroupDraft(i)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
             </div>
+            <div class="g-progress">已背熟 {{ g.mastered }}</div>
           </div>
           <button class="g-add" @click="addGroupDraft">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1672,48 +1670,23 @@ next()
 
 .group-modal-body {
   padding: 12px 16px 16px;
+  background: #f7f7f7;
+  border-radius: 0 0 12px 12px;
 }
 
 .group-card {
   background: #fff;
   border-radius: 12px;
-  padding: 4px 16px 12px;
-  margin-bottom: 10px;
+  padding: 12px 12px 8px;
+  margin-bottom: 14px;
+  border: 0.5px solid #e5e5e5;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-/* 组头行：进度 + 删除 */
-.g-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 38px;
-}
-
-.g-head-progress {
-  font-size: 13px;
-  color: #999;
-  white-space: nowrap;
-}
-
-.g-del {
-  border: none;
-  background: none;
-  padding: 6px;
-  cursor: pointer;
-  color: #999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-}
-
-.g-del:active {
-  color: #666;
-}
-
-/* 输入行：三个轻量字段一行 */
+/* 输入行：三个轻量字段 + 删除一行 */
 .g-inputs {
   display: flex;
+  align-items: center;
   gap: 10px;
 }
 
@@ -1748,6 +1721,28 @@ next()
   color: var(--text-main);
   padding: 0;
   text-align: left;
+}
+
+.g-del {
+  border: none;
+  background: none;
+  padding: 6px;
+  cursor: pointer;
+  color: #999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.g-del:active {
+  color: #666;
+}
+
+.g-progress {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #999;
 }
 
 .g-add {
@@ -1800,7 +1795,9 @@ next()
   display: flex;
   gap: 8px;
   padding: 12px 16px 16px;
+  background: #fff;
   border-top: 0.5px solid #f0f0f0;
+  border-radius: 0 0 12px 12px;
 }
 
 .group-modal-foot .btn {
