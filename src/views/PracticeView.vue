@@ -345,7 +345,9 @@ function submit() {
 
   clearAutoTimer()
   if (isCorrect) {
-    // 答对：锁定输入，等正确发音播报完成后按设置决定是否自动切换下一题
+    // 答对：标记已作答（用于置灰作答控件），不显示"回答正确"文字提示
+    result.value = 'correct'
+    // 锁定输入，等正确发音播报完成后按设置决定是否自动切换下一题
     answeredLock.value = true
     speak(answeredWord, 0, () => {
       answeredLock.value = false
@@ -1083,7 +1085,7 @@ next()
         <!-- 判定反馈 -->
         <div v-if="result" class="feedback" :class="result">
           <template v-if="result === 'correct'">
-            <span class="fb-text">回答正确</span>
+            <!-- 答对不显示"回答正确"文字，仅保留已背熟标记与重听 -->
             <span v-if="current.count >= threshold" class="fb-mastered">已背熟</span>
           </template>
           <template v-else>
