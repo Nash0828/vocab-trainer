@@ -345,12 +345,16 @@ function submit() {
 
   clearAutoTimer()
   if (isCorrect) {
-    // 答对：锁定输入，等正确发音播报完成后自动切换下一题并聚焦
+    // 答对：锁定输入，等正确发音播报完成后按设置决定是否自动切换下一题
     answeredLock.value = true
     speak(answeredWord, 0, () => {
       answeredLock.value = false
-      next()
-      focusInput()
+      if (settings.autoNext) {
+        next()
+        focusInput()
+      } else {
+        focusInput()
+      }
     }, 'main')
   } else {
     speak(answeredWord, 0, null, 'main')

@@ -38,6 +38,11 @@ function getThreshold(uid) {
   const t = Number(row?.value)
   return Number.isFinite(t) && t >= 1 ? Math.floor(t) : 5
 }
+// 答对自动下一题：默认开启
+function getAutoNext(uid) {
+  const row = db.prepare("SELECT value FROM settings WHERE user_id = ? AND key = 'autoNext'").get(uid)
+  return row?.value !== '0'
+}
 function getClientIp(req) {
   return (req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim()
 }
@@ -297,7 +302,7 @@ app.get('/api/state', (req, res) => {
     id: String(w.word_id), chinese: w.chinese, english: w.english, pos: w.pos||'', addedAt: w.added_at,
   }))
   res.json({
-    words, settings: { masteryThreshold: getThreshold(uid) }, records, wrongbook,
+    words, settings: { masteryThreshold: getThreshold(uid), autoNext: getAutoNext(uid) }, records, wrongbook,
     user: { isLoggedIn: !!req.username, username: req.username, isAdmin: req.isAdmin },
   })
 })
@@ -514,6 +519,13 @@ app.put('/api/settings/threshold', (req, res) => {
   res.json({ ok: true, masteryThreshold: Math.floor(t) })
 })
 
+// 答对自动下一题开关
+app.put('/api/settings/autoNext', (req, res) => {
+  const v = req.body?.value
+  db.prepare("INSERT OR REPLACE INTO settings (user_id, key, value) VALUES (?, 'autoNext', ?)").run(req.userId, v ? '1' : '0')
+  res.json({ ok: true, autoNext: !!v })
+})
+
 app.post('/api/records', (req, res) => {
   const { chinese, english, pos, correct, userAnswer } = req.body || {}
   const now = new Date()
@@ -648,7 +660,7 @@ app.get('/api/export', (req, res) => {
   }))
   res.json({
     app: 'vocab-trainer', version: 2, exportedAt: new Date().toISOString(),
-    settings: { masteryThreshold: getThreshold(uid) }, words, records, wrongbook,
+    settings: { masteryThreshold: getThreshold(uid), autoNext: getAutoNext(uid) }, words, records, wrongbook,
   })
 })
 
@@ -711,6 +723,9 @@ app.post('/api/import', (req, res) => {
     if (data.settings && Number.isFinite(Number(data.settings.masteryThreshold))) {
       const t = Number(data.settings.masteryThreshold)
       if (t >= 1) db.prepare("INSERT OR REPLACE INTO settings (user_id, key, value) VALUES (?, 'masteryThreshold', ?)").run(uid, String(Math.floor(t)))
+    }
+    if (data.settings && typeof data.settings.autoNext === 'boolean') {
+      db.prepare("INSERT OR REPLACE INTO settings (user_id, key, value) VALUES (?, 'autoNext', ?)").run(uid, data.settings.autoNext ? '1' : '0')
     }
   })
   tx()

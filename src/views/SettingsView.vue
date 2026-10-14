@@ -7,6 +7,7 @@ const {
   words,
   settings,
   setThreshold,
+  setAutoNext,
   resetAllCounts,
   isMastered,
   exportData,
@@ -211,6 +212,16 @@ function cancelMigrate() {
 
     <!-- 背熟规则 -->
     <div class="menu-group">
+      <div class="menu-item" @click="settings.autoNext = !settings.autoNext; setAutoNext(settings.autoNext)">
+        <span class="menu-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </span>
+        <span class="menu-label">答对自动下一题</span>
+        <span class="menu-switch" :class="{ on: settings.autoNext }">
+          <i></i>
+        </span>
+      </div>
+      <div class="menu-desc">答对并播报完成后自动进入下一题</div>
       <div class="menu-item">
         <span class="menu-icon">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
@@ -478,6 +489,42 @@ function cancelMigrate() {
   font-size: 15px;
   color: var(--primary);
   background: transparent;
+}
+
+/* 微信风格开关 */
+.menu-switch {
+  position: relative;
+  width: 51px;
+  height: 31px;
+  border-radius: 16px;
+  background: #e5e5e5;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.menu-switch i {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s;
+}
+
+.menu-switch.on {
+  background: var(--primary);
+}
+
+.menu-switch.on i {
+  transform: translateX(20px);
+}
+
+.menu-item:active .menu-switch,
+.menu-item .menu-switch:active {
+  opacity: 0.9;
 }
 .cell-desc {
   padding: 8px 16px 12px;

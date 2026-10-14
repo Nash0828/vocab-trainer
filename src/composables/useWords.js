@@ -9,7 +9,7 @@ import { api } from '../api/index.js'
 const DEFAULT_THRESHOLD = 10
 
 const words = ref([])
-const settings = ref({ masteryThreshold: DEFAULT_THRESHOLD })
+const settings = ref({ masteryThreshold: DEFAULT_THRESHOLD, autoNext: true })
 
 let idSeed = 0
 
@@ -19,7 +19,10 @@ export function loadState(state) {
     ...w,
     count: typeof w.count === 'number' ? w.count : 0,
   }))
-  settings.value = { masteryThreshold: state.settings?.masteryThreshold || DEFAULT_THRESHOLD }
+  settings.value = {
+    masteryThreshold: state.settings?.masteryThreshold || DEFAULT_THRESHOLD,
+    autoNext: state.settings?.autoNext !== false,
+  }
   idSeed = words.value.reduce((max, w) => {
     const n = Number(w.id)
     return Number.isFinite(n) && n > max ? n : max
@@ -152,6 +155,13 @@ export function useWords() {
     return true
   }
 
+  /** 答对自动下一题开关 */
+  function setAutoNext(value) {
+    settings.value.autoNext = !!value
+    api.setAutoNext(!!value).catch((err) => console.error('setAutoNext 同步失败', err))
+    return true
+  }
+
   /** 判断单词是否已背熟 */
   function isMastered(word, threshold = settings.value.masteryThreshold) {
     return (word?.count || 0) >= threshold
@@ -198,6 +208,7 @@ export function useWords() {
     resetCount,
     resetAllCounts,
     setThreshold,
+    setAutoNext,
     isMastered,
     exportData,
     validateImport,
