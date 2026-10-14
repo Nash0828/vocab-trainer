@@ -49,15 +49,27 @@ const typeFilterOptions = [
   { value: 'sentence', label: '句子' },
 ]
 
-// ---- 类型筛选底部面板 ----
+// ---- 筛选底部面板（出题来源 + 类型） ----
 const showFilterSheet = ref(false)
+const draftSourceMode = ref('all')
 const draftTypeFilter = ref('all')
-const filterSummary = computed(() =>
-  typeFilter.value !== 'all'
-    ? (typeFilterOptions.find((o) => o.value === typeFilter.value)?.label || '')
-    : ''
-)
+const sourceOptions = [
+  { value: 'all', label: '全部未背熟' },
+  { value: 'wrong', label: '仅错题本' },
+]
+// 筛选按钮摘要：如 "全部未背熟" / "仅错题本 · 短语"
+const filterSummary = computed(() => {
+  const s = sourceOptions.find((o) => o.value === sourceMode.value)?.label || '全部未背熟'
+  const t =
+    typeFilter.value !== 'all'
+      ? (typeFilterOptions.find((o) => o.value === typeFilter.value)?.label || '')
+      : ''
+  return t ? `${s} · ${t}` : s
+})
+// 是否启用了非默认筛选（用于按钮绿色高亮）
+const hasFilter = computed(() => sourceMode.value !== 'all' || typeFilter.value !== 'all')
 function openFilterSheet() {
+  draftSourceMode.value = sourceMode.value
   draftTypeFilter.value = typeFilter.value
   showFilterSheet.value = true
 }
@@ -65,7 +77,9 @@ function closeFilterSheet() {
   showFilterSheet.value = false
 }
 function resetFilterSheet() {
+  draftSourceMode.value = 'all'
   draftTypeFilter.value = 'all'
+  sourceMode.value = 'all'
   typeFilter.value = 'all'
   showFilterSheet.value = false
   lastIndex.value = -1
@@ -73,6 +87,7 @@ function resetFilterSheet() {
   next()
 }
 function applyFilterSheet() {
+  sourceMode.value = draftSourceMode.value
   typeFilter.value = draftTypeFilter.value
   showFilterSheet.value = false
   lastIndex.value = -1
@@ -925,36 +940,33 @@ next()
 
     <!-- 有可练习单词 -->
     <template v-else>
-      <!-- 出题来源切换 + 类型筛选 -->
+      <!-- 筛选入口（出题来源 + 类型都收进筛选面板） -->
       <div class="source-row">
-        <div class="source-tabs">
-          <button
-            class="source-tab"
-            :class="{ active: sourceMode === 'all' }"
-            @click="setSource('all')"
-          >
-            全部未背熟
-          </button>
-          <button
-            class="source-tab"
-            :class="{ active: sourceMode === 'wrong' }"
-            @click="setSource('wrong')"
-          >
-            仅错题本
-          </button>
-        </div>
-        <button class="filter-btn" :class="{ active: filterSummary }" @click="openFilterSheet">
+        <button class="filter-btn filter-btn-wide" :class="{ active: hasFilter }" @click="openFilterSheet">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-          <span>{{ filterSummary || '筛选' }}</span>
+          <span>{{ filterSummary }}</span>
+          <svg class="filter-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>
 
-      <!-- 类型筛选底部面板 -->
+      <!-- 筛选底部面板：出题来源 + 类型 -->
       <transition name="sheet">
         <div v-if="showFilterSheet" class="sheet-mask" @click.self="closeFilterSheet" @touchmove.prevent>
           <div class="sheet" @touchmove.stop>
             <div class="sheet-title">筛选</div>
             <div class="sheet-body">
+              <div class="sheet-group">
+                <div class="sheet-group-title">出题来源</div>
+                <div class="sheet-opts">
+                  <button
+                    v-for="opt in sourceOptions"
+                    :key="opt.value"
+                    class="sheet-opt"
+                    :class="{ active: draftSourceMode === opt.value }"
+                    @click="draftSourceMode = opt.value"
+                  >{{ opt.label }}</button>
+                </div>
+              </div>
               <div class="sheet-group">
                 <div class="sheet-group-title">类型</div>
                 <div class="sheet-opts">
@@ -1288,59 +1300,37 @@ next()
   cursor: pointer;
 }
 
-/* 出题来源切换 */
+/* 筛选入口（全宽按钮，微信风格白底卡片） */
 .source-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 16px 8px;
+  margin: 0 16px 10px;
 }
 
-.source-tabs {
+.filter-btn-wide {
+  width: 100%;
   display: flex;
-  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: none;
   background: #fff;
   border-radius: 10px;
-  padding: 3px;
-  gap: 3px;
-}
-
-.source-tab {
-  flex: 1;
-  border: none;
-  background: transparent;
-  padding: 8px 0;
+  padding: 10px 12px;
   font-size: 14px;
   color: var(--text-sub);
-  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.source-tab.active {
-  background: var(--primary);
-  color: #fff;
-  font-weight: 500;
+.filter-btn-wide:active {
+  background: #f5f5f5;
 }
 
-.filter-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  border: none;
-  background: #fff;
-  border-radius: 8px;
-  padding: 9px 12px;
-  font-size: 13px;
-  color: var(--text-sub);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: all 0.2s;
-}
-
-.filter-btn.active {
-  background: rgba(7, 193, 96, 0.1);
+.filter-btn-wide.active {
   color: var(--primary);
+}
+
+.filter-btn-wide .filter-arrow {
+  color: #c2c2c2;
 }
 
 /* 背诵模式切换（微信风格：白底圆角分段控件） */
