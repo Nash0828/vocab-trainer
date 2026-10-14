@@ -1300,22 +1300,20 @@ next()
         <div class="modal-body group-modal-body" @touchmove.stop>
           <div v-if="!draftGroups.length" class="empty-tip">还没有分组，点击下方「添加一组」开始</div>
           <div v-for="(g, i) in draftGroups" :key="i" class="group-card">
-            <div class="g-fields">
-              <label class="g-field g-seq">
-                <span class="g-label">序号</span>
-                <input class="g-input" type="number" min="1" v-model.number="g.seq" />
-              </label>
-              <label class="g-field g-name">
-                <span class="g-label">名称</span>
-                <input class="g-input" type="text" v-model="g.name" placeholder="组名" />
-              </label>
-              <label class="g-field g-size">
-                <span class="g-label">数量</span>
-                <input class="g-input" type="number" min="0" v-model.number="g.size" />
-              </label>
-              <button class="g-del" title="删除该组" @click="removeGroupDraft(i)">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-              </button>
+            <button class="g-del" title="删除该组" @click="removeGroupDraft(i)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+            <div class="g-row">
+              <span class="g-label">序号</span>
+              <input class="g-input num" type="number" min="1" v-model.number="g.seq" />
+            </div>
+            <div class="g-row">
+              <span class="g-label">名称</span>
+              <input class="g-input" type="text" v-model="g.name" placeholder="组名" />
+            </div>
+            <div class="g-row">
+              <span class="g-label">数量</span>
+              <input class="g-input num" type="number" min="0" v-model.number="g.size" />
             </div>
             <div class="g-progress">已背熟 {{ g.mastered }} / 组内 {{ g.size }}</div>
           </div>
@@ -1673,74 +1671,80 @@ next()
 }
 
 .group-card {
-  background: #f7f7f7;
-  border-radius: 10px;
-  padding: 12px;
-  margin-bottom: 10px;
-}
-
-.g-fields {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.g-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-  min-width: 0;
-}
-
-.g-field.g-seq {
-  flex: 0 0 56px;
-}
-
-.g-field.g-name {
-  flex: 1.4;
-}
-
-.g-label {
-  font-size: 12px;
-  color: var(--text-sub);
-}
-
-.g-input {
-  border: none;
+  position: relative;
   background: #fff;
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 14px;
-  color: var(--text-main);
-  outline: none;
-  width: 100%;
-  box-sizing: border-box;
+  border-radius: 12px;
+  padding: 0 16px 10px;
+  margin-bottom: 12px;
 }
 
 .g-del {
-  align-self: flex-end;
+  position: absolute;
+  top: 12px;
+  right: 12px;
   border: none;
-  background: #f5f5f5;
-  border-radius: 50%;
-  width: 28px;
-  height: 28px;
+  background: none;
+  padding: 4px;
   cursor: pointer;
+  color: #999;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #888;
-  flex-shrink: 0;
+  z-index: 1;
 }
 
 .g-del:active {
-  background: #ebebeb;
+  color: #666;
+}
+
+.g-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  border-bottom: 0.5px solid #f0f0f0;
+}
+
+.g-row:last-of-type {
+  border-bottom: none;
+}
+
+.g-label {
+  font-size: 15px;
+  color: var(--text-main);
+  flex: none;
+}
+
+.g-input {
+  flex: 1;
+  max-width: 60%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 15px;
+  color: var(--text-main);
+  padding: 0;
+  text-align: left;
+}
+
+.g-input.num {
+  text-align: right;
+}
+
+/* 首行输入框右侧预留删除按钮空间 */
+.g-row:first-child .g-input {
+  padding-right: 32px;
+}
+
+/* 聚焦下划线（微信风格） */
+.g-row:focus-within {
+  box-shadow: inset 0 -1.5px 0 var(--primary);
 }
 
 .g-progress {
   margin-top: 8px;
-  font-size: 12px;
-  color: var(--primary);
+  font-size: 13px;
+  color: #999;
 }
 
 .g-add {
