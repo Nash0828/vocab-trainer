@@ -351,7 +351,7 @@ function submit() {
     answeredLock.value = true
     speak(answeredWord, 0, () => {
       answeredLock.value = false
-      if (settings.autoNext) {
+      if (settings.value.autoNext) {
         next()
         focusInput()
       } else {
