@@ -858,12 +858,21 @@ next()
       </button>
     </div>
 
-    <!-- 背诵模式切换（随机背诵 / 分组背诵） -->
+    <!-- 背诵模式切换 + 筛选入口（一行） -->
     <div class="mode-row">
       <div class="mode-tabs">
         <button class="mode-tab" :class="{ active: practiceMode === 'random' }" @click="setMode('random')">随机背诵</button>
         <button class="mode-tab" :class="{ active: practiceMode === 'group' }" @click="setMode('group')">分组背诵</button>
       </div>
+      <button
+        v-if="hasWords"
+        class="filter-icon-btn"
+        :class="{ active: hasFilter }"
+        title="筛选"
+        @click="openFilterSheet"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      </button>
     </div>
 
     <!-- 分组模式：组下拉选框 + 分组设置 -->
@@ -940,15 +949,6 @@ next()
 
     <!-- 有可练习单词 -->
     <template v-else>
-      <!-- 筛选入口（出题来源 + 类型都收进筛选面板） -->
-      <div class="source-row">
-        <button class="filter-btn filter-btn-wide" :class="{ active: hasFilter }" @click="openFilterSheet">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-          <span>{{ filterSummary }}</span>
-          <svg class="filter-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </button>
-      </div>
-
       <!-- 筛选底部面板：出题来源 + 类型 -->
       <transition name="sheet">
         <div v-if="showFilterSheet" class="sheet-mask" @click.self="closeFilterSheet" @touchmove.prevent>
@@ -1300,50 +1300,22 @@ next()
   cursor: pointer;
 }
 
-/* 筛选入口（全宽按钮，微信风格白底卡片） */
-.source-row {
-  margin: 0 16px 10px;
-}
-
-.filter-btn-wide {
-  width: 100%;
+/* 背诵模式切换 + 筛选图标（一行，微信风格） */
+.mode-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 5px;
-  border: none;
-  background: #fff;
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 14px;
-  color: var(--text-sub);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.filter-btn-wide:active {
-  background: #f5f5f5;
-}
-
-.filter-btn-wide.active {
-  color: var(--primary);
-}
-
-.filter-btn-wide .filter-arrow {
-  color: #c2c2c2;
-}
-
-/* 背诵模式切换（微信风格：白底圆角分段控件） */
-.mode-row {
+  gap: 8px;
   margin: 0 16px 10px;
 }
 
 .mode-tabs {
   display: flex;
+  flex: 1;
   background: #fff;
   border-radius: 10px;
   padding: 3px;
   gap: 3px;
+  min-width: 0;
 }
 
 .mode-tab {
@@ -1362,6 +1334,31 @@ next()
   background: var(--primary);
   color: #fff;
   font-weight: 500;
+}
+
+/* 筛选图标按钮：白底圆角，与模式条同高；有筛选时绿色 */
+.filter-icon-btn {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: #fff;
+  border-radius: 10px;
+  color: var(--text-sub);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-icon-btn:active {
+  background: #f5f5f5;
+}
+
+.filter-icon-btn.active {
+  color: var(--primary);
+  background: rgba(7, 193, 96, 0.1);
 }
 
 /* 分组模式：组下拉 + 分组设置按钮 */
