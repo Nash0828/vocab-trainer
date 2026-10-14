@@ -1097,10 +1097,17 @@ next()
         </div>
 
         <div class="quiz-actions">
-          <button v-if="!result" class="btn ghost" :disabled="answeredLock" @click="skip">换一题</button>
-          <button v-if="!result" class="btn ghost" :disabled="answeredLock" @click="revealAnswer">显示答案</button>
-          <button v-if="!result" class="btn primary" :disabled="!answer.trim() || answeredLock" @click="submit">提交</button>
-          <button v-else-if="result === 'correct'" class="btn ghost" @click="skip">下一题</button>
+          <template v-if="!result">
+            <button class="btn ghost" :disabled="answeredLock" @click="skip">换一题</button>
+            <button class="btn ghost" :disabled="answeredLock" @click="revealAnswer">显示答案</button>
+            <button class="btn primary" :disabled="!answer.trim() || answeredLock" @click="submit">提交</button>
+          </template>
+          <template v-else-if="result === 'correct'">
+            <!-- 答对：作答控件置灰，仅"下一题"可点（不自动跳时停留当前题） -->
+            <button class="btn ghost" disabled>提交</button>
+            <button class="btn ghost" disabled>显示答案</button>
+            <button class="btn primary" :disabled="answeredLock" @click="skip">下一题</button>
+          </template>
           <template v-else>
             <button class="btn primary" @click="redo">重做这一题</button>
             <button class="btn ghost" @click="skip">下一题</button>
