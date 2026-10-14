@@ -1,7 +1,7 @@
 ﻿<script setup>
 import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useWords, weightedPickIndex } from '../composables/useWords'
+import { useWords, loadState, weightedPickIndex } from '../composables/useWords'
 import { useHistory } from '../composables/useHistory'
 import { useWrongBook } from '../composables/useWrongBook'
 import { api } from '../api/index.js'
@@ -681,6 +681,11 @@ async function saveGroupsDraft() {
     if (!selectedGroupId.value || !groups.value.some((g) => g.id === selectedGroupId.value)) {
       selectedGroupId.value = groups.value[0]?.id || null
     }
+    // 重新拉取 state：让 words 携带最新的 groupId，出题池才能匹配到组内词
+    try {
+      const st = await api.getState()
+      if (st && Array.isArray(st.words)) loadState(st)
+    } catch (e) {}
     showGroupModal.value = false
     lastIndex.value = -1
     clearAutoTimer()
