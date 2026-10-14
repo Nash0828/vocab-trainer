@@ -210,7 +210,7 @@ function cancelMigrate() {
       <p v-if="tip" class="tip" :class="tip.kind">{{ tip.text }}</p>
     </transition>
 
-    <!-- 背熟规则 -->
+    <!-- 背诵行为 -->
     <div class="menu-group">
       <div class="menu-item" @click="settings.autoNext = !settings.autoNext; setAutoNext(settings.autoNext)">
         <span class="menu-icon">
@@ -221,7 +221,10 @@ function cancelMigrate() {
           <i></i>
         </span>
       </div>
-      <div class="menu-desc">答对并播报完成后自动进入下一题</div>
+    </div>
+
+    <!-- 背熟规则 -->
+    <div class="menu-group">
       <div class="menu-item">
         <span class="menu-icon">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
