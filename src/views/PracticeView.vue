@@ -1300,22 +1300,27 @@ next()
         <div class="modal-body group-modal-body" @touchmove.stop>
           <div v-if="!draftGroups.length" class="empty-tip">还没有分组，点击下方「添加一组」开始</div>
           <div v-for="(g, i) in draftGroups" :key="i" class="group-card">
-            <button class="g-del" title="删除该组" @click="removeGroupDraft(i)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-            </button>
-            <div class="g-row">
-              <span class="g-label">序号</span>
-              <input class="g-input num" type="number" min="1" v-model.number="g.seq" />
+            <div class="g-head">
+              <span class="g-head-name">{{ g.name || '组' + (i + 1) }}</span>
+              <span class="g-head-progress">已背熟 {{ g.mastered }}/{{ g.size }}</span>
+              <button class="g-del" title="删除该组" @click="removeGroupDraft(i)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
             </div>
-            <div class="g-row">
-              <span class="g-label">名称</span>
-              <input class="g-input" type="text" v-model="g.name" placeholder="组名" />
+            <div class="g-inputs">
+              <div class="g-cell">
+                <span class="g-cell-label">序号</span>
+                <input class="g-cell-input" type="number" min="1" v-model.number="g.seq" />
+              </div>
+              <div class="g-cell g-cell-name">
+                <span class="g-cell-label">名称</span>
+                <input class="g-cell-input" type="text" v-model="g.name" placeholder="组名" />
+              </div>
+              <div class="g-cell">
+                <span class="g-cell-label">数量</span>
+                <input class="g-cell-input" type="number" min="0" v-model.number="g.size" />
+              </div>
             </div>
-            <div class="g-row">
-              <span class="g-label">数量</span>
-              <input class="g-input num" type="number" min="0" v-model.number="g.size" />
-            </div>
-            <div class="g-progress">已背熟 {{ g.mastered }} / 组内 {{ g.size }}</div>
           </div>
           <button class="g-add" @click="addGroupDraft">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1671,80 +1676,92 @@ next()
 }
 
 .group-card {
-  position: relative;
   background: #fff;
   border-radius: 12px;
-  padding: 0 16px 10px;
-  margin-bottom: 12px;
+  padding: 4px 16px 12px;
+  margin-bottom: 10px;
+}
+
+/* 组头行：组名 + 进度 + 删除 */
+.g-head {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+}
+
+.g-head-name {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-main);
+  flex: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 45%;
+}
+
+.g-head-progress {
+  flex: 1;
+  text-align: right;
+  font-size: 13px;
+  color: #999;
+  margin-right: 4px;
+  white-space: nowrap;
 }
 
 .g-del {
-  position: absolute;
-  top: 12px;
-  right: 12px;
   border: none;
   background: none;
-  padding: 4px;
+  padding: 6px;
   cursor: pointer;
   color: #999;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1;
+  flex: none;
 }
 
 .g-del:active {
   color: #666;
 }
 
-.g-row {
+/* 输入行：三个轻量字段一行 */
+.g-inputs {
+  display: flex;
+  gap: 10px;
+}
+
+.g-cell {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  min-height: 48px;
-  border-bottom: 0.5px solid #f0f0f0;
+  gap: 6px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 7px 10px;
 }
 
-.g-row:last-of-type {
-  border-bottom: none;
+.g-cell-name {
+  flex: 1.6;
 }
 
-.g-label {
-  font-size: 15px;
-  color: var(--text-main);
+.g-cell-label {
+  font-size: 12px;
+  color: #999;
   flex: none;
 }
 
-.g-input {
+.g-cell-input {
   flex: 1;
-  max-width: 60%;
+  min-width: 0;
   border: none;
   outline: none;
   background: transparent;
-  font-size: 15px;
+  font-size: 14px;
   color: var(--text-main);
   padding: 0;
   text-align: left;
-}
-
-.g-input.num {
-  text-align: right;
-}
-
-/* 首行输入框右侧预留删除按钮空间 */
-.g-row:first-child .g-input {
-  padding-right: 32px;
-}
-
-/* 聚焦下划线（微信风格） */
-.g-row:focus-within {
-  box-shadow: inset 0 -1.5px 0 var(--primary);
-}
-
-.g-progress {
-  margin-top: 8px;
-  font-size: 13px;
-  color: #999;
 }
 
 .g-add {
