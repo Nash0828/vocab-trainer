@@ -661,10 +661,13 @@ function setMode(m) {
   }
   next()
 }
-// 分组下拉切换
-function onSelectGroup(e) {
-  const v = e.target.value
-  selectedGroupId.value = /^\d+$/.test(v) ? Number(v) : v
+// 分组下拉切换（微信风格底部选择面板）
+const showGroupPicker = ref(false)
+const selectedGroup = computed(() => groups.value.find((g) => g.id === selectedGroupId.value) || null)
+function pickGroup(g) {
+  showGroupPicker.value = false
+  if (!g || g.id === selectedGroupId.value) return
+  selectedGroupId.value = g.id
   lastIndex.value = -1
   clearAutoTimer()
   current.value = null
@@ -931,9 +934,11 @@ next()
 
     <!-- 分组模式：组下拉选框 + 分组设置 -->
     <div v-if="practiceMode === 'group'" class="group-row">
-      <select v-if="groups.length" class="group-select" :value="selectedGroupId" @change="onSelectGroup">
-        <option v-for="g in groups" :key="g.id" :value="g.id">{{ g.name }}（已背熟 {{ g.mastered }}/{{ g.size }}）</option>
-      </select>
+      <button v-if="groups.length" class="group-select" @click="showGroupPicker = true">
+        <span class="group-select-name">{{ selectedGroup?.name }}</span>
+        <span class="group-select-progress">已背熟 {{ selectedGroup?.mastered }}/{{ selectedGroup?.size }}</span>
+        <svg class="group-select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
       <span v-else class="group-empty-hint">尚未设置分组</span>
       <button class="group-set-btn" @click="openGroupModal">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
@@ -1266,6 +1271,21 @@ next()
       </div>
     </div>
 
+    <!-- 选择分组（微信风格底部弹层） -->
+    <div v-if="showGroupPicker" class="picker-mask" @click.self="showGroupPicker = false" @touchmove.prevent>
+      <div class="picker-sheet" @touchmove.stop>
+        <div class="picker-head">选择分组</div>
+        <div class="picker-list">
+          <button v-for="g in groups" :key="g.id" class="picker-item" @click="pickGroup(g)">
+            <span class="picker-name">{{ g.name }}</span>
+            <span class="picker-progress">已背熟 {{ g.mastered }}/{{ g.size }}</span>
+            <svg v-if="g.id === selectedGroupId" class="picker-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </button>
+        </div>
+        <button class="picker-cancel" @click="showGroupPicker = false">取消</button>
+      </div>
+    </div>
+
     <!-- 分组设置弹框 -->
     <div v-if="showGroupModal" class="modal-mask" @click.self="closeGroupModal" @touchmove.prevent>
       <div class="modal group-modal" @touchmove.stop>
@@ -1469,10 +1489,133 @@ next()
   appearance: none;
   -webkit-appearance: none;
   outline: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.group-select-name {
+  font-size: 15px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 40%;
+}
+
+.group-select-progress {
+  flex: 1;
+  text-align: right;
+  font-size: 13px;
+  color: #999;
+  white-space: nowrap;
+}
+
+.group-select-arrow {
+  flex: none;
+  color: #999;
+}
+
+/* 选择分组：微信风格底部弹层 */
+.picker-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 700;
+  display: flex;
+  align-items: flex-end;
+}
+
+.picker-sheet {
+  width: 100%;
+  background: #ededed;
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
+  padding-bottom: env(safe-area-inset-bottom);
+  animation: pickerUp 0.2s ease-out;
+}
+
+@keyframes pickerUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.picker-head {
+  background: #fff;
+  text-align: center;
+  padding: 13px 16px;
+  font-size: 13px;
+  color: #999;
+}
+
+.picker-list {
+  background: #fff;
+}
+
+.picker-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  border: none;
+  background: #fff;
+  border-bottom: 0.5px solid #f0f0f0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.picker-item:last-child {
+  border-bottom: none;
+}
+
+.picker-item:active {
+  background: #f5f5f5;
+}
+
+.picker-name {
+  font-size: 16px;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 50%;
+}
+
+.picker-progress {
+  flex: 1;
+  text-align: right;
+  font-size: 13px;
+  color: #999;
+  white-space: nowrap;
+}
+
+.picker-check {
+  color: var(--primary);
+  flex: none;
+}
+
+.picker-cancel {
+  width: calc(100% - 16px);
+  margin: 8px;
+  padding: 13px;
+  font-size: 16px;
+  color: var(--text-main);
+  background: #fff;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.picker-cancel:active {
+  background: #f5f5f5;
 }
 
 .group-empty-hint {
