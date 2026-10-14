@@ -1301,8 +1301,7 @@ next()
           <div v-if="!draftGroups.length" class="empty-tip">还没有分组，点击下方「添加一组」开始</div>
           <div v-for="(g, i) in draftGroups" :key="i" class="group-card">
             <div class="g-head">
-              <span class="g-head-name">{{ g.name || '组' + (i + 1) }}</span>
-              <span class="g-head-progress">已背熟 {{ g.mastered }}/{{ g.size }}</span>
+              <span class="g-head-progress">已背熟 {{ g.mastered }}</span>
               <button class="g-del" title="删除该组" @click="removeGroupDraft(i)">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
               </button>
@@ -1682,30 +1681,17 @@ next()
   margin-bottom: 10px;
 }
 
-/* 组头行：组名 + 进度 + 删除 */
+/* 组头行：进度 + 删除 */
 .g-head {
   display: flex;
   align-items: center;
-  min-height: 42px;
-}
-
-.g-head-name {
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--text-main);
-  flex: none;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 45%;
+  justify-content: space-between;
+  min-height: 38px;
 }
 
 .g-head-progress {
-  flex: 1;
-  text-align: right;
   font-size: 13px;
   color: #999;
-  margin-right: 4px;
   white-space: nowrap;
 }
 
