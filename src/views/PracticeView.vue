@@ -1082,20 +1082,10 @@ next()
           ></textarea>
         </div>
 
-        <!-- 判定反馈 -->
-        <div v-if="result" class="feedback" :class="result">
-          <template v-if="result === 'correct'">
-            <!-- 答对不显示"回答正确"文字，仅保留已背熟标记与重听 -->
-            <span v-if="current.count >= threshold" class="fb-mastered">已背熟</span>
-          </template>
-          <template v-else>
-            <span class="fb-text">{{ revealed ? '已显示答案' : '回答错误' }}</span>
-            <strong class="correct-word">{{ current.english }}</strong>
-          </template>
-          <button class="speak-btn" :class="{ 'is-playing': playingKey === 'main2' }" @click="speak(current.english, 0, null, 'main2')"><span class="spk-static">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span><span class="spk-eq"><i></i><i></i><i></i></span>
-            重听
-          </button>
+        <!-- 判定反馈（答对不显示任何提示块；答错仅显示错误信息，无重听按钮） -->
+        <div v-if="result === 'wrong'" class="feedback wrong">
+          <span class="fb-text">{{ revealed ? '已显示答案' : '回答错误' }}</span>
+          <strong class="correct-word">{{ current.english }}</strong>
         </div>
 
         <div class="quiz-actions">
