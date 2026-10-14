@@ -734,6 +734,26 @@ async function saveGroupsDraft() {
   }
 }
 
+// 重新分配：保持各组数量不变，把词库词句打散随机重新分到各组（立即生效）
+async function reshuffleGroups() {
+  try {
+    const r = await api.reshuffleGroups()
+    groups.value = r.groups || []
+    draftGroups.value = (r.groups || []).map((g) => ({ id: g.id, name: g.name, seq: g.seq, size: g.size, mastered: g.mastered }))
+    groupError.value = ''
+    // 刷新 words 的 groupId，出题池与组进度同步
+    try {
+      const st = await api.getState()
+      if (st && Array.isArray(st.words)) loadState(st)
+    } catch (e) {}
+    lastIndex.value = -1
+    clearAutoTimer()
+    next()
+  } catch (e) {
+    groupError.value = e.message || '重新分配失败'
+  }
+}
+
 // 打开今日记录弹窗（正确/错误）
 function openRecords(tab) {
   refreshToday()
@@ -1283,6 +1303,10 @@ next()
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             添加一组
           </button>
+          <button v-if="draftGroups.length" class="g-reshuffle" @click="reshuffleGroups">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="4" x2="21" y2="21"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+            重新分配
+          </button>
           <p v-if="groupError" class="group-error">{{ groupError }}</p>
         </div>
         <div class="group-modal-foot">
@@ -1592,6 +1616,27 @@ next()
 }
 
 .g-add:active {
+  background: #f5f5f5;
+}
+
+/* 重新分配（微信风格次要操作） */
+.g-reshuffle {
+  width: 100%;
+  border: none;
+  background: #fff;
+  border-radius: 10px;
+  padding: 11px 12px;
+  margin-top: 10px;
+  font-size: 14px;
+  color: #576b95;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.g-reshuffle:active {
   background: #f5f5f5;
 }
 

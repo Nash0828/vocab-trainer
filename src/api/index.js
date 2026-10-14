@@ -49,6 +49,7 @@ export const api = {
   // 分组
   getGroups: () => req('/api/groups'),
   saveGroups: (groups) => req('/api/groups/save', { method: 'POST', body: { groups } }),
+  reshuffleGroups: () => req('/api/groups/reshuffle', { method: 'POST', body: {} }),
 
   // 背诵记录
   addRecord: (data) => req('/api/records', { method: 'POST', body: data }),

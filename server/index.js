@@ -455,6 +455,57 @@ function shuffle(arr) {
   return arr
 }
 
+// 重新分配：保持各组序号/名称/数量不变，把词库词句完全打散随机重新分到各组
+app.post('/api/groups/reshuffle', (req, res) => {
+  const uid = req.userId
+  const threshold = getThreshold(uid)
+  const groups = db.prepare('SELECT id, name, seq FROM groups WHERE user_id = ? ORDER BY seq ASC, id ASC').all(uid)
+  if (!groups.length) return res.json({ ok: true, groups: [], total: 0 })
+
+  // 各组当前实时数量（口径与 /api/groups 一致）
+  const sizeOf = (gid) =>
+    db.prepare('SELECT COUNT(*) c FROM word_groups wg JOIN words w ON w.id = wg.word_id WHERE wg.group_id = ? AND w.user_id = ?').get(gid, uid).c
+  const targets = groups.map((g) => sizeOf(g.id))
+
+  const wordIds = db.prepare('SELECT id FROM words WHERE user_id = ?').all(uid).map((w) => w.id)
+  const total = wordIds.length
+  if (!total) {
+    return res.json({ ok: true, groups: groups.map((g) => ({ id: g.id, name: g.name, seq: g.seq, size: 0, mastered: 0 })), total: 0 })
+  }
+
+  // 兜底：组数量总和与词库总数不一致时（如未入组的新词），按比例补齐到总数
+  const sum = targets.reduce((a, b) => a + b, 0)
+  if (sum !== total) {
+    for (let i = 0; i < total; i++) targets[i % targets.length]++
+    // 削平超出：从最大组逐个减到总数为 total
+    while (targets.reduce((a, b) => a + b, 0) > total) {
+      let mi = 0
+      for (let i = 1; i < targets.length; i++) if (targets[i] > targets[mi]) mi = i
+      targets[mi]--
+    }
+  }
+
+  shuffle(wordIds)
+  const tx = db.transaction(() => {
+    db.prepare('DELETE FROM word_groups WHERE group_id IN (SELECT id FROM groups WHERE user_id = ?)').run(uid)
+    const ins = db.prepare('INSERT OR REPLACE INTO word_groups (word_id, group_id) VALUES (?, ?)')
+    let idx = 0
+    for (let gi = 0; gi < groups.length; gi++) {
+      for (let k = 0; k < targets[gi]; k++) ins.run(wordIds[idx++], groups[gi].id)
+    }
+  })
+  tx()
+
+  const result = groups.map((g) => {
+    const size = sizeOf(g.id)
+    const mastered = db
+      .prepare('SELECT COUNT(*) c FROM word_groups wg JOIN words w ON w.id = wg.word_id WHERE wg.group_id = ? AND w.user_id = ? AND w.count >= ?')
+      .get(g.id, uid, threshold).c
+    return { id: g.id, name: g.name, seq: g.seq, size, mastered }
+  })
+  res.json({ ok: true, groups: result, total })
+})
+
 // 新词自动分到数量最少的组（用户无分组时不入组）
 function assignWordToSmallestGroup(uid, wordId) {
   const g = db.prepare(`
