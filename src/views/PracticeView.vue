@@ -1253,7 +1253,7 @@ next()
           <div v-else-if="wordBubble.error" class="wb-error">{{ wordBubble.error }}</div>
           <template v-else-if="wordBubble.data">
             <div class="wb-head">
-              <div class="wb-word">{{ wordBubble.word }}</div>
+              <span class="wb-word">{{ wordBubble.word }}</span>
               <button class="speak-mini" :class="{ 'is-playing': playingKey === 'bubble' }" @click="speak(wordBubble.word, 0, null, 'bubble')" title="朗读"><span class="spk-static">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span><span class="spk-eq"><i></i><i></i><i></i></span>
               </button>
@@ -2550,8 +2550,7 @@ next()
 .wb-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
 }
 .wb-word {
   font-size: 17px;
