@@ -68,6 +68,24 @@ const filterSummary = computed(() => {
 })
 // 是否启用了非默认筛选（用于按钮绿色高亮）
 const hasFilter = computed(() => sourceMode.value !== 'all' || typeFilter.value !== 'all')
+// 当前生效的筛选条件标签（chips）：仅错题本 / 类型
+const activeFilterChips = computed(() => {
+  const chips = []
+  if (sourceMode.value === 'wrong') chips.push({ key: 'source', label: '仅错题本' })
+  if (typeFilter.value !== 'all') {
+    const t = typeFilterOptions.find((o) => o.value === typeFilter.value)?.label
+    if (t) chips.push({ key: 'type', label: t })
+  }
+  return chips
+})
+// 删除单个筛选条件（微信风格：点标签上的 × 移除）
+function removeFilterChip(key) {
+  if (key === 'source') sourceMode.value = 'all'
+  else if (key === 'type') typeFilter.value = 'all'
+  lastIndex.value = -1
+  clearAutoTimer()
+  next()
+}
 function openFilterSheet() {
   draftSourceMode.value = sourceMode.value
   draftTypeFilter.value = typeFilter.value
@@ -875,6 +893,16 @@ next()
       </button>
     </div>
 
+    <!-- 当前筛选条件标签（微信风格，可单独删除） -->
+    <div v-if="activeFilterChips.length" class="filter-chips">
+      <span v-for="chip in activeFilterChips" :key="chip.key" class="filter-chip">
+        {{ chip.label }}
+        <button class="chip-del" title="移除该筛选" @click="removeFilterChip(chip.key)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </span>
+    </div>
+
     <!-- 分组模式：组下拉选框 + 分组设置 -->
     <div v-if="practiceMode === 'group'" class="group-row">
       <select v-if="groups.length" class="group-select" :value="selectedGroupId" @change="onSelectGroup">
@@ -1359,6 +1387,40 @@ next()
 .filter-icon-btn.active {
   color: var(--primary);
   background: rgba(7, 193, 96, 0.1);
+}
+
+/* 筛选条件标签（微信风格：浅灰底小圆角 chip，可单独删除） */
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -4px 16px 10px;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #f2f2f2;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+.chip-del {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: #b0b0b0;
+  cursor: pointer;
+}
+
+.chip-del:active {
+  color: #888;
 }
 
 /* 分组模式：组下拉 + 分组设置按钮 */
