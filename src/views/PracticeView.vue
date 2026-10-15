@@ -315,6 +315,23 @@ const inputDisabled = computed(() => {
   return false
 })
 
+// 点击发音/查词按钮时保持输入框焦点（iOS 键盘不收起）：
+// @mousedown.prevent 已阻止按钮抢焦点；这里再在手势内把焦点放回输入框
+function refocusInput() {
+  const el = answerInput.value
+  if (el && document.activeElement !== el) {
+    try { el.focus() } catch (e) {}
+  }
+}
+function speakKeepFocus(word, type = 0, onDone = null, key = '') {
+  speak(word, type, onDone, key)
+  refocusInput()
+}
+function lookupKeepFocus(word) {
+  lookupWord(word)
+  refocusInput()
+}
+
 function submit() {
   if (!current.value || result.value || !answer.value.trim()) return
   // 大小写敏感：开启则严格匹配，否则不区分大小写（均去除首尾空格）
@@ -1063,11 +1080,11 @@ next()
         <p v-if="current.pos" class="quiz-pos">{{ current.pos }}</p>
 
         <div class="quiz-sound">
-          <button class="sound-btn" :class="{ 'is-playing': playingKey === 'main' }" @click="speak(current.english, 0, null, 'main')"><span class="spk-static">
+          <button class="sound-btn" :class="{ 'is-playing': playingKey === 'main' }" @mousedown.prevent @click="speakKeepFocus(current.english, 0, null, 'main')"><span class="spk-static">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span><span class="spk-eq"><i></i><i></i><i></i></span>
             发音
           </button>
-          <button class="sound-btn" @click="lookupWord(current.english)">
+          <button class="sound-btn" @mousedown.prevent @click="lookupKeepFocus(current.english)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
             查词
           </button>
