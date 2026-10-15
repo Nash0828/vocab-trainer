@@ -270,6 +270,15 @@ watch(dictModal, (val) => {
 const threshold = computed(() => settings.value.masteryThreshold)
 const masteredCount = computed(() => words.value.filter((w) => isMastered(w)).length)
 
+// 词库统计：全部 / 单词 / 短语 / 句子（基于全量，不受搜索与筛选影响）
+const typeStats = computed(() => {
+  const all = words.value.length
+  const word = words.value.filter((w) => (w.type || 'word') === 'word').length
+  const phrase = words.value.filter((w) => w.type === 'phrase').length
+  const sentence = words.value.filter((w) => w.type === 'sentence').length
+  return { all, word, phrase, sentence }
+})
+
 // ---- 排序：支持「背诵进度」与「录入时间」两列（三态：降序 → 升序 → 取消） ----
 const sortField = ref(null) // null | 'count' | 'createdAt'
 const sortDir = ref('desc') // 'asc' | 'desc'
@@ -611,6 +620,26 @@ function formatTime(ts) {
     <transition name="fade">
       <p v-if="tip" class="tip" :class="tip.kind">{{ tip.text }}</p>
     </transition>
+
+    <!-- 词库统计：全部 / 单词 / 短语 / 句子 -->
+    <div v-if="totalCount" class="lib-stats">
+      <div class="stat-item">
+        <span class="stat-num">{{ typeStats.all }}</span>
+        <span class="stat-label">全部</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">{{ typeStats.word }}</span>
+        <span class="stat-label">单词</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">{{ typeStats.phrase }}</span>
+        <span class="stat-label">短语</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">{{ typeStats.sentence }}</span>
+        <span class="stat-label">句子</span>
+      </div>
+    </div>
 
     <!-- 筛选工具栏 -->
     <div v-if="totalCount" class="filter-bar">
@@ -1178,6 +1207,39 @@ function formatTime(ts) {
   flex-direction: column;
   gap: 10px;
   margin-top: 12px;
+}
+
+/* 词库统计条（微信风格） */
+.lib-stats {
+  display: flex;
+  background: #fff;
+  margin: 8px 16px 0;
+  border-radius: 12px;
+  padding: 14px 0;
+}
+
+.stat-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.stat-item + .stat-item {
+  border-left: 0.5px solid #f0f0f0;
+}
+
+.stat-num {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #999;
 }
 
 .search-box {
