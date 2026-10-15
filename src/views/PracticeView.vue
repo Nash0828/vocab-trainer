@@ -1049,9 +1049,9 @@ next()
 
       <!-- 答题区 -->
       <div class="quiz-card">
-        <p v-if="current.type && current.type !== 'word'" class="quiz-type">{{ current.type === 'phrase' ? '短语' : '句子' }}</p>
         <p class="quiz-label">中文</p>
         <p class="quiz-word" :class="quizWordClass">{{ current.chinese }}</p>
+        <p v-if="current.type && current.type !== 'word'" class="quiz-type">{{ current.type === 'phrase' ? '短语' : '句子' }}</p>
         <p v-if="current.pos" class="quiz-pos">{{ current.pos }}</p>
 
         <div class="quiz-sound">
@@ -2006,7 +2006,7 @@ next()
   margin-bottom: 8px;
 }
 
-/* 短语/句子类型小标签（与词句库列表一致） */
+/* 短语/句子类型小标签（与词句库列表一致，位于词性位置） */
 .quiz-type {
   display: inline-block;
   padding: 1px 8px;
@@ -2014,7 +2014,7 @@ next()
   background: rgba(7, 193, 96, 0.1);
   color: var(--primary);
   font-size: 12px;
-  margin: 0 0 8px;
+  margin: 0 0 16px;
 }
 
 .quiz-word {
