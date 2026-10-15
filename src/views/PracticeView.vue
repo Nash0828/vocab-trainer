@@ -307,6 +307,14 @@ function next() {
   focusInput()
 }
 
+// 输入框禁用逻辑：答错禁输；答对且不自动跳才置灰；
+// 答对且自动跳时保持可编辑，避免 iOS 上 disabled 失焦导致键盘收起
+const inputDisabled = computed(() => {
+  if (result.value === 'wrong') return true
+  if (result.value === 'correct') return !settings.value.autoNext
+  return false
+})
+
 function submit() {
   if (!current.value || result.value || !answer.value.trim()) return
   // 大小写敏感：开启则严格匹配，否则不区分大小写（均去除首尾空格）
@@ -1084,7 +1092,7 @@ next()
             enterkeyhint="go"
             autocorrect="off"
             placeholder="输入英文"
-            :disabled="!!result || answeredLock"
+            :disabled="inputDisabled"
             @focus="focusEnabled = true"
             @keyup.enter="submit"
             autocomplete="off"
@@ -1100,7 +1108,7 @@ next()
             rows="2"
             autocorrect="off"
             placeholder="输入英文"
-            :disabled="!!result || answeredLock"
+            :disabled="inputDisabled"
             @focus="focusEnabled = true"
             autocomplete="off"
             autocapitalize="off"
