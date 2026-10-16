@@ -156,6 +156,8 @@ function clearAllFields() {
             rows="2"
             placeholder="请输入中文"
             autocomplete="off"
+            @keydown.ctrl.enter.prevent="submit"
+            @keydown.meta.enter.prevent="submit"
           ></textarea>
         </div>
         <div class="form-item">
@@ -173,6 +175,8 @@ function clearAllFields() {
             rows="2"
             placeholder="请输入英文"
             autocomplete="off"
+            @keydown.ctrl.enter.prevent="submit"
+            @keydown.meta.enter.prevent="submit"
           ></textarea>
         </div>
         <template v-if="form.type === 'word'">

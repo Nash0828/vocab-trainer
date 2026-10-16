@@ -952,6 +952,12 @@ function onGlobalKeydown(e) {
     }
     return
   }
+  // Ctrl+Enter：等同于普通输入框的提交效果（提交当前答案）
+  if ((e.ctrlKey || e.metaKey) && key === 'Enter') {
+    e.preventDefault()
+    submit()
+    return
+  }
   if (e.key !== 'Enter') return
   const canSkip = result.value === 'wrong' || (result.value === 'correct' && isRedo.value)
   if (!canSkip) return
