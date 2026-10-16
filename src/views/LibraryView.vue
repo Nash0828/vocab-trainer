@@ -76,7 +76,7 @@ function speak(word, type = 0, onDone = null, key = '') {
   audioPlaying.value = true
   playingKey.value = key
   try {
-    const url = `https://dict.youdao.com/dictvoice?type=${type}&audio=${encodeURIComponent(text)}`
+    const url = `/api/tts?text=${encodeURIComponent(text)}`
     currentAudio = new Audio(url)
     let fallbacked = false
     const once = () => {
@@ -229,13 +229,13 @@ async function openWordBubble(word, el) {
     nextTick(() => placeBubble(rect))
   }
 }
-// 朗读例句（有道 dictvoice type=2 句子发音）
+// 朗读例句（走本服务 /api/tts，豆包发音）
 function speakSentence(sentence, key = '') {
   if (!sentence || audioPlaying.value) return
   try {
     audioPlaying.value = true
     playingKey.value = key
-    const url = `https://dict.youdao.com/dictvoice?type=2&audio=${encodeURIComponent(String(sentence).trim())}`
+    const url = `/api/tts?text=${encodeURIComponent(String(sentence).trim())}`
     currentAudio = new Audio(url)
     const done = () => { audioPlaying.value = false; if (playingKey.value === key) playingKey.value = '' }
     currentAudio.onended = done
