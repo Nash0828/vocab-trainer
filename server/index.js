@@ -620,7 +620,12 @@ const BAIDU_KEY = 'rZ9HkdaEImD2KGoVLeCV'
 
 // ============ AI 日常用法（DeepSeek，key 存于 config.js 不入库） ============
 let DEEPSEEK_KEY = ''
-try { DEEPSEEK_KEY = req('./config.cjs').DEEPSEEK_KEY || '' } catch (e) { console.error('config load fail:', e.message) }
+let BYTEDANCE_TTS_KEY = ''
+try {
+  const cfg = req('./config.cjs')
+  DEEPSEEK_KEY = cfg.DEEPSEEK_KEY || ''
+  BYTEDANCE_TTS_KEY = cfg.BYTEDANCE_TTS_KEY || ''
+} catch (e) { console.error('config load fail:', e.message) }
 const usagePending = new Map() // 并发锁：同词同时查询只调一次 AI
 
 app.get('/api/usage', async (req, res) => {
@@ -742,23 +747,54 @@ app.get('/api/tts', async (req, res) => {
     res.set('Cache-Control', 'public, max-age=86400')
     return res.send(cached)
   }
-  try {
-    const url = `https://fanyi.baidu.com/gettts?lan=en&text=${encodeURIComponent(text)}&spd=3&source=web`
-    const r = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-      signal: AbortSignal.timeout(8000),
-    })
-    if (!r.ok) return res.status(502).json({ error: 'TTS 上游服务异常' })
-    const buf = Buffer.from(await r.arrayBuffer())
-    if (buf.length < 1000) return res.status(502).json({ error: 'TTS 未生成音频' })
-    if (ttsCache.size > 2000) ttsCache.clear()
-    ttsCache.set(text, buf)
-    res.set('Content-Type', 'audio/mpeg')
-    res.set('Cache-Control', 'public, max-age=86400')
-    res.send(buf)
-  } catch (e) {
-    res.status(502).json({ error: 'TTS 请求失败' })
+  let buf = null
+  // 策略：单词（无空格）走百度秒出；句子/短语（含空格）走豆包自然发音
+  const isPhrase = /\s/.test(text)
+  if (isPhrase && BYTEDANCE_TTS_KEY) {
+    try {
+      const r = await fetch('https://openspeech.bytedance.com/api/v3/tts/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Api-Key': BYTEDANCE_TTS_KEY },
+        body: JSON.stringify({
+          model: 'seed-audio-1.0',
+          text_prompt: `请用自然清晰的英语女声朗读：${text}`,
+          audio_config: { format: 'mp3', sample_rate: 48000, pitch_rate: 0, speech_rate: 0, loudness_rate: 0 },
+          watermark: {},
+        }),
+        signal: AbortSignal.timeout(30000),
+      })
+      const j = await r.json().catch(() => null)
+      const b64 = j && j.audio ? String(j.audio) : ''
+      if (b64) {
+        const audio = Buffer.from(b64, 'base64')
+        if (audio.length > 1000) buf = audio
+      }
+    } catch (e) {
+      console.error('豆包 TTS 失败:', e.message)
+    }
   }
+  // 兜底：百度翻译发音（单词主用、长文本失败时兜底）
+  if (!buf) {
+    try {
+      const url = `https://fanyi.baidu.com/gettts?lan=en&text=${encodeURIComponent(text)}&spd=3&source=web`
+      const r = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+        signal: AbortSignal.timeout(8000),
+      })
+      if (r.ok) {
+        const audio = Buffer.from(await r.arrayBuffer())
+        if (audio.length >= 1000) buf = audio
+      }
+    } catch (e) {
+      console.error('百度 TTS 兜底失败:', e.message)
+    }
+  }
+  if (!buf) return res.status(502).json({ error: 'TTS 未生成音频' })
+  if (ttsCache.size > 2000) ttsCache.clear()
+  ttsCache.set(text, buf)
+  res.set('Content-Type', 'audio/mpeg')
+  res.set('Cache-Control', 'public, max-age=86400')
+  res.send(buf)
 })
 
 app.get('/api/export', (req, res) => {
