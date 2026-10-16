@@ -45,14 +45,15 @@ onMounted(load)
 <style scoped>
 .ai-card {
   background: #f7f7f7;
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin: 10px 0 0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 10px 0 16px;
 }
 .ai-label {
   font-size: 11px;
   color: var(--text-sub);
-  margin: 0 0 6px 0;
+  margin: 0 0 8px 0;
+  font-weight: 500;
 }
 .ai-loading {
   font-size: 13px;
@@ -60,8 +61,8 @@ onMounted(load)
   margin: 0;
 }
 .ai-text {
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: 14px;
+  line-height: 1.7;
   color: var(--text-main);
   margin: 0;
   white-space: pre-wrap;
@@ -69,7 +70,7 @@ onMounted(load)
 }
 .ai-text.clamped {
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -77,9 +78,9 @@ onMounted(load)
   border: none;
   background: transparent;
   color: var(--primary);
-  font-size: 12px;
+  font-size: 13px;
   padding: 0;
-  margin-top: 6px;
+  margin-top: 8px;
   cursor: pointer;
 }
 </style>
