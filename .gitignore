@@ -42,3 +42,4 @@ __screenshots__/
 vocab.db
 vocab.db-shm
 vocab.db-wal
+server/config.js

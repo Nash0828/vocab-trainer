@@ -615,6 +615,60 @@ app.delete('/api/wrongbook', (req, res) => {
 // 百度翻译开放平台（整句翻译）
 const BAIDU_APPID = '20261010002698344'
 const BAIDU_KEY = 'rZ9HkdaEImD2KGoVLeCV'
+
+// ============ AI 日常用法（DeepSeek，key 存于 config.js 不入库） ============
+let DEEPSEEK_KEY = ''
+try { DEEPSEEK_KEY = require('./config').DEEPSEEK_KEY || '' } catch (e) {}
+const usagePending = new Map() // 并发锁：同词同时查询只调一次 AI
+
+app.get('/api/usage', async (req, res) => {
+  const word = String(req.query.word || '').trim().slice(0, 100)
+  if (!word) return res.status(400).json({ error: '缺少单词' })
+  // 缓存命中直接返回
+  const cached = db.prepare('SELECT content FROM usage_cache WHERE word = ?').get(word)
+  if (cached) return res.json({ word, usage: cached.content })
+  if (!DEEPSEEK_KEY) return res.status(503).json({ error: 'AI 未配置' })
+  // 同词并发：复用进行中的请求
+  if (usagePending.has(word)) {
+    try {
+      const usage = await usagePending.get(word)
+      return res.json({ word, usage })
+    } catch (e) {
+      return res.status(502).json({ error: e.message || 'AI 查询失败' })
+    }
+  }
+  const task = (async () => {
+    const r = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${DEEPSEEK_KEY}` },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: '你是一位英语学习助手。请用简体中文解释一个英语单词或短语在日常生活中的用法，格式如下：1. 核心含义（一句话）；2. 常见用法/搭配（2-3条，每条一行）；3. 两个日常生活例句（英文+中文翻译）。控制在150字以内，语言自然口语化。' },
+          { role: 'user', content: word },
+        ],
+        temperature: 0.7,
+        max_tokens: 300,
+      }),
+      signal: AbortSignal.timeout(15000),
+    })
+    const j = await r.json()
+    const usage = j?.choices?.[0]?.message?.content
+    if (!usage) throw new Error(j?.error?.message || 'AI 返回为空')
+    db.prepare('INSERT OR REPLACE INTO usage_cache (word, content, created_at) VALUES (?, ?, ?)').run(word, usage, Date.now())
+    return usage
+  })()
+  usagePending.set(word, task)
+  try {
+    const usage = await task
+    res.json({ word, usage })
+  } catch (e) {
+    res.status(502).json({ error: e.message || 'AI 查询失败' })
+  } finally {
+    usagePending.delete(word)
+  }
+})
+
 async function baiduTranslate(text) {
   const q = String(text || '').trim().slice(0, 2000)
   if (!q) return null

@@ -83,6 +83,12 @@ db.exec(`
     UNIQUE(user_id, word_id)
   );
 
+  CREATE TABLE IF NOT EXISTS usage_cache (
+    word TEXT PRIMARY KEY,
+    content TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS guest_meta (
     user_id TEXT PRIMARY KEY,
     last_ip TEXT DEFAULT '',

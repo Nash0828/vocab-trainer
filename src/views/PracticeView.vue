@@ -5,6 +5,7 @@ import { useWords, loadState, weightedPickIndex } from '../composables/useWords'
 import { useHistory } from '../composables/useHistory'
 import { useWrongBook } from '../composables/useWrongBook'
 import { api } from '../api/index.js'
+import AiUsageCard from '../components/AiUsageCard.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -1284,6 +1285,7 @@ next()
           <h3>{{ dictModal.word }}</h3>
           <button class="dict-close" @click="closeDict">✕</button>
         </div>
+        <AiUsageCard v-if="dictModal" :word="dictModal.word" />
         <div class="dict-body">
           <div v-if="dictModal.loading" class="dict-loading">查询中…</div>
           <div v-else-if="dictModal.error" class="dict-error">{{ dictModal.error }}</div>
