@@ -749,24 +749,20 @@ app.get('/api/tts', async (req, res) => {
     return res.send(cached)
   }
   let buf = null
-  // 1) 豆包语音合成（seed-tts-2.0 双向流式，低时延、音色自然，全量优先）
-  if (BYTEDANCE_TTS_KEY) {
-    try { buf = await volcTts(text) } catch (e) { console.error('豆包流式 TTS 失败:', e.message) }
-  }
-  // 2) 兜底：百度翻译发音
-  if (!buf) {
-    try {
-      const url = `https://fanyi.baidu.com/gettts?lan=en&text=${encodeURIComponent(text)}&spd=3&source=web`
-      const r = await fetch(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-        signal: AbortSignal.timeout(8000),
-      })
-      if (r.ok) {
-        const audio = Buffer.from(await r.arrayBuffer())
-        if (audio.length >= 1000) buf = audio
-      }
-    } catch (e) {
-      console.error('百度 TTS 兜底失败:', e.message)
+  // 单词/短语（词数≤6 且非句末标点）走百度：标准词典音、平实无语气；句子走豆包：自然语气
+  const isSentence = /[.?!]["'\u201d]?\s*$/.test(text) || text.split(/\s+/).length > 6
+  if (isSentence) {
+    // 1) 豆包语音合成（seed-tts-2.0 双向流式，低时延、音色自然）
+    if (BYTEDANCE_TTS_KEY) {
+      try { buf = await volcTts(text) } catch (e) { console.error('豆包流式 TTS 失败:', e.message) }
+    }
+    // 2) 兜底：百度翻译发音
+    if (!buf) buf = await baiduTts(text)
+  } else {
+    // 单词/短语：百度优先（平实），豆包兜底
+    buf = await baiduTts(text)
+    if (!buf && BYTEDANCE_TTS_KEY) {
+      try { buf = await volcTts(text) } catch (e) { console.error('豆包流式 TTS 失败:', e.message) }
     }
   }
   if (!buf) return res.status(502).json({ error: 'TTS 未生成音频' })
@@ -776,6 +772,23 @@ app.get('/api/tts', async (req, res) => {
   res.set('Cache-Control', 'public, max-age=86400')
   res.send(buf)
 })
+
+async function baiduTts(text) {
+  try {
+    const url = `https://fanyi.baidu.com/gettts?lan=en&text=${encodeURIComponent(text)}&spd=3&source=web`
+    const r = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+      signal: AbortSignal.timeout(8000),
+    })
+    if (r.ok) {
+      const audio = Buffer.from(await r.arrayBuffer())
+      if (audio.length >= 1000) return audio
+    }
+  } catch (e) {
+    console.error('百度 TTS 失败:', e.message)
+  }
+  return null
+}
 
 // ===== 豆包语音合成（seed-tts-2.0 双向流式 WebSocket）=====
 const VOLC_EV = { START_CONNECTION: 1, FINISH_CONNECTION: 2, CONNECTION_STARTED: 50, CONNECTION_FAILED: 51, CONNECTION_FINISHED: 52, START_SESSION: 100, FINISH_SESSION: 102, SESSION_STARTED: 150, SESSION_FINISHED: 152, SESSION_FAILED: 153, TASK_REQUEST: 200, TTS_RESPONSE: 352 }
