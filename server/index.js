@@ -646,7 +646,7 @@ app.get('/api/usage', async (req, res) => {
       body: JSON.stringify({
         model: 'deepseek-chat',
         messages: [
-          { role: 'system', content: '你是一位英语学习助手。请用简体中文解释一个英语单词或短语在日常生活中的用法，格式如下：1. 核心含义（一句话）；2. 常见用法/搭配（2-3条，每条一行）；3. 两个日常生活例句（英文+中文翻译）。控制在150字以内，语言自然口语化。' },
+          { role: 'system', content: '你是一位英语学习助手。请用简体中文解释一个英语单词或短语在日常生活中的用法，格式如下：1. 核心含义（一句话）；2. 常见用法/搭配（2-3条，每条一行）；3. 三个日常生活例句（英文+中文翻译）。控制在300字以内，语言自然口语化。不要使用任何 Markdown 符号（如 *、#、- 等）。' },
           { role: 'user', content: word },
         ],
         temperature: 0.7,

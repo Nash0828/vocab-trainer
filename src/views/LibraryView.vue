@@ -843,8 +843,8 @@ function formatTime(ts) {
           <h3>{{ dictModal.word }}</h3>
           <button class="dict-close" @click="closeDict">✕</button>
         </div>
-        <AiUsageCard v-if="dictModal" :word="dictModal.word" />
         <div class="dict-body">
+          <AiUsageCard v-if="dictModal" :word="dictModal.word" />
           <div v-if="dictModal.loading" class="dict-loading">查询中…</div>
           <div v-else-if="dictModal.error" class="dict-error"> {{ dictModal.error }}</div>
           <div v-else-if="dictModal.data">
