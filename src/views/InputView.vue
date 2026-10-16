@@ -149,6 +149,8 @@ function clearAllFields() {
             type="text"
             placeholder="请输入中文"
             autocomplete="off"
+            @keydown.ctrl.enter.prevent="submit"
+            @keydown.meta.enter.prevent="submit"
           />
           <textarea
             v-else
@@ -168,6 +170,8 @@ function clearAllFields() {
             type="text"
             placeholder="请输入英文"
             autocomplete="off"
+            @keydown.ctrl.enter.prevent="submit"
+            @keydown.meta.enter.prevent="submit"
           />
           <textarea
             v-else
