@@ -107,6 +107,12 @@ function goPractice(word) {
   if (!word) return
   router.push({ path: '/practice', query: { word } })
 }
+
+// 判断历史记录是否为单词（旧记录无 type 字段时按英文是否含空格兜底）
+function isWordRecord(r) {
+  const t = r.type || (r.english && r.english.trim().includes(' ') ? 'phrase' : 'word')
+  return t === 'word'
+}
 </script>
 
 <template>
@@ -202,7 +208,7 @@ function goPractice(word) {
                     </div>
                     <div v-if="!r.correct && r.userAnswer" class="rec-wrong">
                       <span class="rec-wrong-label">你答：</span>
-                      <template v-if="r.type === 'word'">
+                      <template v-if="isWordRecord(r)">
                         <span class="diff-bad">{{ r.userAnswer }}</span>
                       </template>
                       <template v-else>
