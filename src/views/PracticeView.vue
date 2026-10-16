@@ -480,6 +480,34 @@ function speak(word, type = 0, onDone = null, key = '') {
   }
 }
 
+// 英音/美音发音（详情弹框）：有道 dictvoice type=0 英音、type=1 美音，失败兜底本服务
+function speakAccent(word, accent, key = '') {
+  if (!word || audioPlaying.value) return
+  const text = String(word).trim()
+  audioPlaying.value = true
+  playingKey.value = key
+  stopAudio()
+  const type = accent === 'uk' ? 0 : 1
+  const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=${type}`
+  currentAudio = new Audio(url)
+  const done = () => { audioPlaying.value = false; if (playingKey.value === key) playingKey.value = '' }
+  let fallbacked = false
+  const once = () => {
+    if (fallbacked) return
+    fallbacked = true
+    const u2 = `/api/tts?text=${encodeURIComponent(text)}`
+    currentAudio = new Audio(u2)
+    currentAudio.onended = done
+    currentAudio.onpause = done
+    currentAudio.onerror = done
+    currentAudio.play().catch(done)
+  }
+  currentAudio.onended = done
+  currentAudio.onpause = done
+  currentAudio.onerror = once
+  currentAudio.play().catch(once)
+}
+
 // 百度 TTS（走本服务代理 /api/tts，支持任意句子）
 function speakBaidu(text) {
   try {
@@ -1305,13 +1333,13 @@ next()
             <div v-if="dictModal.data.usphone || dictModal.data.ukphone" class="dict-phonetic">
               <span v-if="dictModal.data.ukphone" class="phonetic-item">
                 英 [{{ dictModal.data.ukphone }}]
-                <button class="speak-mini" :class="{ 'is-playing': playingKey === 'uk' }" @click="speak(dictModal.word, 1, null, 'uk')" title="英式发音"><span class="spk-static">
+                <button class="speak-mini" :class="{ 'is-playing': playingKey === 'uk' }" @click="speakAccent(dictModal.word, 'uk', 'uk')" title="英式发音"><span class="spk-static">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span><span class="spk-eq"><i></i><i></i><i></i></span>
                 </button>
               </span>
               <span v-if="dictModal.data.usphone" class="phonetic-item" style="margin-left:12px">
                 美 [{{ dictModal.data.usphone }}]
-                <button class="speak-mini" :class="{ 'is-playing': playingKey === 'us' }" @click="speak(dictModal.word, 0, null, 'us')" title="美式发音"><span class="spk-static">
+                <button class="speak-mini" :class="{ 'is-playing': playingKey === 'us' }" @click="speakAccent(dictModal.word, 'us', 'us')" title="美式发音"><span class="spk-static">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span><span class="spk-eq"><i></i><i></i><i></i></span>
                 </button>
               </span>
