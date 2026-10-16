@@ -212,7 +212,9 @@ function isWordRecord(r) {
                         <span class="diff-bad">{{ r.userAnswer }}</span>
                       </template>
                       <template v-else>
-                        <span v-for="(d, i) in diffUserWords(r.userAnswer, r.english)" :key="i" :class="d.ok ? 'diff-ok' : 'diff-bad'">{{ d.word }}</span>
+                        <span class="rec-diff">
+                          <span v-for="(d, i) in diffUserWords(r.userAnswer, r.english)" :key="i" :class="d.ok ? 'diff-ok' : 'diff-bad'">{{ d.word }}</span>
+                        </span>
                       </template>
                     </div>
                   </div>
@@ -564,6 +566,11 @@ function isWordRecord(r) {
 /* 你答：短语/句子逐词对比（对词绿、错词红） */
 .rec-wrong-label {
   color: var(--text-sub);
+}
+.rec-diff {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0 4px;
 }
 .diff-ok {
   color: var(--success);
