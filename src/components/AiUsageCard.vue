@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 
 const props = defineProps({
   word: { type: String, required: true },
+  type: { type: String, default: 'word' },
 })
 
 const status = ref('loading') // loading | done | error
@@ -14,7 +15,7 @@ const hasMore = computed(() => usage.value.length > 80)
 async function load() {
   status.value = 'loading'
   try {
-    const res = await fetch(`/api/usage?word=${encodeURIComponent(props.word)}`)
+    const res = await fetch(`/api/usage?word=${encodeURIComponent(props.word)}&type=${encodeURIComponent(props.type || 'word')}`)
     if (!res.ok) throw new Error('AI 查询失败')
     const j = await res.json()
     usage.value = j.usage || ''

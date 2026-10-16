@@ -28,9 +28,9 @@ let tipTimer = null
 
 // ===== 词典查询弹窗 =====
 const dictModal = ref(null)
-async function lookupWord(word) {
+async function lookupWord(word, type = 'word') {
   if (!word) return
-  dictModal.value = { word, data: null, loading: true, error: null }
+  dictModal.value = { word, type, data: null, loading: true, error: null }
   try {
     const res = await fetch(`/api/dict?word=${encodeURIComponent(word.trim().toLowerCase())}`)
     if (!res.ok) {
@@ -761,7 +761,7 @@ function formatTime(ts) {
         <template v-else>
           <div class="word-main">
             <div class="word-left">
-              <span class="word-en" title="查看详情" @click="lookupWord(word.english)">{{ word.english }}</span>
+              <span class="word-en" title="查看详情" @click="lookupWord(word.english, word.type || 'word')">{{ word.english }}</span>
               <button class="speak-btn" :class="{ 'is-playing': playingKey === 'card' + word.id }" title="发音" @click.stop="speak(word.english, 0, null, 'card' + word.id)"><span class="spk-static">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span><span class="spk-eq"><i></i><i></i><i></i></span>
               </button>
@@ -801,7 +801,7 @@ function formatTime(ts) {
               <button class="op-btn" title="编辑" @click="startEdit(word)">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               </button>
-              <button class="op-btn" title="查词典" @click="lookupWord(word.english)">
+              <button class="op-btn" title="查词典" @click="lookupWord(word.english, word.type || 'word')">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
               </button>
               <button class="op-btn" title="重置次数" @click="askReset(word)">
@@ -844,7 +844,7 @@ function formatTime(ts) {
           <button class="dict-close" @click="closeDict">✕</button>
         </div>
         <div class="dict-body">
-          <AiUsageCard v-if="dictModal" :word="dictModal.word" />
+          <AiUsageCard v-if="dictModal" :word="dictModal.word" :type="dictModal.type || 'word'" />
           <div v-if="dictModal.loading" class="dict-loading">查询中…</div>
           <div v-else-if="dictModal.error" class="dict-error"> {{ dictModal.error }}</div>
           <div v-else-if="dictModal.data">

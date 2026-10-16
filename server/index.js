@@ -624,7 +624,8 @@ try { DEEPSEEK_KEY = req('./config.cjs').DEEPSEEK_KEY || '' } catch (e) { consol
 const usagePending = new Map() // 并发锁：同词同时查询只调一次 AI
 
 app.get('/api/usage', async (req, res) => {
-  const word = String(req.query.word || '').trim().slice(0, 100)
+  const word = String(req.query.word || '').trim().slice(0, 200)
+  const type = String(req.query.type || 'word').slice(0, 10)
   if (!word) return res.status(400).json({ error: '缺少单词' })
   // 缓存命中直接返回
   const cached = db.prepare('SELECT content FROM usage_cache WHERE word = ?').get(word)
@@ -639,6 +640,10 @@ app.get('/api/usage', async (req, res) => {
       return res.status(502).json({ error: e.message || 'AI 查询失败' })
     }
   }
+  // 提示词：句子用句子版（400 字内），单词/短语用通用版（300 字内）
+  const sysPrompt = type === 'sentence'
+    ? '你是一位英语学习助手。请用简体中文讲解一个英语句子的含义和用法，格式如下：1. 整句意思（中文翻译）；2. 结构拆解（简要说明句型、时态、关键搭配或短语，适合初中生理解）；3. 使用场景（这句话通常用在什么场合，1-2 句话）。控制在400字以内，语言自然口语化。不要使用任何 Markdown 符号（如 *、#、- 等）。'
+    : '你是一位英语学习助手。请用简体中文解释一个英语单词或短语在日常生活中的用法，格式如下：1. 核心含义（一句话）；2. 常见用法/搭配（2-3条，每条一行）；3. 三个日常生活例句（英文+中文翻译）。控制在300字以内，语言自然口语化。不要使用任何 Markdown 符号（如 *、#、- 等）。'
   const task = (async () => {
     const r = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
@@ -646,11 +651,11 @@ app.get('/api/usage', async (req, res) => {
       body: JSON.stringify({
         model: 'deepseek-chat',
         messages: [
-          { role: 'system', content: '你是一位英语学习助手。请用简体中文解释一个英语单词或短语在日常生活中的用法，格式如下：1. 核心含义（一句话）；2. 常见用法/搭配（2-3条，每条一行）；3. 三个日常生活例句（英文+中文翻译）。控制在300字以内，语言自然口语化。不要使用任何 Markdown 符号（如 *、#、- 等）。' },
+          { role: 'system', content: sysPrompt },
           { role: 'user', content: word },
         ],
         temperature: 0.7,
-        max_tokens: 300,
+        max_tokens: 500,
       }),
       signal: AbortSignal.timeout(15000),
     })

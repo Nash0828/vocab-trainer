@@ -652,14 +652,14 @@ function speakSentence(sentence, key = '') {
 
 // ===== 词典查询弹窗（有道词典接口） =====
 const dictModal = ref(null) // { word, data, loading, error }
-async function lookupWord(word) {
+async function lookupWord(word, type = 'word') {
   if (!word) return
   // 打开详情弹框：收起键盘，避免弹框被键盘遮挡
   const el = answerInput.value
   if (el && document.activeElement === el) {
     try { el.blur() } catch (e) {}
   }
-  dictModal.value = { word, data: null, loading: true, error: null }
+  dictModal.value = { word, type, data: null, loading: true, error: null }
   try {
     const res = await fetch(`/api/dict?word=${encodeURIComponent(word.trim().toLowerCase())}`)
     if (!res.ok) {
@@ -907,7 +907,7 @@ function onGlobalKeydown(e) {
   // Ctrl+Q：查询当前单词详情（阻止浏览器默认行为）
   if ((e.ctrlKey || e.metaKey) && key === 'q') {
     e.preventDefault()
-    if (current.value) lookupWord(current.value.english)
+    if (current.value) lookupWord(current.value.english, current.value.type || 'word')
     return
   }
   // Ctrl+P（Mac 为 Cmd+P）：朗读当前单词，阻止浏览器打印对话框，焦点留在输入框
@@ -1152,7 +1152,7 @@ next()
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span><span class="spk-eq"><i></i><i></i><i></i></span>
             发音
           </button>
-          <button class="sound-btn" @click="lookupWord(current.english)">
+          <button class="sound-btn" @click="lookupWord(current.english, current.type || 'word')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
             查词
           </button>
@@ -1286,7 +1286,7 @@ next()
           <button class="dict-close" @click="closeDict">✕</button>
         </div>
         <div class="dict-body">
-          <AiUsageCard v-if="dictModal" :word="dictModal.word" />
+          <AiUsageCard v-if="dictModal" :word="dictModal.word" :type="dictModal.type || 'word'" />
           <div v-if="dictModal.loading" class="dict-loading">查询中…</div>
           <div v-else-if="dictModal.error" class="dict-error">{{ dictModal.error }}</div>
           <div v-else-if="dictModal.data">
