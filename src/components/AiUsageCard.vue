@@ -48,7 +48,7 @@ onMounted(load)
   background: #f7f7f7;
   border-radius: 10px;
   padding: 12px 14px;
-  margin: 10px 0 16px;
+  margin: 4px 0 16px;
 }
 .ai-label {
   font-size: 11px;
