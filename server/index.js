@@ -6,6 +6,7 @@ import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 import cookieParser from 'cookie-parser'
 import { createRequire } from 'module'
+import WebSocket from 'ws'
 import db from './db.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -748,32 +749,11 @@ app.get('/api/tts', async (req, res) => {
     return res.send(cached)
   }
   let buf = null
-  // 策略：单词（无空格）走百度秒出；句子/短语（含空格）走豆包自然发音
-  const isPhrase = /\s/.test(text)
-  if (isPhrase && BYTEDANCE_TTS_KEY) {
-    try {
-      const r = await fetch('https://openspeech.bytedance.com/api/v3/tts/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Api-Key': BYTEDANCE_TTS_KEY },
-        body: JSON.stringify({
-          model: 'seed-audio-1.0',
-          text_prompt: `请用自然清晰的英语女声朗读：${text}`,
-          audio_config: { format: 'mp3', sample_rate: 48000, pitch_rate: 0, speech_rate: 0, loudness_rate: 0 },
-          watermark: {},
-        }),
-        signal: AbortSignal.timeout(30000),
-      })
-      const j = await r.json().catch(() => null)
-      const b64 = j && j.audio ? String(j.audio) : ''
-      if (b64) {
-        const audio = Buffer.from(b64, 'base64')
-        if (audio.length > 1000) buf = audio
-      }
-    } catch (e) {
-      console.error('豆包 TTS 失败:', e.message)
-    }
+  // 1) 豆包语音合成（seed-tts-2.0 双向流式，低时延、音色自然，全量优先）
+  if (BYTEDANCE_TTS_KEY) {
+    try { buf = await volcTts(text) } catch (e) { console.error('豆包流式 TTS 失败:', e.message) }
   }
-  // 兜底：百度翻译发音（单词主用、长文本失败时兜底）
+  // 2) 兜底：百度翻译发音
   if (!buf) {
     try {
       const url = `https://fanyi.baidu.com/gettts?lan=en&text=${encodeURIComponent(text)}&spd=3&source=web`
@@ -796,6 +776,88 @@ app.get('/api/tts', async (req, res) => {
   res.set('Cache-Control', 'public, max-age=86400')
   res.send(buf)
 })
+
+// ===== 豆包语音合成（seed-tts-2.0 双向流式 WebSocket）=====
+const VOLC_EV = { START_CONNECTION: 1, FINISH_CONNECTION: 2, CONNECTION_STARTED: 50, CONNECTION_FAILED: 51, CONNECTION_FINISHED: 52, START_SESSION: 100, FINISH_SESSION: 102, SESSION_STARTED: 150, SESSION_FINISHED: 152, SESSION_FAILED: 153, TASK_REQUEST: 200, TTS_RESPONSE: 352 }
+function volcFrame(event, sessionId, payload) {
+  const head = Buffer.from([0b00010001, 0b00010100, 0b00010000, 0])
+  const ev = Buffer.alloc(4); ev.writeUInt32BE(event)
+  const parts = [head, ev]
+  if (sessionId != null) {
+    const sid = Buffer.from(sessionId)
+    const l = Buffer.alloc(4); l.writeUInt32BE(sid.length)
+    parts.push(l, sid)
+  }
+  const p = Buffer.isBuffer(payload) ? payload : Buffer.from(payload || '{}')
+  const pl = Buffer.alloc(4); pl.writeUInt32BE(p.length)
+  parts.push(pl, p)
+  return Buffer.concat(parts)
+}
+function volcParse(buf) {
+  const headerSize = (buf[0] & 0x0F) * 4
+  const messageType = buf[1] >> 4
+  const flags = buf[1] & 0x0F
+  const event = buf.readUInt32BE(4)
+  let pos = headerSize
+  if (flags & 0x04) pos += 4
+  let sessionId = null
+  if ([1, 9, 11].includes(messageType)) {
+    const sl = buf.readUInt32BE(pos); pos += 4
+    sessionId = buf.subarray(pos, pos + sl).toString(); pos += sl
+  }
+  const pl = buf.readUInt32BE(pos); pos += 4
+  return { event, sessionId, payload: buf.subarray(pos, pos + pl) }
+}
+async function volcTts(text) {
+  return await new Promise((resolve, reject) => {
+    const sid = crypto.randomUUID()
+    const chunks = []
+    let settled = false
+    const done = (err, buf) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      try { ws.terminate() } catch (e) {}
+      err ? reject(err) : resolve(buf)
+    }
+    const timer = setTimeout(() => done(new Error('火山 TTS 超时')), 25000)
+    let ws
+    try {
+      ws = new WebSocket('wss://openspeech.bytedance.com/api/v3/tts/bidirection', {
+        headers: { 'X-Api-Key': BYTEDANCE_TTS_KEY, 'X-Api-Resource-Id': 'seed-tts-2.0', 'X-Api-Connect-Id': crypto.randomUUID() },
+      })
+    } catch (e) { return done(e) }
+    ws.on('open', () => ws.send(volcFrame(VOLC_EV.START_CONNECTION, null, '{}')))
+    ws.on('message', (data, isBinary) => {
+      if (!isBinary) return
+      let f
+      try { f = volcParse(Buffer.from(data)) } catch (e) { return }
+      switch (f.event) {
+        case VOLC_EV.CONNECTION_STARTED:
+          ws.send(volcFrame(VOLC_EV.START_SESSION, sid, JSON.stringify({ event: VOLC_EV.START_SESSION, req_params: { speaker: 'en_female_dacey_uranus_bigtts', audio_params: { format: 'mp3', sample_rate: 24000 } } })))
+          break
+        case VOLC_EV.SESSION_STARTED:
+          ws.send(volcFrame(VOLC_EV.TASK_REQUEST, sid, JSON.stringify({ event: VOLC_EV.TASK_REQUEST, req_params: { text } })))
+          ws.send(volcFrame(VOLC_EV.FINISH_SESSION, sid, '{}'))
+          break
+        case VOLC_EV.TTS_RESPONSE:
+          chunks.push(Buffer.from(f.payload))
+          break
+        case VOLC_EV.SESSION_FINISHED:
+          ws.send(volcFrame(VOLC_EV.FINISH_CONNECTION, null, '{}'))
+          break
+        case VOLC_EV.CONNECTION_FINISHED:
+          const full = Buffer.concat(chunks)
+          done(full.length > 1000 ? null : new Error('火山 TTS 音频为空'), full)
+          break
+        case VOLC_EV.CONNECTION_FAILED: case VOLC_EV.SESSION_FAILED:
+          done(new Error('火山 TTS 会话失败'))
+          break
+      }
+    })
+    ws.on('error', (e) => done(e))
+  })
+}
 
 app.get('/api/export', (req, res) => {
   const uid = req.userId
