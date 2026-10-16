@@ -953,7 +953,7 @@ function onGlobalKeydown(e) {
     return
   }
   // Ctrl+Enter：等同于普通输入框的提交效果（提交当前答案）
-  if ((e.ctrlKey || e.metaKey) && key === 'Enter') {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
     e.preventDefault()
     submit()
     return
