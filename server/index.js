@@ -847,7 +847,7 @@ async function volcTts(text) {
       try { f = volcParse(Buffer.from(data)) } catch (e) { return }
       switch (f.event) {
         case VOLC_EV.CONNECTION_STARTED:
-          ws.send(volcFrame(VOLC_EV.START_SESSION, sid, JSON.stringify({ event: VOLC_EV.START_SESSION, req_params: { speaker: 'en_female_dacey_uranus_bigtts', audio_params: { format: 'mp3', sample_rate: 24000 } } })))
+          ws.send(volcFrame(VOLC_EV.START_SESSION, sid, JSON.stringify({ event: VOLC_EV.START_SESSION, req_params: { speaker: 'en_female_amanda_mars_bigtts', audio_params: { format: 'mp3', sample_rate: 24000 } } })))
           break
         case VOLC_EV.SESSION_STARTED:
           ws.send(volcFrame(VOLC_EV.TASK_REQUEST, sid, JSON.stringify({ event: VOLC_EV.TASK_REQUEST, req_params: { text } })))
