@@ -108,10 +108,9 @@ function goPractice(word) {
   router.push({ path: '/practice', query: { word } })
 }
 
-// 判断历史记录是否为单词（旧记录无 type 字段时按英文是否含空格兜底）
+// 判断历史记录是否为单词（单词必无空格、短语/句子必有空格，旧数据无 type 也能准确判断）
 function isWordRecord(r) {
-  const t = r.type || (r.english && r.english.trim().includes(' ') ? 'phrase' : 'word')
-  return t === 'word'
+  return !r.english || !r.english.trim().includes(' ')
 }
 </script>
 
