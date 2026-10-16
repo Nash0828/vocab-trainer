@@ -2,6 +2,7 @@
 import { ref, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHistory } from '../composables/useHistory'
+import { diffUserWords } from '../utils/wordDiff'
 
 const router = useRouter()
 const { getHistoryByDay, clearDay, clearAll } = useHistory()
@@ -199,7 +200,15 @@ function goPractice(word) {
                       <span class="rec-zh">{{ r.chinese }}</span>
                       <span class="rec-time">{{ new Date(r.ts).toTimeString().slice(0, 5) }}</span>
                     </div>
-                    <div v-if="!r.correct && r.userAnswer" class="rec-wrong">你答：{{ r.userAnswer }}</div>
+                    <div v-if="!r.correct && r.userAnswer" class="rec-wrong">
+                      <span class="rec-wrong-label">你答：</span>
+                      <template v-if="r.type === 'word'">
+                        <span class="diff-bad">{{ r.userAnswer }}</span>
+                      </template>
+                      <template v-else>
+                        <span v-for="(d, i) in diffUserWords(r.userAnswer, r.english)" :key="i" :class="d.ok ? 'diff-ok' : 'diff-bad'">{{ d.word }}</span>
+                      </template>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -544,6 +553,17 @@ function goPractice(word) {
   font-size: 12px;
   color: var(--danger);
   margin-top: 2px;
+}
+
+/* 你答：短语/句子逐词对比（对词绿、错词红） */
+.rec-wrong-label {
+  color: var(--text-sub);
+}
+.diff-ok {
+  color: var(--success);
+}
+.diff-bad {
+  color: var(--danger);
 }
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.25s; }

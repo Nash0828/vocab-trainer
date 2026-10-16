@@ -296,7 +296,7 @@ app.get('/api/state', (req, res) => {
     return w
   })
   const records = db.prepare('SELECT * FROM records WHERE user_id = ? ORDER BY ts ASC').all(uid).map((r) => ({
-    id: r.id, date: r.date, chinese: r.chinese, english: r.english, pos: r.pos||'', correct: !!r.correct, userAnswer: r.user_answer||'', ts: r.ts,
+    id: r.id, date: r.date, chinese: r.chinese, english: r.english, pos: r.pos||'', type: r.type||'word', correct: !!r.correct, userAnswer: r.user_answer||'', ts: r.ts,
   }))
   const wrongbook = db.prepare('SELECT * FROM wrongbook WHERE user_id = ? ORDER BY added_at ASC').all(uid).map((w) => ({
     id: String(w.word_id), chinese: w.chinese, english: w.english, pos: w.pos||'', addedAt: w.added_at,
@@ -578,13 +578,13 @@ app.put('/api/settings/autoNext', (req, res) => {
 })
 
 app.post('/api/records', (req, res) => {
-  const { chinese, english, pos, correct, userAnswer } = req.body || {}
+  const { chinese, english, pos, correct, userAnswer, type } = req.body || {}
   const now = new Date()
   const pad = (n) => String(n).padStart(2, '0')
   const date = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`
   const id = genId('rec-')
-  db.prepare('INSERT INTO records (id, user_id, date, chinese, english, pos, correct, user_answer, ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .run(id, req.userId, date, (chinese||'').trim(), (english||'').trim(), (pos||'').trim(), correct?1:0, (userAnswer||'').trim(), Date.now())
+  db.prepare('INSERT INTO records (id, user_id, date, chinese, english, pos, correct, user_answer, type, ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(id, req.userId, date, (chinese||'').trim(), (english||'').trim(), (pos||'').trim(), correct?1:0, (userAnswer||'').trim(), (type||'word').trim() || 'word', Date.now())
   res.json({ ok: true, id })
 })
 app.delete('/api/records/:date', (req, res) => {
@@ -704,7 +704,7 @@ app.get('/api/export', (req, res) => {
   const uid = req.userId
   const words = db.prepare('SELECT * FROM words WHERE user_id = ? ORDER BY created_at ASC').all(uid).map(rowToWord)
   const records = db.prepare('SELECT * FROM records WHERE user_id = ? ORDER BY ts ASC').all(uid).map((r) => ({
-    id: r.id, date: r.date, chinese: r.chinese, english: r.english, pos: r.pos||'', correct: !!r.correct, userAnswer: r.user_answer||'', ts: r.ts,
+    id: r.id, date: r.date, chinese: r.chinese, english: r.english, pos: r.pos||'', type: r.type||'word', correct: !!r.correct, userAnswer: r.user_answer||'', ts: r.ts,
   }))
   const wrongbook = db.prepare('SELECT * FROM wrongbook WHERE user_id = ? ORDER BY added_at ASC').all(uid).map((w) => ({
     wordId: String(w.word_id), chinese: w.chinese, english: w.english, pos: w.pos||'', addedAt: w.added_at,

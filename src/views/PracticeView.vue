@@ -375,6 +375,7 @@ function submit() {
     chinese: current.value.chinese,
     english: current.value.english,
     pos: current.value.pos || '',
+    type: current.value.type || 'word',
     correct: isCorrect,
     userAnswer: answer.value,
   })
@@ -716,6 +717,7 @@ function revealAnswer() {
     chinese: current.value.chinese,
     english: current.value.english,
     pos: current.value.pos || '',
+    type: current.value.type || 'word',
     correct: false,
     userAnswer: '',
   })

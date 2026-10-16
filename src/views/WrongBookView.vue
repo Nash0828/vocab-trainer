@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useWords } from '../composables/useWords'
 import { useWrongBook } from '../composables/useWrongBook'
 import { useHistory } from '../composables/useHistory'
+import { diffUserWords } from '../utils/wordDiff'
 
 const router = useRouter()
 const { words } = useWords()
@@ -143,7 +144,15 @@ function goPractice(word) {
             </div>
             <div class="w-zh">{{ w.chinese }}</div>
             <div v-if="lastWrongAnswer(w.english)" class="w-wrong">
-              你答：{{ lastWrongAnswer(w.english) }}
+              <span class="w-wrong-label">你答：</span>
+              <template v-if="w.type === 'word'">
+                <span class="diff-bad">{{ lastWrongAnswer(w.english) }}</span>
+              </template>
+              <template v-else>
+                <span class="w-diff">
+                  <span v-for="(d, i) in diffUserWords(lastWrongAnswer(w.english), w.english, !!w.caseSensitive)" :key="i" :class="d.ok ? 'diff-ok' : 'diff-bad'">{{ d.word }}</span>
+                </span>
+              </template>
             </div>
           </div>
           <div v-if="confirmRemoveId === (w.id || w.english)" class="w-confirm">
@@ -402,6 +411,22 @@ function goPractice(word) {
   font-size: 13px;
   color: var(--danger);
   margin-top: 4px;
+}
+
+/* 你答：短语/句子逐词对比（对词绿、错词红） */
+.w-wrong-label {
+  color: var(--text-sub);
+}
+.w-diff {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px 4px;
+}
+.diff-ok {
+  color: var(--success);
+}
+.diff-bad {
+  color: var(--danger);
 }
 
 .w-confirm {
