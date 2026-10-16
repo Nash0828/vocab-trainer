@@ -405,12 +405,29 @@ function fireDone() {
   }
 }
 
+// 强制停止当前所有音频（Audio 对象 + 系统语音），防止旧音频残留叠加
+function stopAudio() {
+  try {
+    if (currentAudio) {
+      currentAudio.onended = null
+      currentAudio.onpause = null
+      currentAudio.onerror = null
+      currentAudio.pause()
+    }
+  } catch (e) {}
+  currentAudio = null
+  try {
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+  } catch (e) {}
+}
+
 function speak(word, type = 0, onDone = null, key = '') {
   if (!word || audioPlaying.value) return
   if (onDone) audioDone = onDone
   const text = String(word).trim()
   audioPlaying.value = true
   playingKey.value = key
+  stopAudio() // 先停掉任何残留音频，再播新的
   try {
     const url = `https://dict.youdao.com/dictvoice?type=${type}&audio=${encodeURIComponent(text)}`
     currentAudio = new Audio(url)
@@ -433,6 +450,7 @@ function speak(word, type = 0, onDone = null, key = '') {
 function speakBaidu(text) {
   try {
     const url = `/api/tts?text=${encodeURIComponent(text)}`
+    stopAudio() // 先停掉残留音频
     currentAudio = new Audio(url)
     let fallbacked = false
     const once = () => {
@@ -453,6 +471,7 @@ function speakBaidu(text) {
 function speakViaSpeechSynthesis(text) {
   if (!('speechSynthesis' in window)) { audioPlaying.value = false; fireDone(); return }
   try {
+    stopAudio() // 停掉残留的 Audio 与旧语音，再播新的
     window.speechSynthesis.cancel()
     const u = new SpeechSynthesisUtterance(text)
     u.lang = 'en-US'
@@ -571,6 +590,7 @@ function speakSentence(sentence, key = '') {
   try {
     audioPlaying.value = true
     playingKey.value = key
+    stopAudio() // 先停掉残留音频，再播新的
     const url = `https://dict.youdao.com/dictvoice?type=2&audio=${encodeURIComponent(String(sentence).trim())}`
     currentAudio = new Audio(url)
     const done = () => { audioPlaying.value = false; if (playingKey.value === key) playingKey.value = '' }
