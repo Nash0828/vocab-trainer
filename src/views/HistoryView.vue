@@ -100,6 +100,12 @@ function doClearAll() {
 function formatDate(dateStr) {
   return dateStr // 已是 YYYY-MM-DD
 }
+
+// 跳转背诵页并直接背诵该词句
+function goPractice(word) {
+  if (!word) return
+  router.push({ path: '/practice', query: { word } })
+}
 </script>
 
 <template>
@@ -185,6 +191,9 @@ function formatDate(dateStr) {
                     <div class="rec-line1">
                       <span class="rec-en">{{ r.english }}</span>
                       <span v-if="r.pos" class="rec-pos">{{ r.pos }}</span>
+                      <button class="study-btn" @click="goPractice(r.english)" title="背诵">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                      </button>
                     </div>
                     <div class="rec-line2">
                       <span class="rec-zh">{{ r.chinese }}</span>
@@ -479,6 +488,26 @@ function formatDate(dateStr) {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* "背诵"按钮（微信风格，跳转背诵该词句） */
+.study-btn {
+  border: none;
+  background: #f5f5f5;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  padding: 0;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.study-btn:active {
+  background: #e5e5e5;
 }
 
 .rec-en {
