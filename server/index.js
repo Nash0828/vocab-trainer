@@ -749,9 +749,9 @@ app.get('/api/tts', async (req, res) => {
     return res.send(cached)
   }
   let buf = null
-  // 单词/短语（词数≤6 且非句末标点）走百度：标准词典音、平实无语气；句子走豆包：自然语气
-  const isSentence = /[.?!]["'\u201d]?\s*$/.test(text) || text.split(/\s+/).length > 6
-  if (isSentence) {
+  // 纯单词（无空格）走百度：标准词典音、平实；短语/句子走豆包（Jenny）：自然平实语气
+  const isWord = !/\s/.test(text)
+  if (!isWord) {
     // 1) 豆包语音合成（seed-tts-2.0 双向流式，低时延、音色自然）
     if (BYTEDANCE_TTS_KEY) {
       try { buf = await volcTts(text) } catch (e) { console.error('豆包流式 TTS 失败:', e.message) }
@@ -759,7 +759,7 @@ app.get('/api/tts', async (req, res) => {
     // 2) 兜底：百度翻译发音
     if (!buf) buf = await baiduTts(text)
   } else {
-    // 单词/短语：百度优先（平实），豆包兜底
+    // 单词：百度优先（词典平实音），豆包兜底
     buf = await baiduTts(text)
     if (!buf && BYTEDANCE_TTS_KEY) {
       try { buf = await volcTts(text) } catch (e) { console.error('豆包流式 TTS 失败:', e.message) }
