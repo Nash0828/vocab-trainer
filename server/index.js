@@ -5,10 +5,12 @@ import fs from 'fs'
 import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 import cookieParser from 'cookie-parser'
+import { createRequire } from 'module'
 import db from './db.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+const req = createRequire(import.meta.url)
 const DIST_DIR = join(__dirname, '..', 'dist')
 
 const app = express()
@@ -618,7 +620,7 @@ const BAIDU_KEY = 'rZ9HkdaEImD2KGoVLeCV'
 
 // ============ AI 日常用法（DeepSeek，key 存于 config.js 不入库） ============
 let DEEPSEEK_KEY = ''
-try { DEEPSEEK_KEY = require('./config').DEEPSEEK_KEY || '' } catch (e) {}
+try { DEEPSEEK_KEY = req('./config.cjs').DEEPSEEK_KEY || '' } catch (e) { console.error('config load fail:', e.message) }
 const usagePending = new Map() // 并发锁：同词同时查询只调一次 AI
 
 app.get('/api/usage', async (req, res) => {
