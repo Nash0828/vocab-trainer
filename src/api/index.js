@@ -4,16 +4,23 @@
  */
 
 async function req(path, options = {}) {
-  const res = await fetch(path, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.error || `请求失败: ${res.status}`)
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 15000) // 兜底超时：防止 iOS 后台挂起导致请求永久 pending
+  try {
+    const res = await fetch(path, {
+      headers: { 'Content-Type': 'application/json' },
+      ...options,
+      signal: options.signal || controller.signal,
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || `请求失败: ${res.status}`)
+    }
+    return res.json()
+  } finally {
+    clearTimeout(timer)
   }
-  return res.json()
 }
 
 export const api = {
