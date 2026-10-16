@@ -76,7 +76,11 @@ function speak(word, type = 0, onDone = null, key = '') {
   audioPlaying.value = true
   playingKey.value = key
   try {
-    const url = `/api/tts?text=${encodeURIComponent(text)}`
+    // 单词（无空格）走有道词典音；短语/句子走本服务 /api/tts（百度平实/豆包自然）
+    const isWord = !/\s/.test(text) && text.length <= 30
+    const url = isWord
+      ? `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=0`
+      : `/api/tts?text=${encodeURIComponent(text)}`
     currentAudio = new Audio(url)
     let fallbacked = false
     const once = () => {

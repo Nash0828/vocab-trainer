@@ -458,13 +458,17 @@ function speak(word, type = 0, onDone = null, key = '') {
   playingKey.value = key
   stopAudio() // 先停掉任何残留音频，再播新的
   try {
-    const url = `/api/tts?text=${encodeURIComponent(text)}`
+    // 单词（无空格）走有道词典音；短语/句子走本服务 /api/tts（百度平实/豆包自然）
+    const isWord = !/\s/.test(text) && text.length <= 30
+    const url = isWord
+      ? `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=0`
+      : `/api/tts?text=${encodeURIComponent(text)}`
     currentAudio = new Audio(url)
     let fallbacked = false
     const once = () => {
       if (fallbacked) return
       fallbacked = true
-      speakViaSpeechSynthesis(text)
+      speakBaidu(text)
     }
     currentAudio.onended = () => { audioPlaying.value = false; fireDone() }
     currentAudio.onpause = () => { audioPlaying.value = false; fireDone() }
@@ -476,7 +480,7 @@ function speak(word, type = 0, onDone = null, key = '') {
       if (audioPlaying.value) { audioPlaying.value = false; fireDone() }
     }, estimateDuration(text) * 1000)
   } catch (e) {
-    speakViaSpeechSynthesis(text)
+    speakBaidu(text)
   }
 }
 
