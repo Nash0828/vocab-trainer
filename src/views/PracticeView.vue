@@ -329,7 +329,13 @@ function speakKeepFocus(word, type = 0, onDone = null, key = '') {
 }
 
 function submit() {
-  if (!current.value || result.value || !answer.value.trim()) return
+  if (!current.value || !answer.value.trim()) return
+  // 重做答对后，再次回车/go：进入下一题作答
+  if (isRedo.value && result.value === 'correct') {
+    skip()
+    return
+  }
+  if (result.value) return
   // 大小写敏感：开启则严格匹配，否则不区分大小写（均去除首尾空格）
   const userInput = answer.value.trim()
   const rightAnswer = current.value.english.trim()
