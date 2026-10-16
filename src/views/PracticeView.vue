@@ -315,6 +315,16 @@ const inputDisabled = computed(() => {
   return false
 })
 
+// 短语/句子答错时：逐词对比用户输入与正确答案，标记对/错单词
+const diffResult = computed(() => {
+  if (!current.value || result.value !== 'wrong' || current.value.type === 'word') return []
+  const right = current.value.english.trim().split(/\s+/)
+  const user = answer.value.trim().split(/\s+/)
+  const cs = !!current.value.caseSensitive
+  const norm = s => (cs ? s : s.toLowerCase())
+  return right.map((w, i) => ({ word: w, ok: i < user.length && norm(user[i]) === norm(w) }))
+})
+
 // 点击发音/查词按钮时保持输入框焦点（iOS 键盘不收起）：
 // @mousedown.prevent 已阻止按钮抢焦点；这里再在手势内把焦点放回输入框
 function refocusInput() {
@@ -1163,7 +1173,14 @@ next()
         <!-- 判定反馈（答对不显示任何提示块；答错仅显示错误信息，无重听按钮） -->
         <div v-if="result === 'wrong'" class="feedback wrong">
           <span class="fb-text">{{ revealed ? '已显示答案' : '回答错误' }}</span>
-          <strong class="correct-word">{{ current.english }}</strong>
+          <template v-if="current.type === 'word'">
+            <strong class="correct-word">{{ current.english }}</strong>
+          </template>
+          <template v-else>
+            <span class="correct-word diff">
+              <span v-for="(w, i) in diffResult" :key="i" :class="w.ok ? 'diff-ok' : 'diff-bad'">{{ w.word }}</span>
+            </span>
+          </template>
         </div>
 
         <div class="quiz-actions">
@@ -2199,6 +2216,19 @@ next()
 
 .correct-word {
   font-size: 18px;
+  color: var(--danger);
+}
+
+/* 短语/句子逐词对比：答对词绿色，答错词红色 */
+.correct-word.diff {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+.diff-ok {
+  color: var(--success);
+}
+.diff-bad {
   color: var(--danger);
 }
 
