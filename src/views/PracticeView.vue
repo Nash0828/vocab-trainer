@@ -411,14 +411,25 @@ let currentAudio = null
 const audioPlaying = ref(false)
 const playingKey = ref('') // 当前正在播放的按钮标识，独立控制动画
 let audioDone = null
+let doneTimer = null // 播放兜底定时器：iOS 上网络音频可能不触发 ended
+
+function clearDoneTimer() {
+  if (doneTimer) { clearTimeout(doneTimer); doneTimer = null }
+}
 
 function fireDone() {
+  clearDoneTimer()
   playingKey.value = ''
   if (audioDone) {
     const fn = audioDone
     audioDone = null
     try { fn() } catch (e) {}
   }
+}
+
+// 按文本长度估算播放上限时长（秒），防止 ended 不触发时状态卡死
+function estimateDuration(text) {
+  return Math.max(10, Math.min(60, String(text || '').length * 0.3))
 }
 
 // 强制停止当前所有音频（Audio 对象 + 系统语音），防止旧音频残留叠加
@@ -457,6 +468,11 @@ function speak(word, type = 0, onDone = null, key = '') {
     currentAudio.onpause = () => { audioPlaying.value = false; fireDone() }
     currentAudio.onerror = once
     currentAudio.play().catch(once)
+    // 兜底：iOS 上部分网络音频播完不触发 ended，按时长上限强制收尾
+    doneTimer = setTimeout(() => {
+      stopAudio()
+      if (audioPlaying.value) { audioPlaying.value = false; fireDone() }
+    }, estimateDuration(text) * 1000)
   } catch (e) {
     speakBaidu(text)
   }
@@ -478,6 +494,10 @@ function speakBaidu(text) {
     currentAudio.onpause = () => { audioPlaying.value = false; fireDone() }
     currentAudio.onerror = once
     currentAudio.play().catch(once)
+    doneTimer = setTimeout(() => {
+      stopAudio()
+      if (audioPlaying.value) { audioPlaying.value = false; fireDone() }
+    }, estimateDuration(text) * 1000)
   } catch (e) {
     speakViaSpeechSynthesis(text)
   }
@@ -500,6 +520,10 @@ function speakViaSpeechSynthesis(text) {
     u.onend = () => { audioPlaying.value = false; fireDone() }
     u.onerror = () => { audioPlaying.value = false; fireDone() }
     window.speechSynthesis.speak(u)
+    doneTimer = setTimeout(() => {
+      stopAudio()
+      if (audioPlaying.value) { audioPlaying.value = false; fireDone() }
+    }, estimateDuration(text) * 1000)
   } catch (e) {
     audioPlaying.value = false
     fireDone()
@@ -614,6 +638,10 @@ function speakSentence(sentence, key = '') {
     currentAudio.onpause = done
     currentAudio.onerror = done
     currentAudio.play().catch(done)
+    doneTimer = setTimeout(() => {
+      stopAudio()
+      if (audioPlaying.value) { audioPlaying.value = false; fireDone() }
+    }, estimateDuration(sentence) * 1000)
   } catch (e) {
     audioPlaying.value = false
     if (playingKey.value === key) playingKey.value = ''
