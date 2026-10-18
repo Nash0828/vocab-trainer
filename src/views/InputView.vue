@@ -403,17 +403,24 @@ function clearAllFields() {
   color: #333;
   line-height: 1.6;
 }
+/* 朝下箭头：灰描边三角 + 白填充三角，上边与气泡底边齐平，完整伸出气泡外 */
 .ex-tip::before {
   content: '';
   position: absolute;
-  bottom: -3px;
-  left: 38px; /* 箭头中心=38+4=42，页面位置=16+42=58px，对准图标中心57.5 */
-  width: 8px;
-  height: 8px;
-  background: #fff;
-  border-right: 1px solid #e5e5e5;
-  border-bottom: 1px solid #e5e5e5;
-  transform: rotate(45deg);
+  top: 100%;
+  left: 34px;
+  border: 8px solid transparent;
+  border-top-color: #e5e5e5;
+  z-index: 21;
+}
+.ex-tip::after {
+  content: '';
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 36px;
+  border: 6px solid transparent;
+  border-top-color: #fff;
+  z-index: 22;
 }
 
 .pos-row {
