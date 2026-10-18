@@ -403,11 +403,11 @@ function clearAllFields() {
   color: #333;
   line-height: 1.6;
 }
-/* 朝下箭头：灰描边三角 + 白填充三角，上边与气泡底边齐平，完整伸出气泡外 */
+/* 朝下箭头：灰描边三角 + 白填充三角，上移1px盖住气泡边框线，与气泡融为一体 */
 .ex-tip::before {
   content: '';
   position: absolute;
-  top: 100%;
+  top: calc(100% - 1px);
   left: 34px;
   border: 8px solid transparent;
   border-top-color: #e5e5e5;
@@ -416,7 +416,7 @@ function clearAllFields() {
 .ex-tip::after {
   content: '';
   position: absolute;
-  top: calc(100% + 2px);
+  top: calc(100% + 1px);
   left: 36px;
   border: 6px solid transparent;
   border-top-color: #fff;
