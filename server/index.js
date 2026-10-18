@@ -587,16 +587,39 @@ async function translateText(text) {
   return content
 }
 
-app.put('/api/words/:id', (req, res) => {
+app.put('/api/words/:id', async (req, res) => {
   const id = Number(req.params.id)
-  const { chinese, english, pos, type, caseSensitive } = req.body || {}
+  const { chinese, english, pos, type, caseSensitive, example } = req.body || {}
   const c = (chinese||'').trim(), e = (english||'').trim(), p = (pos||'').trim()
   const t = ['word', 'phrase', 'sentence'].includes(type) ? type : 'word'
   if (!c || !e) return res.status(400).json({ error: '中文和英文不能为空' })
-  const info = db.prepare('UPDATE words SET chinese = ?, english = ?, pos = ?, type = ?, case_sensitive = ? WHERE id = ? AND user_id = ?').run(c, e, p, t, caseSensitive ? 1 : 0, id, req.userId)
+  // 例句（仅单词/短语）：必须包含当前英文；查重复用，否则 AI 翻译后新增句子并关联
+  const ex = (example || '').trim()
+  let exampleId = 0
+  if (ex && t !== 'sentence') {
+    const isWord = t === 'word'
+    const contains = isWord
+      ? new RegExp(`(^|[^a-zA-Z0-9])${e.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-zA-Z0-9]|$)`, 'i').test(ex)
+      : ex.toLowerCase().includes(e.toLowerCase())
+    if (!contains) return res.status(400).json({ error: '例句需包含当前单词或短语', code: 'EXAMPLE_NOT_CONTAIN' })
+    const dup = db.prepare("SELECT id FROM words WHERE user_id = ? AND type = 'sentence' AND LOWER(english) = LOWER(?)").get(req.userId, ex)
+    if (dup) {
+      exampleId = Number(dup.id)
+    } else {
+      let zh = ''
+      try { zh = await translateText(ex) } catch (err) {
+        console.error('例句翻译失败:', err.message)
+        return res.status(502).json({ error: '例句翻译失败，请稍后重试', code: 'TRANSLATE_FAIL' })
+      }
+      const s = db.prepare("INSERT INTO words (user_id, chinese, english, pos, type, count, created_at, case_sensitive) VALUES (?, ?, ?, '', 'sentence', 0, ?, 0)").run(req.userId, zh, ex, Date.now())
+      exampleId = Number(s.lastInsertRowid)
+      assignWordToSmallestGroup(req.userId, exampleId)
+    }
+  }
+  const info = db.prepare('UPDATE words SET chinese = ?, english = ?, pos = ?, type = ?, case_sensitive = ?, example_id = ? WHERE id = ? AND user_id = ?').run(c, e, p, t, caseSensitive ? 1 : 0, exampleId, id, req.userId)
   if (!info.changes) return res.status(404).json({ error: '单词不存在' })
   db.prepare('UPDATE wrongbook SET chinese = ?, english = ?, pos = ? WHERE word_id = ? AND user_id = ?').run(c, e, p, String(id), req.userId)
-  res.json({ ok: true })
+  res.json({ ok: true, exampleId })
 })
 
 app.delete('/api/words/:id', (req, res) => {

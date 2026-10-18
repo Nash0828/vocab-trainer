@@ -15,7 +15,7 @@ const { words, updateWord, removeWord, checkDuplicate, resetCount, isMastered, s
   useWords()
 
 const editingId = ref(null)
-const editForm = reactive({ chinese: '', english: '', pos: '', type: 'word', caseSensitive: false })
+const editForm = reactive({ chinese: '', english: '', pos: '', type: 'word', caseSensitive: false, example: '' })
 const typeOptions = [
   { value: 'word', label: '单词' },
   { value: 'phrase', label: '短语' },
@@ -565,6 +565,16 @@ function pct(word) {
   return Math.min(100, Math.round(((word.count || 0) / t) * 100))
 }
 
+// 例句是否包含当前录入的单词/短语（单词按词边界匹配，短语忽略大小写包含）
+function exampleContains(en, ex, isWord) {
+  if (!en) return false
+  if (isWord) {
+    const esc = en.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    return new RegExp(`(^|[^a-zA-Z0-9])${esc}([^a-zA-Z0-9]|$)`, 'i').test(ex)
+  }
+  return ex.toLowerCase().includes(en.toLowerCase())
+}
+
 function startEdit(word) {
   editingId.value = word.id
   confirmDeleteId.value = null
@@ -574,6 +584,12 @@ function startEdit(word) {
   editForm.pos = word.pos || ''
   editForm.type = ['word', 'phrase', 'sentence'].includes(word.type) ? word.type : 'word'
   editForm.caseSensitive = !!word.caseSensitive
+  // 带出关联例句（exampleId 对应的句子英文）
+  editForm.example = ''
+  if (word.exampleId) {
+    const ex = words.value.find((x) => Number(x.id) === Number(word.exampleId) && x.type === 'sentence')
+    if (ex) editForm.example = ex.english
+  }
 }
 
 function cancelEdit() {
@@ -602,12 +618,19 @@ function saveEdit(word) {
     showTip(`⛔ ${parts.join(' 与 ')}与词句库中其他词句重复，保存失败`, 'err')
     return
   }
+  // 例句必须包含当前录入的单词/短语
+  const ex = (editForm.example || '').trim()
+  if (ex && editForm.type !== 'sentence' && !exampleContains(editForm.english.trim(), ex, editForm.type === 'word')) {
+    showTip(`例句需包含当前${editForm.type === 'word' ? '单词' : '短语'}`, 'err')
+    return
+  }
   const ok = updateWord(word.id, {
     chinese: editForm.chinese.trim(),
     english: editForm.english.trim(),
     pos: editForm.type === 'word' ? editForm.pos.trim() : '',
     type: editForm.type,
     caseSensitive: editForm.type === 'word' ? editForm.caseSensitive : false,
+    example: editForm.type === 'sentence' ? '' : ex,
   })
   if (ok) {
     showTip(`已保存修改：${editForm.english}`, 'ok')
@@ -794,6 +817,9 @@ function formatTime(ts) {
                 <div class="mini-switch-knob"></div>
               </div>
             </div>
+          </template>
+          <template v-if="editForm.type !== 'sentence'">
+            <textarea v-model="editForm.example" class="cell-input area" placeholder="例句（选填）"></textarea>
           </template>
           <div class="edit-btns">
             <button class="btn primary mini" @click="saveEdit(word)">保存</button>
