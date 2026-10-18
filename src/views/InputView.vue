@@ -389,7 +389,7 @@ function clearAllFields() {
 }
 .ex-tip {
   position: absolute;
-  top: 20px;
+  top: -52px;
   left: 0;
   z-index: 20;
   max-width: 280px;
@@ -405,13 +405,13 @@ function clearAllFields() {
 .ex-tip::before {
   content: '';
   position: absolute;
-  top: -5px;
+  bottom: -5px;
   left: 20px;
   width: 8px;
   height: 8px;
   background: #fff;
-  border-left: 1px solid #e5e5e5;
-  border-top: 1px solid #e5e5e5;
+  border-right: 1px solid #e5e5e5;
+  border-bottom: 1px solid #e5e5e5;
   transform: rotate(45deg);
 }
 
