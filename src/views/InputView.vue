@@ -263,10 +263,10 @@ function clearAllFields() {
             例句
             <span class="ex-help" @click.stop="showExampleTip = !showExampleTip">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b2b2b2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <transition name="fade">
+                <div v-if="showExampleTip" class="ex-tip">保存时将自动翻译成中文并作为句子加入词句库</div>
+              </transition>
             </span>
-            <transition name="fade">
-              <div v-if="showExampleTip" class="ex-tip">保存时将自动翻译成中文并作为句子加入词句库</div>
-            </transition>
           </label>
           <textarea
             v-model="form.example"
@@ -381,6 +381,7 @@ function clearAllFields() {
   position: relative;
 }
 .ex-help {
+  position: relative;
   display: inline-flex;
   align-items: center;
   margin-left: 4px;
@@ -389,7 +390,7 @@ function clearAllFields() {
 }
 .ex-tip {
   position: absolute;
-  top: -50px;
+  bottom: calc(100% + 4px); /* 贴紧图标上方 4px */
   left: 0;
   z-index: 20;
   width: 280px;
@@ -406,7 +407,7 @@ function clearAllFields() {
   content: '';
   position: absolute;
   bottom: -5px;
-  left: 41px;
+  left: 4px; /* 箭头中心 4+4=8px ≈ 图标中心，恒对准 */
   width: 8px;
   height: 8px;
   background: #fff;
