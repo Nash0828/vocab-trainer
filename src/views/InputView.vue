@@ -390,35 +390,26 @@ function clearAllFields() {
 }
 .ex-tip {
   position: absolute;
-  bottom: calc(100% + 4px); /* 贴紧图标上方 4px */
+  bottom: calc(100% + 6px); /* 气泡底边距图标 6px，三角伸出后仍留 2px 间隙 */
   left: -34px; /* 气泡左缘贴到表单左侧内边距 16px */
   z-index: 20;
   width: 280px;
   padding: 8px 10px;
   background: #fff;
-  border: 1px solid #e5e5e5;
+  border: none;
   border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   font-size: 12px;
   color: #333;
   line-height: 1.6;
 }
-/* 朝下箭头：灰描边三角 + 白填充三角，上移1px盖住气泡边框线，与气泡融为一体 */
-.ex-tip::before {
-  content: '';
-  position: absolute;
-  top: calc(100% - 1px);
-  left: 34px;
-  border: 8px solid transparent;
-  border-top-color: #e5e5e5;
-  z-index: 21;
-}
+/* 实心白三角：与气泡同色无描边，从气泡底边伸出，完全融为一体 */
 .ex-tip::after {
   content: '';
   position: absolute;
-  top: calc(100% + 1px);
-  left: 36px;
-  border: 6px solid transparent;
+  top: 100%;
+  left: 38px; /* 三角中心=38+4=42，页面位置=16+42=58px，对准图标中心57.5 */
+  border: 4px solid transparent;
   border-top-color: #fff;
   z-index: 22;
 }
