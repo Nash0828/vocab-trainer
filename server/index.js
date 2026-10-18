@@ -526,20 +526,23 @@ app.post('/api/words', async (req, res) => {
   const c = (chinese||'').trim(), e = (english||'').trim(), p = (pos||'').trim()
   const t = ['word', 'phrase', 'sentence'].includes(type) ? type : 'word'
   if (!c || !e) return res.status(400).json({ error: '中文和英文不能为空' })
-  // 例句（仅单词/短语）：查重 → AI 翻译 → 自动作为句子入库，并关联 example_id
+  // 例句（仅单词/短语）：查重——已有相同句子则复用其 id；否则 AI 翻译后新增句子并关联
   const ex = (example || '').trim()
   let exampleId = 0
   if (ex && t !== 'sentence') {
     const dup = db.prepare("SELECT id FROM words WHERE user_id = ? AND type = 'sentence' AND LOWER(english) = LOWER(?)").get(req.userId, ex)
-    if (dup) return res.status(400).json({ error: '该例句已存在', code: 'EXAMPLE_DUP' })
-    let zh = ''
-    try { zh = await translateText(ex) } catch (err) {
-      console.error('例句翻译失败:', err.message)
-      return res.status(502).json({ error: '例句翻译失败，请稍后重试', code: 'TRANSLATE_FAIL' })
+    if (dup) {
+      exampleId = Number(dup.id)
+    } else {
+      let zh = ''
+      try { zh = await translateText(ex) } catch (err) {
+        console.error('例句翻译失败:', err.message)
+        return res.status(502).json({ error: '例句翻译失败，请稍后重试', code: 'TRANSLATE_FAIL' })
+      }
+      const s = db.prepare("INSERT INTO words (user_id, chinese, english, pos, type, count, created_at, case_sensitive) VALUES (?, ?, ?, '', 'sentence', 0, ?, 0)").run(req.userId, zh, ex, Date.now())
+      exampleId = Number(s.lastInsertRowid)
+      assignWordToSmallestGroup(req.userId, exampleId)
     }
-    const s = db.prepare("INSERT INTO words (user_id, chinese, english, pos, type, count, created_at, case_sensitive) VALUES (?, ?, ?, '', 'sentence', 0, ?, 0)").run(req.userId, zh, ex, Date.now())
-    exampleId = Number(s.lastInsertRowid)
-    assignWordToSmallestGroup(req.userId, exampleId)
   }
   try {
     const info = db.prepare('INSERT INTO words (user_id, chinese, english, pos, type, count, created_at, case_sensitive, example_id) VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)').run(req.userId, c, e, p, t, Date.now(), caseSensitive ? 1 : 0, exampleId)

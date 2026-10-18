@@ -128,8 +128,7 @@ async function submit() {
       showTip(`已保存：${real.english}（${real.chinese}）`, 'ok')
       resetForm()
     } catch (err) {
-      const msg = err.code === 'EXAMPLE_DUP' ? '该例句已存在，不能重复录入'
-        : err.code === 'TRANSLATE_FAIL' ? '例句翻译失败，请稍后重试'
+      const msg = err.code === 'TRANSLATE_FAIL' ? '例句翻译失败，请稍后重试'
         : '保存失败，请检查输入'
       showTip(msg, 'err')
     } finally {
@@ -258,14 +257,13 @@ function clearAllFields() {
         </div>
         </template>
         <div v-if="form.type !== 'sentence'" class="form-item">
-          <label>例句<span class="optional">（选填）</span></label>
+          <label>例句<span class="ex-help" @click="showTip('保存时将自动翻译成中文并作为句子加入词句库', 'warn')">？</span></label>
           <textarea
             v-model="form.example"
             rows="2"
-            placeholder="输入一个包含该词/短语的英文例句，保存后自动加入词句库"
+            placeholder="输入一个包含该词/短语的英文例句"
             autocomplete="off"
           ></textarea>
-          <p class="form-hint">保存时将自动翻译成中文并作为句子加入词句库</p>
         </div>
       </div>
 
@@ -368,10 +366,21 @@ function clearAllFields() {
   margin-left: 4px;
 }
 
-.form-item .form-hint {
-  margin-top: 4px;
-  font-size: 12px;
+/* 例句帮助问号 */
+.form-item .ex-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 4px;
+  border-radius: 50%;
+  border: 1px solid #b2b2b2;
   color: #b2b2b2;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  vertical-align: middle;
 }
 
 .pos-row {
