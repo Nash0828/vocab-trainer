@@ -34,7 +34,7 @@ function genToken() { return crypto.randomBytes(32).toString('hex') }
 const ttsCache = new Map()
 function genId(prefix = '') { return `${prefix}${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }
 function rowToWord(row) {
-  return { id: String(row.id), chinese: row.chinese, english: row.english, pos: row.pos || '', type: row.type || 'word', count: row.count || 0, createdAt: row.created_at, caseSensitive: !!row.case_sensitive }
+  return { id: String(row.id), chinese: row.chinese, english: row.english, pos: row.pos || '', type: row.type || 'word', count: row.count || 0, createdAt: row.created_at, caseSensitive: !!row.case_sensitive, exampleId: row.example_id || 0 }
 }
 function getThreshold(uid) {
   const row = db.prepare("SELECT value FROM settings WHERE user_id = ? AND key = 'masteryThreshold'").get(uid)
@@ -521,17 +521,61 @@ function assignWordToSmallestGroup(uid, wordId) {
   if (g) db.prepare('INSERT OR IGNORE INTO word_groups (word_id, group_id) VALUES (?, ?)').run(wordId, g.id)
 }
 
-app.post('/api/words', (req, res) => {
-  const { chinese, english, pos, type, caseSensitive } = req.body || {}
+app.post('/api/words', async (req, res) => {
+  const { chinese, english, pos, type, caseSensitive, example } = req.body || {}
   const c = (chinese||'').trim(), e = (english||'').trim(), p = (pos||'').trim()
   const t = ['word', 'phrase', 'sentence'].includes(type) ? type : 'word'
   if (!c || !e) return res.status(400).json({ error: '中文和英文不能为空' })
-  const info = db.prepare('INSERT INTO words (user_id, chinese, english, pos, type, count, created_at, case_sensitive) VALUES (?, ?, ?, ?, ?, 0, ?, ?)').run(req.userId, c, e, p, t, Date.now(), caseSensitive ? 1 : 0)
-  const word = rowToWord(db.prepare('SELECT * FROM words WHERE id = ?').get(info.lastInsertRowid))
-  assignWordToSmallestGroup(req.userId, info.lastInsertRowid)
-  word.groupId = db.prepare('SELECT group_id FROM word_groups WHERE word_id = ?').get(info.lastInsertRowid)?.group_id || null
-  res.json(word)
+  // 例句（仅单词/短语）：查重 → AI 翻译 → 自动作为句子入库，并关联 example_id
+  const ex = (example || '').trim()
+  let exampleId = 0
+  if (ex && t !== 'sentence') {
+    const dup = db.prepare("SELECT id FROM words WHERE user_id = ? AND type = 'sentence' AND LOWER(english) = LOWER(?)").get(req.userId, ex)
+    if (dup) return res.status(400).json({ error: '该例句已存在', code: 'EXAMPLE_DUP' })
+    let zh = ''
+    try { zh = await translateText(ex) } catch (err) {
+      console.error('例句翻译失败:', err.message)
+      return res.status(502).json({ error: '例句翻译失败，请稍后重试', code: 'TRANSLATE_FAIL' })
+    }
+    const s = db.prepare("INSERT INTO words (user_id, chinese, english, pos, type, count, created_at, case_sensitive) VALUES (?, ?, ?, '', 'sentence', 0, ?, 0)").run(req.userId, zh, ex, Date.now())
+    exampleId = Number(s.lastInsertRowid)
+    assignWordToSmallestGroup(req.userId, exampleId)
+  }
+  try {
+    const info = db.prepare('INSERT INTO words (user_id, chinese, english, pos, type, count, created_at, case_sensitive, example_id) VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)').run(req.userId, c, e, p, t, Date.now(), caseSensitive ? 1 : 0, exampleId)
+    const word = rowToWord(db.prepare('SELECT * FROM words WHERE id = ?').get(info.lastInsertRowid))
+    assignWordToSmallestGroup(req.userId, info.lastInsertRowid)
+    word.groupId = db.prepare('SELECT group_id FROM word_groups WHERE word_id = ?').get(info.lastInsertRowid)?.group_id || null
+    res.json(word)
+  } catch (err) {
+    console.error('保存单词失败:', err.message)
+    if (exampleId) db.prepare('DELETE FROM words WHERE id = ?').run(exampleId)
+    res.status(500).json({ error: '保存失败' })
+  }
 })
+
+// 例句翻译（DeepSeek）
+async function translateText(text) {
+  const r = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${DEEPSEEK_KEY}` },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: '你是翻译助手。把用户提供的英文句子翻译成自然简洁的中文译文，只输出译文本身，不要输出任何解释、注释或 Markdown 符号。' },
+        { role: 'user', content: text },
+      ],
+      temperature: 0.3,
+      max_tokens: 200,
+    }),
+    signal: AbortSignal.timeout(20000),
+  })
+  if (!r.ok) throw new Error('translate http ' + r.status)
+  const j = await r.json()
+  const content = j?.choices?.[0]?.message?.content?.trim()
+  if (!content) throw new Error('translate empty')
+  return content
+}
 
 app.put('/api/words/:id', (req, res) => {
   const id = Number(req.params.id)

@@ -28,6 +28,18 @@ let tipTimer = null
 
 // ===== 词典查询弹窗 =====
 const dictModal = ref(null)
+// 把用户录入的例句（exampleId 关联的句子）插到有道例句列表最前面
+function prependExampleSentences(data, wordText) {
+  if (!data) return
+  const cur = words.value.find((w) => w.english.trim().toLowerCase() === String(wordText).trim().toLowerCase())
+  if (!cur || !cur.exampleId) return
+  const ex = words.value.find((w) => Number(w.id) === Number(cur.exampleId))
+  if (!ex || ex.type !== 'sentence' || !ex.english) return
+  if (!Array.isArray(data.sentences)) data.sentences = []
+  if (!data.sentences.some((s) => s.en === ex.english)) {
+    data.sentences.unshift({ en: ex.english, zh: ex.chinese })
+  }
+}
 async function lookupWord(word, type = 'word') {
   if (!word) return
   dictModal.value = { word, type, data: null, loading: true, error: null }
@@ -38,6 +50,7 @@ async function lookupWord(word, type = 'word') {
       throw new Error(j.error || '查询失败')
     }
     dictModal.value.data = await res.json()
+    prependExampleSentences(dictModal.value.data, word)
   } catch (e) {
     dictModal.value.error = e.message || '查询失败，请稍后重试'
   } finally {

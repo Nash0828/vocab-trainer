@@ -15,7 +15,9 @@ async function req(path, options = {}) {
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
-      throw new Error(err.error || `请求失败: ${res.status}`)
+      const e = new Error(err.error || `请求失败: ${res.status}`)
+      e.code = err.code || ''
+      throw e
     }
     return res.json()
   } finally {

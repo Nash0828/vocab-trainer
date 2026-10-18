@@ -1,8 +1,10 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useWords } from '../composables/useWords'
+import { api } from '../api/index.js'
 
 const { words, addWord, checkDuplicate } = useWords()
+const saving = ref(false)
 
 const form = reactive({
   chinese: '',
@@ -10,6 +12,7 @@ const form = reactive({
   type: 'word',
   pos: '',
   caseSensitive: false,
+  example: '',
 })
 
 const typeOptions = [
@@ -100,24 +103,57 @@ function duplicateTip() {
   return `⛔ ${parts.join(' 与 ')}已在词句库中，不能重复录入`
 }
 
-function submit() {
+async function submit() {
+  if (saving.value) return
   if (!validate()) return
   const dupMsg = duplicateTip()
   if (dupMsg) {
     showTip(dupMsg, 'err')
     return
   }
+  // 带例句：先端保存（查重 + AI 翻译 + 例句自动入库），成功后再写入本地
+  const ex = (form.example || '').trim()
+  if (ex) {
+    saving.value = true
+    try {
+      const real = await api.addWord({
+        chinese: form.chinese.trim(),
+        english: form.english.trim(),
+        pos: form.pos.trim(),
+        type: form.type,
+        caseSensitive: form.caseSensitive,
+        example: ex,
+      })
+      words.value.push({ ...real, count: 0 })
+      showTip(`已保存：${real.english}（${real.chinese}）`, 'ok')
+      resetForm()
+    } catch (err) {
+      const msg = err.code === 'EXAMPLE_DUP' ? '该例句已存在，不能重复录入'
+        : err.code === 'TRANSLATE_FAIL' ? '例句翻译失败，请稍后重试'
+        : '保存失败，请检查输入'
+      showTip(msg, 'err')
+    } finally {
+      saving.value = false
+    }
+    return
+  }
   const word = addWord({ ...form })
   if (word) {
     showTip(`已保存：${word.english}（${word.chinese}）`, 'ok')
-    form.chinese = ''
-    form.english = ''
-    form.type = 'word'
-    form.pos = ''
-    posInput.value = ''
+    resetForm()
   } else {
     showTip('保存失败，请检查输入')
   }
+}
+
+function resetForm() {
+  form.chinese = ''
+  form.english = ''
+  form.type = 'word'
+  form.pos = ''
+  form.caseSensitive = false
+  form.example = ''
+  posInput.value = ''
 }
 
 function clearAllFields() {
@@ -125,6 +161,7 @@ function clearAllFields() {
   form.english = ''
   form.type = 'word'
   form.pos = ''
+  form.example = ''
 }
 </script>
 
@@ -220,6 +257,16 @@ function clearAllFields() {
           </div>
         </div>
         </template>
+        <div v-if="form.type !== 'sentence'" class="form-item">
+          <label>例句<span class="optional">（选填）</span></label>
+          <textarea
+            v-model="form.example"
+            rows="2"
+            placeholder="输入一个包含该词/短语的英文例句，保存后自动加入词句库"
+            autocomplete="off"
+          ></textarea>
+          <p class="form-hint">保存时将自动翻译成中文并作为句子加入词句库</p>
+        </div>
       </div>
 
       <!-- 类型选择底部弹层 -->
@@ -248,7 +295,7 @@ function clearAllFields() {
       </transition>
 
       <div class="form-actions">
-        <button type="submit" class="btn primary">保存</button>
+        <button type="submit" class="btn primary" :disabled="saving">{{ saving ? '保存中…' : '保存' }}</button>
       </div>
     </form>
   </div>
@@ -311,6 +358,19 @@ function clearAllFields() {
 
 .form-item input::placeholder,
 .form-item textarea::placeholder {
+  color: #b2b2b2;
+}
+
+.form-item .optional {
+  color: #b2b2b2;
+  font-size: 12px;
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+.form-item .form-hint {
+  margin-top: 4px;
+  font-size: 12px;
   color: #b2b2b2;
 }
 

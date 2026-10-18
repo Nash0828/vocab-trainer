@@ -128,6 +128,7 @@ function tryMigrate(sql) {
 tryMigrate("ALTER TABLE words ADD COLUMN user_id INTEGER DEFAULT 0")
 tryMigrate("ALTER TABLE words ADD COLUMN case_sensitive INTEGER DEFAULT 0")
 tryMigrate("ALTER TABLE words ADD COLUMN type TEXT DEFAULT 'word'")
+tryMigrate("ALTER TABLE words ADD COLUMN example_id INTEGER DEFAULT 0")
 tryMigrate("ALTER TABLE records ADD COLUMN user_id INTEGER DEFAULT 0")
 tryMigrate("ALTER TABLE records ADD COLUMN user_answer TEXT DEFAULT ''")
 tryMigrate("ALTER TABLE records ADD COLUMN type TEXT DEFAULT 'word'")
