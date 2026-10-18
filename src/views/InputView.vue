@@ -389,10 +389,10 @@ function clearAllFields() {
 }
 .ex-tip {
   position: absolute;
-  top: -52px;
+  top: -50px;
   left: 0;
   z-index: 20;
-  max-width: 280px;
+  width: 280px;
   padding: 8px 10px;
   background: #fff;
   border: 1px solid #e5e5e5;
@@ -406,7 +406,7 @@ function clearAllFields() {
   content: '';
   position: absolute;
   bottom: -5px;
-  left: 20px;
+  left: 41px;
   width: 8px;
   height: 8px;
   background: #fff;
