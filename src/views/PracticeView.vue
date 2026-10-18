@@ -458,7 +458,7 @@ function speak(word, type = 0, onDone = null, key = '') {
     // 单词（无空格）走有道美音词典音；短语/句子走本服务 /api/tts（百度平实/豆包自然）
     const isWord = !/\s/.test(text) && text.length <= 30
     const url = isWord
-      ? `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=1`
+      ? `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=2`
       : `/api/tts?text=${encodeURIComponent(text)}`
     currentAudio = new Audio(url)
     let fallbacked = false
@@ -481,14 +481,14 @@ function speak(word, type = 0, onDone = null, key = '') {
   }
 }
 
-// 英音/美音发音（详情弹框）：有道 dictvoice type=0 英音、type=1 美音，失败兜底本服务
+// 英音/美音发音（详情弹框）：有道 dictvoice type=1 英音、type=2 美音（以有道官方页面为准），失败兜底本服务
 function speakAccent(word, accent, key = '') {
   if (!word || audioPlaying.value) return
   const text = String(word).trim()
   audioPlaying.value = true
   playingKey.value = key
   stopAudio()
-  const type = accent === 'uk' ? 0 : 1
+  const type = accent === 'uk' ? 1 : 2
   const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=${type}`
   currentAudio = new Audio(url)
   const done = () => { audioPlaying.value = false; if (playingKey.value === key) playingKey.value = '' }
