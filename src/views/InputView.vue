@@ -180,7 +180,7 @@ function clearAllFields() {
           </div>
         </div>
         <div class="form-item">
-          <label>中文</label>
+          <label><em class="req">*</em>中文</label>
           <input
             v-if="form.type === 'word'"
             v-model="form.chinese"
@@ -201,7 +201,7 @@ function clearAllFields() {
           ></textarea>
         </div>
         <div class="form-item">
-          <label>英文</label>
+          <label><em class="req">*</em>英文</label>
           <input
             v-if="form.type === 'word'"
             v-model="form.english"
@@ -343,6 +343,14 @@ function clearAllFields() {
   flex-shrink: 0;
   line-height: 1.5;
   padding-top: 6px;
+}
+
+/* 必填标记：微信风格红色星号 */
+.form-item label .req {
+  color: #fa5151;
+  font-style: normal;
+  font-weight: 400;
+  margin-right: 2px;
 }
 
 .form-item input,
