@@ -321,9 +321,13 @@ const inputDisabled = computed(() => {
 const diffResult = computed(() => {
   if (!current.value || result.value !== 'wrong' || current.value.type === 'word') return []
   const cs = !!current.value.caseSensitive
-  const right = tokensOf(current.value.english, cs)
+  // 正确答案保留原文大小写展示；比对时忽略大小写（除非区分大小写）
+  const right = tokensOf(current.value.english, true)
   const user = tokensOf(answer.value, cs)
-  return right.map((w, i) => ({ word: w, ok: i < user.length && user[i] === w }))
+  return right.map((w, i) => {
+    const ok = i < user.length && (cs ? user[i] === w : user[i] === w.toLowerCase())
+    return { word: w, ok }
+  })
 })
 
 // 点击发音/查词按钮时保持输入框焦点（iOS 键盘不收起）：

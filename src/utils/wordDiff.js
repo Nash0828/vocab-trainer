@@ -31,10 +31,12 @@ export function isAnswerMatch(userInput, rightAnswer, caseSensitive = false, isP
 
 /**
  * 逐词对比：返回用户输入各词的匹配标记（忽略标点/空白），用于着色展示
+ * 展示层保留原文大小写；比对时忽略大小写（除非 caseSensitive）
  * @returns {Array<{word: string, ok: boolean}>}
  */
 export function diffUserWords(userInput, rightAnswer, caseSensitive = false) {
   const right = tokensOf(rightAnswer, caseSensitive)
-  const user = tokensOf(userInput, caseSensitive)
-  return user.map((w, i) => ({ word: w, ok: i < right.length && w === right[i] }))
+  const user = tokensOf(userInput, true) // 保留原文大小写用于展示
+  const userNorm = caseSensitive ? user : user.map((t) => t.toLowerCase())
+  return user.map((w, i) => ({ word: w, ok: i < right.length && userNorm[i] === right[i] }))
 }
