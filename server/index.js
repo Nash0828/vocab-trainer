@@ -530,13 +530,9 @@ app.post('/api/words', async (req, res) => {
   const ex = (example || '').trim()
   let exampleId = 0
   if (ex && t !== 'sentence') {
-    // 例句必须包含当前录入的单词/短语
+    // 例句必须包含当前录入的单词/短语（AI 判断，含变形形式）
     const en = String(english || '').trim()
-    const isWord = t === 'word'
-    const contains = isWord
-      ? new RegExp(`(^|[^a-zA-Z0-9])${en.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-zA-Z0-9]|$)`, 'i').test(ex)
-      : ex.toLowerCase().includes(en.toLowerCase())
-    if (!en || !contains) return res.status(400).json({ error: '例句需包含当前单词或短语', code: 'EXAMPLE_NOT_CONTAIN' })
+    if (!en || !(await aiExampleContains(en, ex))) return res.status(400).json({ error: '例句需包含当前单词（含变形形式）', code: 'EXAMPLE_NOT_CONTAIN' })
     const dup = db.prepare("SELECT id FROM words WHERE user_id = ? AND type = 'sentence' AND LOWER(english) = LOWER(?)").get(req.userId, ex)
     if (dup) {
       exampleId = Number(dup.id)
@@ -587,21 +583,50 @@ async function translateText(text) {
   return content
 }
 
+// AI 判断例句是否包含当前单词（含时态/单复数/派生等变形形式）
+const exampleContainsCache = new Map()
+async function aiExampleContains(en, ex) {
+  const key = `${en.toLowerCase()}|${ex.toLowerCase()}`
+  if (exampleContainsCache.has(key)) return exampleContainsCache.get(key)
+  let ok
+  try {
+    const r = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${DEEPSEEK_KEY}` },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: '你是英语教学助手。判断给出的英文句子中是否包含给出的单词。单词的变形形式（时态变化、单复数、派生词、同根词等）也算包含。只输出"是"或"否"，不要输出任何其他内容或符号。' },
+          { role: 'user', content: `句子：${ex}\n单词：${en}` },
+        ],
+        temperature: 0,
+        max_tokens: 5,
+      }),
+      signal: AbortSignal.timeout(15000),
+    })
+    if (!r.ok) throw new Error('example-contain http ' + r.status)
+    const j = await r.json()
+    const ans = (j?.choices?.[0]?.message?.content || '').trim()
+    ok = ans.startsWith('是')
+  } catch (err) {
+    console.error('AI 例句包含判断失败，回退宽松匹配:', err.message)
+    ok = ex.toLowerCase().includes(en.toLowerCase())
+  }
+  exampleContainsCache.set(key, ok)
+  return ok
+}
+
 app.put('/api/words/:id', async (req, res) => {
   const id = Number(req.params.id)
   const { chinese, english, pos, type, caseSensitive, example } = req.body || {}
   const c = (chinese||'').trim(), e = (english||'').trim(), p = (pos||'').trim()
   const t = ['word', 'phrase', 'sentence'].includes(type) ? type : 'word'
   if (!c || !e) return res.status(400).json({ error: '中文和英文不能为空' })
-  // 例句（仅单词/短语）：必须包含当前英文；查重复用，否则 AI 翻译后新增句子并关联
+  // 例句（仅单词/短语）：AI 判断必须包含当前英文（含变形），查重复用，否则 AI 翻译后新增句子并关联
   const ex = (example || '').trim()
   let exampleId = 0
   if (ex && t !== 'sentence') {
-    const isWord = t === 'word'
-    const contains = isWord
-      ? new RegExp(`(^|[^a-zA-Z0-9])${e.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-zA-Z0-9]|$)`, 'i').test(ex)
-      : ex.toLowerCase().includes(e.toLowerCase())
-    if (!contains) return res.status(400).json({ error: '例句需包含当前单词或短语', code: 'EXAMPLE_NOT_CONTAIN' })
+    if (!(await aiExampleContains(e, ex))) return res.status(400).json({ error: '例句需包含当前单词（含变形形式）', code: 'EXAMPLE_NOT_CONTAIN' })
     const dup = db.prepare("SELECT id FROM words WHERE user_id = ? AND type = 'sentence' AND LOWER(english) = LOWER(?)").get(req.userId, ex)
     if (dup) {
       exampleId = Number(dup.id)
