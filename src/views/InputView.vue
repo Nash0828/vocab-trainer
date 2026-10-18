@@ -391,7 +391,7 @@ function clearAllFields() {
 .ex-tip {
   position: absolute;
   bottom: calc(100% + 4px); /* 贴紧图标上方 4px */
-  left: -6px;
+  left: -34px; /* 气泡左缘贴到表单左侧内边距 16px */
   z-index: 20;
   width: 280px;
   padding: 8px 10px;
@@ -407,7 +407,7 @@ function clearAllFields() {
   content: '';
   position: absolute;
   bottom: -3px;
-  left: 10px; /* 箭头中心 10+4=14px（气泡左移6px后仍对准图标） */
+  left: 38px; /* 箭头中心=38+4=42，页面位置=16+42=58px，对准图标中心57.5 */
   width: 8px;
   height: 8px;
   background: #fff;
