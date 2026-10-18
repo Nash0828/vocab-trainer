@@ -596,7 +596,7 @@ async function aiExampleContains(en, ex) {
       body: JSON.stringify({
         model: 'deepseek-chat',
         messages: [
-          { role: 'system', content: '你是英语教学助手。判断给出的英文句子中是否包含给出的单词。单词的变形形式（时态变化、单复数、派生词、同根词等）也算包含。只输出"是"或"否"，不要输出任何其他内容或符号。' },
+          { role: 'system', content: '你是英语教学助手。判断给出的英文句子中是否包含给出的单词或短语。以下情况都算包含：单词的变形形式（时态变化、单复数、派生词、同根词等）；短语的词序调整、冠词增减、单复数或时态变化；短语中的占位符（如 A、B、X、Y 等）在例句中被具体单词替换。只输出"是"或"否"，不要输出任何其他内容或符号。' },
           { role: 'user', content: `句子：${ex}\n单词：${en}` },
         ],
         temperature: 0,
