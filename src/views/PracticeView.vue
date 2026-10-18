@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useWords, loadState, weightedPickIndex } from '../composables/useWords'
 import { useHistory } from '../composables/useHistory'
 import { useWrongBook } from '../composables/useWrongBook'
+import { isAnswerMatch, tokensOf } from '../utils/wordDiff'
 import { api } from '../api/index.js'
 import AiUsageCard from '../components/AiUsageCard.vue'
 
@@ -316,14 +317,13 @@ const inputDisabled = computed(() => {
   return false
 })
 
-// 短语/句子答错时：逐词对比用户输入与正确答案，标记对/错单词
+// 短语/句子答错时：逐词对比用户输入与正确答案，标记对/错单词（忽略标点/空白）
 const diffResult = computed(() => {
   if (!current.value || result.value !== 'wrong' || current.value.type === 'word') return []
-  const right = current.value.english.trim().split(/\s+/)
-  const user = answer.value.trim().split(/\s+/)
   const cs = !!current.value.caseSensitive
-  const norm = s => (cs ? s : s.toLowerCase())
-  return right.map((w, i) => ({ word: w, ok: i < user.length && norm(user[i]) === norm(w) }))
+  const right = tokensOf(current.value.english, cs)
+  const user = tokensOf(answer.value, cs)
+  return right.map((w, i) => ({ word: w, ok: i < user.length && user[i] === w }))
 })
 
 // 点击发音/查词按钮时保持输入框焦点（iOS 键盘不收起）：
@@ -347,12 +347,9 @@ function submit() {
     return
   }
   if (result.value) return
-  // 大小写敏感：开启则严格匹配，否则不区分大小写（均去除首尾空格）
-  const userInput = answer.value.trim()
-  const rightAnswer = current.value.english.trim()
-  const isCorrect = current.value.caseSensitive
-    ? userInput === rightAnswer
-    : userInput.toLowerCase() === rightAnswer.toLowerCase()
+  // 判定：单词整串比较；短语/句子忽略标点与空白（含中文空格、多空格），仅逐词比较
+  const isPhrase = current.value.type !== 'word'
+  const isCorrect = isAnswerMatch(answer.value, current.value.english, !!current.value.caseSensitive, isPhrase)
 
   if (isRedo.value) {
     // 重做模式：无论对错都不算正式作答，只显示反馈，不更新 count、不移除/加入错题本
