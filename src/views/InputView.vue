@@ -5,6 +5,7 @@ import { api } from '../api/index.js'
 
 const { words, addWord, checkDuplicate } = useWords()
 const saving = ref(false)
+const showExampleTip = ref(false)
 
 const form = reactive({
   chinese: '',
@@ -58,6 +59,7 @@ function togglePos(opt) {
 
 function closePosPicker() {
   showPosPicker.value = false
+  showExampleTip.value = false
 }
 onMounted(() => document.addEventListener('click', closePosPicker))
 onUnmounted(() => document.removeEventListener('click', closePosPicker))
@@ -256,8 +258,16 @@ function clearAllFields() {
           </div>
         </div>
         </template>
-        <div v-if="form.type !== 'sentence'" class="form-item">
-          <label>例句<span class="ex-help" @click="showTip('保存时将自动翻译成中文并作为句子加入词句库', 'warn')">？</span></label>
+        <div v-if="form.type !== 'sentence'" class="form-item ex-item">
+          <label>
+            例句
+            <span class="ex-help" @click.stop="showExampleTip = !showExampleTip">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b2b2b2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </span>
+            <transition name="fade">
+              <div v-if="showExampleTip" class="ex-tip">保存时将自动翻译成中文并作为句子加入词句库</div>
+            </transition>
+          </label>
           <textarea
             v-model="form.example"
             rows="2"
@@ -366,21 +376,43 @@ function clearAllFields() {
   margin-left: 4px;
 }
 
-/* 例句帮助问号 */
-.form-item .ex-help {
+/* 例句帮助：icon + tooltip */
+.ex-item {
+  position: relative;
+}
+.ex-help {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
   margin-left: 4px;
-  border-radius: 50%;
-  border: 1px solid #b2b2b2;
-  color: #b2b2b2;
-  font-size: 11px;
-  line-height: 1;
   cursor: pointer;
-  vertical-align: middle;
+  vertical-align: -2px;
+}
+.ex-tip {
+  position: absolute;
+  top: 20px;
+  left: 0;
+  z-index: 20;
+  max-width: 280px;
+  padding: 8px 10px;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  font-size: 12px;
+  color: #333;
+  line-height: 1.6;
+}
+.ex-tip::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: 20px;
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border-left: 1px solid #e5e5e5;
+  border-top: 1px solid #e5e5e5;
+  transform: rotate(45deg);
 }
 
 .pos-row {
