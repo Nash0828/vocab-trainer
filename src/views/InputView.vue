@@ -96,13 +96,22 @@ function validate() {
 }
 
 // 重复校验：中文/英文与词句库已有条目重复时阻止提交，并区分提示
-function duplicateTip() {
-  const dup = checkDuplicate({ chinese: form.chinese, english: form.english })
+function duplicateTip() {  const dup = checkDuplicate({ chinese: form.chinese, english: form.english })
   const parts = []
   if (dup.duplicateChinese) parts.push(`中文「${form.chinese.trim()}」`)
   if (dup.duplicateEnglish) parts.push(`英文「${form.english.trim()}」`)
   if (!parts.length) return null
   return `⛔ ${parts.join(' 与 ')}已在词句库中，不能重复录入`
+}
+
+// 例句是否包含当前录入的单词/短语（单词按词边界匹配，短语忽略大小写包含）
+function exampleContains(en, ex, isWord) {
+  if (!en) return false
+  if (isWord) {
+    const esc = en.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    return new RegExp(`(^|[^a-zA-Z0-9])${esc}([^a-zA-Z0-9]|$)`, 'i').test(ex)
+  }
+  return ex.toLowerCase().includes(en.toLowerCase())
 }
 
 async function submit() {
@@ -116,6 +125,11 @@ async function submit() {
   // 带例句：先端保存（查重 + AI 翻译 + 例句自动入库），成功后再写入本地
   const ex = (form.example || '').trim()
   if (ex) {
+    // 例句必须包含当前录入的单词/短语
+    if (!exampleContains(form.english.trim(), ex, form.type === 'word')) {
+      showTip(`例句需包含当前${form.type === 'word' ? '单词' : '短语'}`, 'err')
+      return
+    }
     saving.value = true
     try {
       const real = await api.addWord({
@@ -131,6 +145,7 @@ async function submit() {
       resetForm()
     } catch (err) {
       const msg = err.code === 'TRANSLATE_FAIL' ? '例句翻译失败，请稍后重试'
+        : err.code === 'EXAMPLE_NOT_CONTAIN' ? '例句需包含当前单词或短语'
         : '保存失败，请检查输入'
       showTip(msg, 'err')
     } finally {

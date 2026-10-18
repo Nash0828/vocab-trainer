@@ -530,6 +530,13 @@ app.post('/api/words', async (req, res) => {
   const ex = (example || '').trim()
   let exampleId = 0
   if (ex && t !== 'sentence') {
+    // 例句必须包含当前录入的单词/短语
+    const en = String(english || '').trim()
+    const isWord = t === 'word'
+    const contains = isWord
+      ? new RegExp(`(^|[^a-zA-Z0-9])${en.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-zA-Z0-9]|$)`, 'i').test(ex)
+      : ex.toLowerCase().includes(en.toLowerCase())
+    if (!en || !contains) return res.status(400).json({ error: '例句需包含当前单词或短语', code: 'EXAMPLE_NOT_CONTAIN' })
     const dup = db.prepare("SELECT id FROM words WHERE user_id = ? AND type = 'sentence' AND LOWER(english) = LOWER(?)").get(req.userId, ex)
     if (dup) {
       exampleId = Number(dup.id)
