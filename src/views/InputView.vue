@@ -391,7 +391,7 @@ function clearAllFields() {
 .ex-tip {
   position: absolute;
   bottom: calc(100% + 4px); /* 贴紧图标上方 4px */
-  left: 0;
+  left: -6px;
   z-index: 20;
   width: 280px;
   padding: 8px 10px;
@@ -406,8 +406,8 @@ function clearAllFields() {
 .ex-tip::before {
   content: '';
   position: absolute;
-  bottom: -5px;
-  left: 4px; /* 箭头中心 4+4=8px ≈ 图标中心，恒对准 */
+  bottom: -3px;
+  left: 10px; /* 箭头中心 10+4=14px（气泡左移6px后仍对准图标） */
   width: 8px;
   height: 8px;
   background: #fff;
