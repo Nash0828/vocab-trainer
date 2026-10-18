@@ -718,6 +718,11 @@ async function lookupWord(word, type = 'word') {
 }
 function closeDict() {
   dictModal.value = null
+  // 关闭查词弹框后，焦点回到答题输入框，键盘保持弹出
+  const el = answerInput.value
+  if (el) {
+    try { el.focus() } catch (e) {}
+  }
 }
 
 // 弹窗打开时禁止背景滚动（iOS 全版本可靠的 body 滚动锁）
