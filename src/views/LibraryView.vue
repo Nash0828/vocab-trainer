@@ -181,7 +181,8 @@ function speakViaSpeechSynthesis(text) {
 
 // 例句中高亮当前单词（含常见词形变化）
 function escapeHtml(s) {
-  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  // 文本内容场景：不转义引号，避免后端已解码的引号被二次转义成 &quot;
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 function highlightWord(word, sentence) {
   const esc = escapeHtml(sentence)
