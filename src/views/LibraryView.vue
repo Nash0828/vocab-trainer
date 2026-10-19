@@ -372,6 +372,7 @@ const totalCount = computed(() => words.value.length)
 
 // ---- 筛选：关键字 + 类型 + 背熟状态（可组合） ----
 const keyword = ref('')
+const searchInputRef = ref(null) // 搜索框引用：清空时保持焦点
 const statusFilter = ref('all') // 'all' | 'mastered' | 'notMastered'
 const typeFilter = ref('all') // 'all' | 'word' | 'phrase' | 'sentence'
 
@@ -494,6 +495,14 @@ function resetFilters() {
   keyword.value = ''
   statusFilter.value = 'all'
   typeFilter.value = 'all'
+}
+
+// 清空搜索关键词：保持输入框焦点，避免收起键盘
+function clearSearch() {
+  keyword.value = ''
+  nextTick(() => {
+    try { searchInputRef.value && searchInputRef.value.focus() } catch (e) {}
+  })
 }
 
 // ---- 列宽拖拽（colgroup + col 方案，表头与单元格自动对齐） ----
@@ -704,10 +713,11 @@ function formatTime(ts) {
         <input
           v-model="keyword"
           type="text"
+          ref="searchInputRef"
           class="search-input"
           placeholder="搜索中文 / 英文…"
         />
-        <button v-if="keyword" class="search-clear" @click="keyword = ''">
+        <button v-if="keyword" class="search-clear" @mousedown.prevent @click="clearSearch">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
         <button class="filter-btn" :class="{ active: filterSummary }" @click="openFilterSheet">
