@@ -808,6 +808,12 @@ app.get('/api/dict', async (req, res) => {
     .replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'")
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
     .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
+  // 例句文本清理：解码实体 + 移除 HTML 标签（有道例句可能带 <b> 等标记）+ 压缩空白
+  const cleanText = (s) => decodeEntities(s)
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\s+([,.;:!?'’"”])/g, '$1')
+    .trim()
   // 1) 有道词典（单词/短语详情）
   try {
     const r = await fetch(`https://dict.youdao.com/jsonapi?q=${encodeURIComponent(word)}`, { signal: AbortSignal.timeout(6000) })
@@ -821,20 +827,20 @@ app.get('/api/dict', async (req, res) => {
         const blng = data.blng_sents_part
         if (blng && Array.isArray(blng['sentence-pair'])) {
           sentences = blng['sentence-pair'].map((s) => ({
-            en: decodeEntities(s.sentence || s['sentence-eng'] || ''),
-            zh: decodeEntities(s['sentence-translation'] || ''),
+            en: cleanText(s.sentence || s['sentence-eng'] || ''),
+            zh: cleanText(s['sentence-translation'] || ''),
           })).filter((s) => s.en.trim())
         }
         if (!sentences.length && data.media_sents_part && Array.isArray(data.media_sents_part['sentence-pair'])) {
           sentences = data.media_sents_part['sentence-pair'].map((s) => ({
-            en: decodeEntities(s.sentence || s['sentence-eng'] || ''),
-            zh: decodeEntities(s['sentence-translation'] || ''),
+            en: cleanText(s.sentence || s['sentence-eng'] || ''),
+            zh: cleanText(s['sentence-translation'] || ''),
           })).filter((s) => s.en.trim())
         }
         return res.json({
-          usphone: decodeEntities(w.usphone), ukphone: decodeEntities(w.ukphone), examType: ec.exam_type||[],
-          trs: (w.trs||[]).map(t => decodeEntities(t.tr[0].l.i[0])),
-          wfs: (w.wfs||[]).map(wf => `${decodeEntities(wf.wf.name)}：${decodeEntities(wf.wf.value)}`),
+          usphone: cleanText(w.usphone), ukphone: cleanText(w.ukphone), examType: ec.exam_type||[],
+          trs: (w.trs||[]).map(t => cleanText(t.tr[0].l.i[0])),
+          wfs: (w.wfs||[]).map(wf => `${cleanText(wf.wf.name)}：${cleanText(wf.wf.value)}`),
           sentences: sentences.slice(0, 5),
         })
       }
