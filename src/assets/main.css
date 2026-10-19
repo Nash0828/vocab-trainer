@@ -169,6 +169,9 @@ html, body {
   display: inline-flex;
   align-items: center;
   gap: 2px;
+  /* 与静态喇叭图标同高，避免播放切换时按钮高度变化引起页面跳动 */
+  height: 16px;
+  min-width: 16px;
 }
 .spk-eq i {
   display: block;
