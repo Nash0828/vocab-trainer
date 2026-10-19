@@ -900,6 +900,11 @@ function formatTime(ts) {
           <button class="dict-close" @click="closeDict">✕</button>
         </div>
         <div class="dict-body">
+          <div v-if="dictModal.type !== 'word'" class="dict-speak-row">
+            <button class="dict-speak-btn" :class="{ 'is-playing': playingKey === 'dict-main' }" @click="speak(dictModal.word, 0, null, 'dict-main')" title="朗读"><span class="spk-static">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span><span class="spk-eq"><i></i><i></i><i></i></span><span class="dict-speak-text">朗读</span>
+            </button>
+          </div>
           <AiUsageCard v-if="dictModal" :word="dictModal.word" :type="dictModal.type || 'word'" />
           <div v-if="dictModal.loading" class="dict-loading">查询中…</div>
           <div v-else-if="dictModal.error" class="dict-error"> {{ dictModal.error }}</div>
@@ -1669,6 +1674,27 @@ function formatTime(ts) {
   overscroll-behavior: contain;
 }
 
+/* 详情弹框：短语/句子独立发音行（微信风格胶囊按钮） */
+.dict-speak-row {
+  padding: 10px 16px 0;
+}
+.dict-speak-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f2f2f2;
+  border: none;
+  border-radius: 16px;
+  padding: 6px 14px;
+  color: #576b95;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.dict-speak-text {
+  color: #576b95;
+  font-size: 13px;
+}
 .dict-loading, .dict-error {
   text-align: center;
   padding: 40px 0;
