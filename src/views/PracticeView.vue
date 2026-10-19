@@ -723,19 +723,24 @@ async function lookupWord(word, type = 'word') {
 }
 function closeDict() {
   dictModal.value = null
-  // 关闭查词弹框后：等弹框移除，再聚焦答题输入框，并滚到可见区避免被键盘遮盖
+  // 关闭查词弹框后：等弹框移除，再聚焦答题输入框，并滚动保证输入框不被键盘遮盖
   nextTick(() => {
     const el = answerInput.value
     if (!el) return
     try { el.focus() } catch (e) {}
-    // iOS 键盘弹出会压缩视口，延迟后再滚到输入框位置，保证可见且光标聚焦
+    // 等 iOS 键盘弹出动画结束（约 300ms+）后再滚动，避免被二次挤压
     setTimeout(() => {
       try {
         el.focus()
         if (el.setSelectionRange) el.setSelectionRange(el.value.length, el.value.length)
       } catch (e) {}
-      try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }) } catch (e) {}
-    }, 200)
+      // 手动滚动：让元素底边不越过视口下半区，多行文本框也不会被键盘盖住
+      const r = el.getBoundingClientRect()
+      const vh = window.innerHeight || document.documentElement.clientHeight
+      const safeBottom = vh * 0.5
+      if (r.top < 0) window.scrollBy(0, r.top - 20)
+      else if (r.bottom > safeBottom) window.scrollBy(0, r.bottom - safeBottom)
+    }, 400)
   })
 }
 
