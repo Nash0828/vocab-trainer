@@ -2574,9 +2574,9 @@ next()
   overscroll-behavior: contain;
 }
 
-/* 详情弹框：短语/句子独立发音行（微信风格胶囊按钮） */
+/* 详情弹框：短语独立发音行（微信风格胶囊按钮），左右对齐内容区，下留白避免挤压释义 */
 .dict-speak-row {
-  padding: 10px 16px 0;
+  padding: 12px 0;
 }
 .dict-speak-btn {
   display: inline-flex;
