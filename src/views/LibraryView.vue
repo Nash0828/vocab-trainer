@@ -15,7 +15,7 @@ const { words, updateWord, removeWord, checkDuplicate, resetCount, isMastered, s
   useWords()
 
 const editingId = ref(null)
-const editForm = reactive({ chinese: '', english: '', pos: '', type: 'word', caseSensitive: false, phrases: [''], examples: [''] })
+const editForm = reactive({ chinese: '', english: '', pos: '', type: 'word', caseSensitive: false, phrases: [], examples: [''] })
 const typeOptions = [
   { value: 'word', label: '单词' },
   { value: 'phrase', label: '短语' },
@@ -604,7 +604,7 @@ function startEdit(word) {
   const linked = (word.examples && word.examples.length) ? word.examples : (word.exampleId ? [words.value.find((x) => Number(x.id) === Number(word.exampleId) && x.type === 'sentence')].filter(Boolean) : [])
   const phs = linked.filter((x) => x && x.type === 'phrase').map((x) => x.english)
   const exs = linked.filter((x) => x && x.type === 'sentence').map((x) => x.english)
-  editForm.phrases = phs.length ? phs : ['']
+  editForm.phrases = phs
   editForm.examples = exs.length ? exs : ['']
 }
 

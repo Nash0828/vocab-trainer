@@ -14,7 +14,7 @@ const form = reactive({
   type: 'word',
   pos: '',
   caseSensitive: false,
-  phrases: [''],
+  phrases: [],
   examples: [''],
 })
 
@@ -158,7 +158,7 @@ function resetForm() {
   form.type = 'word'
   form.pos = ''
   form.caseSensitive = false
-  form.phrases = ['']
+  form.phrases = []
   form.examples = ['']
   posInput.value = ''
 }
@@ -168,7 +168,7 @@ function clearAllFields() {
   form.english = ''
   form.type = 'word'
   form.pos = ''
-  form.phrases = ['']
+  form.phrases = []
   form.examples = ['']
 }
 
