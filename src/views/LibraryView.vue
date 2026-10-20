@@ -15,6 +15,7 @@ const { words, updateWord, removeWord, checkDuplicate, resetCount, isMastered, s
   useWords()
 
 const editingId = ref(null)
+const savingEdit = ref(false)
 const editForm = reactive({ chinese: '', english: '', pos: '', type: 'word', caseSensitive: false, phrases: [], examples: [''] })
 const typeOptions = [
   { value: 'word', label: '单词' },
@@ -640,6 +641,8 @@ async function saveEdit(word) {
     showTip(`⛔ ${parts.join(' 与 ')}与词句库中其他词句重复，保存失败`, 'err')
     return
   }
+  if (savingEdit.value) return
+  savingEdit.value = true
   try {
     await updateWord(word.id, {
       chinese: editForm.chinese.trim(),
@@ -657,6 +660,8 @@ async function saveEdit(word) {
       : err.code === 'EXAMPLE_NOT_CONTAIN' ? '相关短语/例句需包含当前单词（含变形形式）'
       : '保存失败，请检查输入'
     showTip(msg, 'err')
+  } finally {
+    savingEdit.value = false
   }
 }
 
@@ -864,8 +869,10 @@ function formatTime(ts) {
             </div>
           </template>
           <div class="edit-btns">
-            <button class="btn primary mini" @click="saveEdit(word)">保存</button>
-            <button class="btn ghost mini" @click="cancelEdit">取消</button>
+            <button class="btn primary mini" :disabled="savingEdit" @click="saveEdit(word)">
+              <span v-if="savingEdit" class="btn-spinner"></span>{{ savingEdit ? '保存中…' : '保存' }}
+            </button>
+            <button class="btn ghost mini" :disabled="savingEdit" @click="cancelEdit">取消</button>
           </div>
         </div>
 

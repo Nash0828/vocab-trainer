@@ -123,6 +123,32 @@
   border-radius: 6px;
   font-size: 16px;
   text-align: center;
+  border: none;
+  cursor: pointer;
+  transition: opacity .2s;
+}
+.btn:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.btn-spinner {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255, 255, 255, .45);
+  border-top-color: #fff;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: -2px;
+  animation: btn-spin .8s linear infinite;
+}
+@keyframes btn-spin {
+  to { transform: rotate(360deg); }
+}
+.btn.ghost .btn-spinner {
+  border-color: rgba(0, 0, 0, .25);
+  border-top-color: var(--text-main);
 }
 .btn.primary {
   background: var(--primary);
