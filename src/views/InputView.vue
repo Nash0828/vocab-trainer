@@ -2,6 +2,9 @@
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useWords } from '../composables/useWords'
 import { api } from '../api/index.js'
+import { defineOptions } from 'vue'
+
+defineOptions({ name: 'InputView' })
 
 const { words, addWord, checkDuplicate } = useWords()
 const saving = ref(false)
