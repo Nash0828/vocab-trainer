@@ -28,7 +28,7 @@ let tipTimer = null
 
 // ===== 词典查询弹窗 =====
 const dictModal = ref(null)
-// 把用户录入的关联词句插到有道例句列表最前面：相关短语在上，例句在下
+// 把用户录入的关联词句插到详情弹框：相关短语放 data.phrases（例句区块上方），例句插到有道例句最前
 function prependExampleSentences(data, wordText) {
   if (!data) return
   const cur = words.value.find((w) => w.english.trim().toLowerCase() === String(wordText).trim().toLowerCase())
@@ -40,18 +40,24 @@ function prependExampleSentences(data, wordText) {
     if (old) exs = [old]
   }
   if (!exs.length) return
-  if (!Array.isArray(data.sentences)) data.sentences = []
-  // 先插例句（在用户例句之后会排在前面），再插短语（unshift 后短语在最前）
-  const sentences = exs.filter((x) => x && x.type !== 'phrase' && x.english)
-  for (let i = sentences.length - 1; i >= 0; i--) {
-    if (!data.sentences.some((s) => s.en === sentences[i].english)) {
-      data.sentences.unshift({ en: sentences[i].english, zh: sentences[i].chinese })
+  // 相关短语 → data.phrases（展示在例句上方）
+  const phrases = exs.filter((x) => x && x.type === 'phrase' && x.english)
+  if (phrases.length) {
+    if (!Array.isArray(data.phrases)) data.phrases = []
+    for (let i = phrases.length - 1; i >= 0; i--) {
+      if (!data.phrases.some((p) => p.en === phrases[i].english)) {
+        data.phrases.unshift({ en: phrases[i].english, zh: phrases[i].chinese })
+      }
     }
   }
-  const phrases = exs.filter((x) => x && x.type === 'phrase' && x.english)
-  for (let i = phrases.length - 1; i >= 0; i--) {
-    if (!data.sentences.some((s) => s.en === phrases[i].english)) {
-      data.sentences.unshift({ en: phrases[i].english, zh: phrases[i].chinese })
+  // 例句 → data.sentences 最前
+  const sentences = exs.filter((x) => x && x.type !== 'phrase' && x.english)
+  if (sentences.length) {
+    if (!Array.isArray(data.sentences)) data.sentences = []
+    for (let i = sentences.length - 1; i >= 0; i--) {
+      if (!data.sentences.some((s) => s.en === sentences[i].english)) {
+        data.sentences.unshift({ en: sentences[i].english, zh: sentences[i].chinese })
+      }
     }
   }
 }
@@ -998,6 +1004,20 @@ function formatTime(ts) {
               <p class="dict-label">词形变化</p>
               <ul>
                 <li v-for="(wf, i) in dictModal.data.wfs" :key="i" v-html="wordify(wf, '')"></li>
+              </ul>
+            </div>
+            <div v-if="dictModal.data.phrases && dictModal.data.phrases.length" class="dict-meaning" @click="onDictTextClick">
+              <p class="dict-label">相关短语</p>
+              <ul class="sent-list">
+                <li v-for="(s, i) in dictModal.data.phrases" :key="'ph' + i" class="sent-item">
+                  <div class="sent-line">
+                    <p class="sent-en" v-html="wordify(s.en, dictModal.word)"></p>
+                    <button class="sent-speak" :class="{ 'is-playing': playingKey === 'ph' + i }" @click="speakSentence(s.en, 'ph' + i)" title="朗读短语"><span class="spk-static">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span><span class="spk-eq"><i></i><i></i><i></i></span>
+                    </button>
+                  </div>
+                  <p v-if="s.zh" class="sent-zh">{{ s.zh }}</p>
+                </li>
               </ul>
             </div>
             <div v-if="dictModal.data.sentences && dictModal.data.sentences.length" class="dict-meaning" @click="onDictTextClick">
