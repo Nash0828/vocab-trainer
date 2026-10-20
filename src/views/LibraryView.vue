@@ -824,7 +824,7 @@ function formatTime(ts) {
           <template v-if="editForm.type !== 'sentence'">
             <div class="edit-ex-wrap">
               <div v-for="(ex, i) in editForm.examples" :key="i" class="edit-ex-row">
-                <textarea v-model="editForm.examples[i]" class="cell-input area" :placeholder="`例句${i + 1}（包含当前词/短语）`"></textarea>
+                <textarea v-model="editForm.examples[i]" class="cell-input area" :placeholder="`例句${i + 1}`"></textarea>
                 <button type="button" class="edit-ex-del" @click="editForm.examples.splice(i, 1)" title="删除该例句">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>

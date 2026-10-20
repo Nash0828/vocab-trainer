@@ -281,7 +281,7 @@ function removeExample(i) {
             <textarea
               v-model="form.examples[i]"
               rows="2"
-              :placeholder="`例句${i + 1}（包含当前词/短语）`"
+              :placeholder="`例句${i + 1}`"
               autocomplete="off"
             ></textarea>
             <button class="ex-del" type="button" @click="removeExample(i)" title="删除该例句">
