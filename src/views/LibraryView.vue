@@ -15,7 +15,7 @@ const { words, updateWord, removeWord, checkDuplicate, resetCount, isMastered, s
   useWords()
 
 const editingId = ref(null)
-const editForm = reactive({ chinese: '', english: '', pos: '', type: 'word', caseSensitive: false, examples: [] })
+const editForm = reactive({ chinese: '', english: '', pos: '', type: 'word', caseSensitive: false, examples: [''] })
 const typeOptions = [
   { value: 'word', label: '单词' },
   { value: 'phrase', label: '短语' },
@@ -593,10 +593,11 @@ function startEdit(word) {
   editForm.pos = word.pos || ''
   editForm.type = ['word', 'phrase', 'sentence'].includes(word.type) ? word.type : 'word'
   editForm.caseSensitive = !!word.caseSensitive
-  // 带出关联例句（多条）
-  editForm.examples = (word.examples && word.examples.length)
+  // 带出关联例句（多条）；无关联时默认显示一个空框
+  const exs = (word.examples && word.examples.length)
     ? word.examples.map((x) => x.english)
     : (word.exampleId ? [words.value.find((x) => Number(x.id) === Number(word.exampleId) && x.type === 'sentence')].filter(Boolean).map((x) => x.english) : [])
+  editForm.examples = exs.length ? exs : ['']
 }
 
 function cancelEdit() {
@@ -828,7 +829,7 @@ function formatTime(ts) {
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
-              <button v-if="editForm.examples.length < 5" type="button" class="edit-ex-add" @click="editForm.examples.push('')">+ 添加例句（最多5条）</button>
+              <button v-if="editForm.examples.length < 5" type="button" class="edit-ex-add" @click="editForm.examples.push('')">+ 添加例句</button>
             </div>
           </template>
           <div class="edit-btns">

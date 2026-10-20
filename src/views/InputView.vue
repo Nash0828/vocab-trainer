@@ -13,7 +13,7 @@ const form = reactive({
   type: 'word',
   pos: '',
   caseSensitive: false,
-  examples: [],
+  examples: [''],
 })
 
 const typeOptions = [
@@ -153,7 +153,7 @@ function resetForm() {
   form.type = 'word'
   form.pos = ''
   form.caseSensitive = false
-  form.examples = []
+  form.examples = ['']
   posInput.value = ''
 }
 
@@ -162,7 +162,7 @@ function clearAllFields() {
   form.english = ''
   form.type = 'word'
   form.pos = ''
-  form.examples = []
+  form.examples = ['']
 }
 
 // 例句：最多5条
@@ -288,7 +288,7 @@ function removeExample(i) {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
-          <button v-if="form.examples.length < 5" type="button" class="ex-add" @click="addExample">+ 添加例句（最多5条）</button>
+          <button v-if="form.examples.length < 5" type="button" class="ex-add" @click="addExample">+ 添加例句</button>
         </div>
       </div>
 
