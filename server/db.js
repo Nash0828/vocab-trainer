@@ -129,6 +129,10 @@ tryMigrate("ALTER TABLE words ADD COLUMN user_id INTEGER DEFAULT 0")
 tryMigrate("ALTER TABLE words ADD COLUMN case_sensitive INTEGER DEFAULT 0")
 tryMigrate("ALTER TABLE words ADD COLUMN type TEXT DEFAULT 'word'")
 tryMigrate("ALTER TABLE words ADD COLUMN example_id INTEGER DEFAULT 0")
+// 多例句：词句 ↔ 句子 多对多关联表（一个词句最多关联5条例句）
+tryMigrate("CREATE TABLE IF NOT EXISTS word_examples (id INTEGER PRIMARY KEY AUTOINCREMENT, word_id INTEGER NOT NULL, sentence_id INTEGER NOT NULL, created_at INTEGER DEFAULT 0, UNIQUE(word_id, sentence_id))")
+// 迁移旧单例句数据到关联表
+tryMigrate("INSERT OR IGNORE INTO word_examples (word_id, sentence_id, created_at) SELECT id, example_id, created_at FROM words WHERE example_id > 0")
 tryMigrate("ALTER TABLE records ADD COLUMN user_id INTEGER DEFAULT 0")
 tryMigrate("ALTER TABLE records ADD COLUMN user_answer TEXT DEFAULT ''")
 tryMigrate("ALTER TABLE records ADD COLUMN type TEXT DEFAULT 'word'")

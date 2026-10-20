@@ -13,7 +13,7 @@ const form = reactive({
   type: 'word',
   pos: '',
   caseSensitive: false,
-  example: '',
+  examples: [],
 })
 
 const typeOptions = [
@@ -113,8 +113,8 @@ async function submit() {
     return
   }
   // 带例句：先端保存（AI 包含校验 + 查重 + AI 翻译 + 例句自动入库），成功后再写入本地
-  const ex = (form.example || '').trim()
-  if (ex) {
+  const exList = form.examples.map((x) => String(x || '').trim()).filter(Boolean)
+  if (exList.length) {
     saving.value = true
     try {
       const real = await api.addWord({
@@ -123,7 +123,7 @@ async function submit() {
         pos: form.pos.trim(),
         type: form.type,
         caseSensitive: form.caseSensitive,
-        example: ex,
+        examples: exList,
       })
       words.value.push({ ...real, count: 0 })
       showTip(`已保存：${real.english}（${real.chinese}）`, 'ok')
@@ -153,7 +153,7 @@ function resetForm() {
   form.type = 'word'
   form.pos = ''
   form.caseSensitive = false
-  form.example = ''
+  form.examples = []
   posInput.value = ''
 }
 
@@ -162,7 +162,16 @@ function clearAllFields() {
   form.english = ''
   form.type = 'word'
   form.pos = ''
-  form.example = ''
+  form.examples = []
+}
+
+// 例句：最多5条
+function addExample() {
+  if (form.examples.length >= 5) return
+  form.examples.push('')
+}
+function removeExample(i) {
+  form.examples.splice(i, 1)
 }
 </script>
 
@@ -264,16 +273,22 @@ function clearAllFields() {
             <span class="ex-help" @click.stop="showExampleTip = !showExampleTip">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b2b2b2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               <transition name="fade">
-                <div v-if="showExampleTip" class="ex-tip">保存时将自动翻译成中文并作为句子加入词句库</div>
+                <div v-if="showExampleTip" class="ex-tip">保存时将自动翻译成中文并作为句子加入词句库，最多可添加5条</div>
               </transition>
             </span>
           </label>
-          <textarea
-            v-model="form.example"
-            rows="2"
-            placeholder="输入一个包含该词/短语的英文例句"
-            autocomplete="off"
-          ></textarea>
+          <div v-for="(ex, i) in form.examples" :key="i" class="ex-row">
+            <textarea
+              v-model="form.examples[i]"
+              rows="2"
+              :placeholder="`例句${i + 1}（包含当前词/短语）`"
+              autocomplete="off"
+            ></textarea>
+            <button class="ex-del" type="button" @click="removeExample(i)" title="删除该例句">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <button v-if="form.examples.length < 5" type="button" class="ex-add" @click="addExample">+ 添加例句（最多5条）</button>
         </div>
       </div>
 
@@ -387,6 +402,45 @@ function clearAllFields() {
 /* 例句帮助：icon + tooltip */
 .ex-item {
   position: relative;
+}
+/* 多条例句：每条输入框右侧带删除按钮（微信风格） */
+.ex-row {
+  position: relative;
+  margin-bottom: 10px;
+}
+.ex-row textarea {
+  width: 100%;
+  padding-right: 34px;
+  box-sizing: border-box;
+}
+.ex-del {
+  position: absolute;
+  top: 8px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: #b2b2b2;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.ex-del:active {
+  background: #f2f2f2;
+}
+.ex-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  color: #576b95;
+  font-size: 14px;
+  padding: 6px 2px;
+  cursor: pointer;
 }
 .ex-help {
   position: relative;

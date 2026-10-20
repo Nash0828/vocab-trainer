@@ -15,7 +15,7 @@ const { words, updateWord, removeWord, checkDuplicate, resetCount, isMastered, s
   useWords()
 
 const editingId = ref(null)
-const editForm = reactive({ chinese: '', english: '', pos: '', type: 'word', caseSensitive: false, example: '' })
+const editForm = reactive({ chinese: '', english: '', pos: '', type: 'word', caseSensitive: false, examples: [] })
 const typeOptions = [
   { value: 'word', label: '单词' },
   { value: 'phrase', label: '短语' },
@@ -28,16 +28,24 @@ let tipTimer = null
 
 // ===== 词典查询弹窗 =====
 const dictModal = ref(null)
-// 把用户录入的例句（exampleId 关联的句子）插到有道例句列表最前面
+// 把用户录入的例句（多条关联句子）插到有道例句列表最前面
 function prependExampleSentences(data, wordText) {
   if (!data) return
   const cur = words.value.find((w) => w.english.trim().toLowerCase() === String(wordText).trim().toLowerCase())
-  if (!cur || !cur.exampleId) return
-  const ex = words.value.find((w) => Number(w.id) === Number(cur.exampleId))
-  if (!ex || ex.type !== 'sentence' || !ex.english) return
+  if (!cur) return
+  // 优先取多例句关联；兼容旧的单 exampleId
+  let exs = (cur.examples && cur.examples.length) ? cur.examples : []
+  if (!exs.length && cur.exampleId) {
+    const old = words.value.find((x) => Number(x.id) === Number(cur.exampleId) && x.type === 'sentence')
+    if (old) exs = [old]
+  }
+  if (!exs.length) return
   if (!Array.isArray(data.sentences)) data.sentences = []
-  if (!data.sentences.some((s) => s.en === ex.english)) {
-    data.sentences.unshift({ en: ex.english, zh: ex.chinese })
+  for (let i = exs.length - 1; i >= 0; i--) {
+    const ex = exs[i]
+    if (ex && ex.english && !data.sentences.some((s) => s.en === ex.english)) {
+      data.sentences.unshift({ en: ex.english, zh: ex.chinese })
+    }
   }
 }
 async function lookupWord(word, type = 'word') {
@@ -585,12 +593,10 @@ function startEdit(word) {
   editForm.pos = word.pos || ''
   editForm.type = ['word', 'phrase', 'sentence'].includes(word.type) ? word.type : 'word'
   editForm.caseSensitive = !!word.caseSensitive
-  // 带出关联例句（exampleId 对应的句子英文）
-  editForm.example = ''
-  if (word.exampleId) {
-    const ex = words.value.find((x) => Number(x.id) === Number(word.exampleId) && x.type === 'sentence')
-    if (ex) editForm.example = ex.english
-  }
+  // 带出关联例句（多条）
+  editForm.examples = (word.examples && word.examples.length)
+    ? word.examples.map((x) => x.english)
+    : (word.exampleId ? [words.value.find((x) => Number(x.id) === Number(word.exampleId) && x.type === 'sentence')].filter(Boolean).map((x) => x.english) : [])
 }
 
 function cancelEdit() {
@@ -625,7 +631,7 @@ function saveEdit(word) {
     pos: editForm.type === 'word' ? editForm.pos.trim() : '',
     type: editForm.type,
     caseSensitive: editForm.type === 'word' ? editForm.caseSensitive : false,
-    example: editForm.type === 'sentence' ? '' : (editForm.example || '').trim(),
+    examples: editForm.type === 'sentence' ? [] : editForm.examples.map((x) => String(x || '').trim()).filter(Boolean),
   })
   if (ok) {
     showTip(`已保存修改：${editForm.english}`, 'ok')
@@ -815,7 +821,15 @@ function formatTime(ts) {
             </div>
           </template>
           <template v-if="editForm.type !== 'sentence'">
-            <textarea v-model="editForm.example" class="cell-input area" placeholder="例句（选填）"></textarea>
+            <div class="edit-ex-wrap">
+              <div v-for="(ex, i) in editForm.examples" :key="i" class="edit-ex-row">
+                <textarea v-model="editForm.examples[i]" class="cell-input area" :placeholder="`例句${i + 1}（包含当前词/短语）`"></textarea>
+                <button type="button" class="edit-ex-del" @click="editForm.examples.splice(i, 1)" title="删除该例句">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <button v-if="editForm.examples.length < 5" type="button" class="edit-ex-add" @click="editForm.examples.push('')">+ 添加例句（最多5条）</button>
+            </div>
           </template>
           <div class="edit-btns">
             <button class="btn primary mini" @click="saveEdit(word)">保存</button>
@@ -1574,6 +1588,47 @@ function formatTime(ts) {
   line-height: 1.5;
   font-family: inherit;
   box-sizing: border-box;
+}
+/* 编辑卡片：多条例句 */
+.edit-ex-wrap {
+  margin-top: 8px;
+}
+.edit-ex-row {
+  position: relative;
+  margin-bottom: 8px;
+}
+.edit-ex-row textarea {
+  width: 100%;
+  padding-right: 30px;
+  box-sizing: border-box;
+}
+.edit-ex-del {
+  position: absolute;
+  top: 6px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: #b2b2b2;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.edit-ex-del:active {
+  background: #f2f2f2;
+}
+.edit-ex-add {
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  background: transparent;
+  color: #576b95;
+  font-size: 13px;
+  padding: 4px 2px;
+  cursor: pointer;
 }
 
 .cell-input.pos {

@@ -92,7 +92,8 @@ export function useWords() {
     if (idx === -1) return false
     words.value[idx] = { ...words.value[idx], ...patch }
     const w = words.value[idx]
-    api.updateWord(id, { chinese: w.chinese, english: w.english, pos: w.pos, type: w.type || 'word', caseSensitive: !!w.caseSensitive, example: w.example || '' }).then((r) => {
+    api.updateWord(id, { chinese: w.chinese, english: w.english, pos: w.pos, type: w.type || 'word', caseSensitive: !!w.caseSensitive, examples: w.examples || [] }).then((r) => {
+      if (r && r.examples !== undefined) w.examples = r.examples
       if (r && r.exampleId !== undefined) w.exampleId = Number(r.exampleId)
     }).catch((err) =>
       console.error('updateWord 同步失败', err)

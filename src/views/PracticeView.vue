@@ -686,16 +686,24 @@ function speakSentence(sentence, key = '') {
 
 // ===== 词典查询弹窗（有道词典接口） =====
 const dictModal = ref(null) // { word, data, loading, error }
-// 把用户录入的例句（exampleId 关联的句子）插到有道例句列表最前面
+// 把用户录入的例句（多条关联句子）插到有道例句列表最前面
 function prependExampleSentences(data, wordText) {
   if (!data) return
   const cur = words.value.find((w) => w.english.trim().toLowerCase() === String(wordText).trim().toLowerCase())
-  if (!cur || !cur.exampleId) return
-  const ex = words.value.find((w) => Number(w.id) === Number(cur.exampleId))
-  if (!ex || ex.type !== 'sentence' || !ex.english) return
+  if (!cur) return
+  // 优先取多例句关联；兼容旧的单 exampleId
+  let exs = (cur.examples && cur.examples.length) ? cur.examples : []
+  if (!exs.length && cur.exampleId) {
+    const old = words.value.find((x) => Number(x.id) === Number(cur.exampleId) && x.type === 'sentence')
+    if (old) exs = [old]
+  }
+  if (!exs.length) return
   if (!Array.isArray(data.sentences)) data.sentences = []
-  if (!data.sentences.some((s) => s.en === ex.english)) {
-    data.sentences.unshift({ en: ex.english, zh: ex.chinese })
+  for (let i = exs.length - 1; i >= 0; i--) {
+    const ex = exs[i]
+    if (ex && ex.english && !data.sentences.some((s) => s.en === ex.english)) {
+      data.sentences.unshift({ en: ex.english, zh: ex.chinese })
+    }
   }
 }
 
