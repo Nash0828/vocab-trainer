@@ -402,6 +402,13 @@ function removeExample(i) {
 /* 例句帮助：icon + tooltip */
 .ex-item {
   position: relative;
+  /* 覆盖 .form-item 的横向 flex：例句框纵向堆叠 */
+  flex-direction: column;
+  align-items: stretch;
+}
+.ex-item label {
+  width: auto;
+  margin-bottom: 10px;
 }
 /* 多条例句：每条输入框右侧带删除按钮（微信风格） */
 .ex-row {
