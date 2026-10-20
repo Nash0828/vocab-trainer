@@ -686,7 +686,7 @@ function speakSentence(sentence, key = '') {
 
 // ===== 词典查询弹窗（有道词典接口） =====
 const dictModal = ref(null) // { word, data, loading, error }
-// 把用户录入的例句（多条关联句子）插到有道例句列表最前面
+// 把用户录入的关联词句插到有道例句列表最前面：相关短语在上，例句在下
 function prependExampleSentences(data, wordText) {
   if (!data) return
   const cur = words.value.find((w) => w.english.trim().toLowerCase() === String(wordText).trim().toLowerCase())
@@ -699,10 +699,17 @@ function prependExampleSentences(data, wordText) {
   }
   if (!exs.length) return
   if (!Array.isArray(data.sentences)) data.sentences = []
-  for (let i = exs.length - 1; i >= 0; i--) {
-    const ex = exs[i]
-    if (ex && ex.english && !data.sentences.some((s) => s.en === ex.english)) {
-      data.sentences.unshift({ en: ex.english, zh: ex.chinese })
+  // 先插例句（在用户例句之后会排在前面），再插短语（unshift 后短语在最前）
+  const sentences = exs.filter((x) => x && x.type !== 'phrase' && x.english)
+  for (let i = sentences.length - 1; i >= 0; i--) {
+    if (!data.sentences.some((s) => s.en === sentences[i].english)) {
+      data.sentences.unshift({ en: sentences[i].english, zh: sentences[i].chinese })
+    }
+  }
+  const phrases = exs.filter((x) => x && x.type === 'phrase' && x.english)
+  for (let i = phrases.length - 1; i >= 0; i--) {
+    if (!data.sentences.some((s) => s.en === phrases[i].english)) {
+      data.sentences.unshift({ en: phrases[i].english, zh: phrases[i].chinese })
     }
   }
 }

@@ -35,12 +35,12 @@ const ttsCache = new Map()
 function genId(prefix = '') { return `${prefix}${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }
 function rowToWord(row) {
   const w = { id: String(row.id), chinese: row.chinese, english: row.english, pos: row.pos || '', type: row.type || 'word', count: row.count || 0, createdAt: row.created_at, caseSensitive: !!row.case_sensitive, exampleId: row.example_id || 0 }
-  // 关联例句（多对多）：按关联表顺序返回句子列表
-  w.examples = (db.prepare('SELECT s.id, s.english, s.chinese FROM word_examples we JOIN words s ON s.id = we.sentence_id WHERE we.word_id = ? ORDER BY we.id ASC').all(row.id) || [])
-    .map((s) => ({ id: String(s.id), english: s.english, chinese: s.chinese }))
+  // 关联词句（相关短语+例句，多对多）：按关联表顺序返回，带类型
+  w.examples = (db.prepare('SELECT s.id, s.english, s.chinese, s.type FROM word_examples we JOIN words s ON s.id = we.sentence_id WHERE we.word_id = ? ORDER BY we.id ASC').all(row.id) || [])
+    .map((s) => ({ id: String(s.id), english: s.english, chinese: s.chinese, type: s.type || 'sentence' }))
   return w
 }
-// 写入词句的关联例句：清空旧关联后写入新列表
+// 写入词句的关联词句：清空旧关联后写入新列表
 function saveWordExamples(wordId, sentenceIds) {
   db.prepare('DELETE FROM word_examples WHERE word_id = ?').run(wordId)
   const st = db.prepare('INSERT OR IGNORE INTO word_examples (word_id, sentence_id, created_at) VALUES (?, ?, ?)')
@@ -305,9 +305,9 @@ app.get('/api/state', (req, res) => {
   const groupMap = getWordGroupMap(uid)
   // 批量取例句关联，避免逐条查询
   const exMap = new Map()
-  for (const r of db.prepare('SELECT we.word_id, s.id, s.english, s.chinese FROM word_examples we JOIN words s ON s.id = we.sentence_id ORDER BY we.id ASC').all()) {
+  for (const r of db.prepare('SELECT we.word_id, s.id, s.english, s.chinese, s.type FROM word_examples we JOIN words s ON s.id = we.sentence_id ORDER BY we.id ASC').all()) {
     const arr = exMap.get(r.word_id) || []
-    arr.push({ id: String(r.id), english: r.english, chinese: r.chinese })
+    arr.push({ id: String(r.id), english: r.english, chinese: r.chinese, type: r.type || 'sentence' })
     exMap.set(r.word_id, arr)
   }
   const words = db.prepare('SELECT * FROM words WHERE user_id = ? ORDER BY created_at ASC').all(uid).map((row) => {
@@ -539,46 +539,60 @@ function assignWordToSmallestGroup(uid, wordId) {
   if (g) db.prepare('INSERT OR IGNORE INTO word_groups (word_id, group_id) VALUES (?, ?)').run(wordId, g.id)
 }
 
+// 解析关联词句列表（相关短语 phrase / 例句 sentence）：AI 校验包含当前英文 → 查重复用 → 翻译新增
+// 返回关联 id 数组；校验失败抛带 code 的错误（EXAMPLE_NOT_CONTAIN / TRANSLATE_FAIL）
+async function resolveLinked(userId, type, english, list) {
+  const items = (Array.isArray(list) ? list : []).map((x) => String(x || '').trim()).filter(Boolean).slice(0, 5)
+  if (!items.length) return []
+  const ids = []
+  for (const item of items) {
+    if (!(await aiExampleContains(english, item))) {
+      const err = new Error('EXAMPLE_NOT_CONTAIN'); err.code = 'EXAMPLE_NOT_CONTAIN'; throw err
+    }
+    const dup = db.prepare('SELECT id FROM words WHERE user_id = ? AND type = ? AND LOWER(english) = LOWER(?)').get(userId, type, item)
+    if (dup) { ids.push(Number(dup.id)); continue }
+    let zh = ''
+    try { zh = await translateText(item) } catch (err) {
+      console.error('关联词句翻译失败:', err.message)
+      const e2 = new Error('TRANSLATE_FAIL'); e2.code = 'TRANSLATE_FAIL'; throw e2
+    }
+    const s = db.prepare("INSERT INTO words (user_id, chinese, english, pos, type, count, created_at, case_sensitive) VALUES (?, ?, ?, '', ?, 0, ?, 0)").run(userId, zh, item, type, Date.now())
+    ids.push(Number(s.lastInsertRowid))
+    assignWordToSmallestGroup(userId, Number(s.lastInsertRowid))
+  }
+  return ids
+}
+
 app.post('/api/words', async (req, res) => {
-  const { chinese, english, pos, type, caseSensitive, examples, example } = req.body || {}
+  const { chinese, english, pos, type, caseSensitive, phrases, examples, example } = req.body || {}
   const c = (chinese||'').trim(), e = (english||'').trim(), p = (pos||'').trim()
   const t = ['word', 'phrase', 'sentence'].includes(type) ? type : 'word'
   if (!c || !e) return res.status(400).json({ error: '中文和英文不能为空' })
-  // 例句列表（仅单词/短语，最多5条）：兼容旧的单条 example 字段
+  // 相关短语（仅单词，最多5条）+ 例句（仅单词/短语，最多5条，兼容旧的单条 example 字段）
   const exList = (Array.isArray(examples) ? examples : (example ? [example] : []))
-    .map((x) => String(x || '').trim()).filter(Boolean).slice(0, 5)
-  // 逐条：AI 判断必须包含当前英文（含变形），查重——已有相同句子则复用；否则 AI 翻译后新增句子
+  const phraseIds = []
   const sentenceIds = []
-  if (exList.length && t !== 'sentence') {
-    for (const ex of exList) {
-      if (!(await aiExampleContains(e, ex))) return res.status(400).json({ error: '例句需包含当前单词（含变形形式）', code: 'EXAMPLE_NOT_CONTAIN' })
-      const dup = db.prepare("SELECT id FROM words WHERE user_id = ? AND type = 'sentence' AND LOWER(english) = LOWER(?)").get(req.userId, ex)
-      if (dup) {
-        sentenceIds.push(Number(dup.id))
-      } else {
-        let zh = ''
-        try { zh = await translateText(ex) } catch (err) {
-          console.error('例句翻译失败:', err.message)
-          return res.status(502).json({ error: '例句翻译失败，请稍后重试', code: 'TRANSLATE_FAIL' })
-        }
-        const s = db.prepare("INSERT INTO words (user_id, chinese, english, pos, type, count, created_at, case_sensitive) VALUES (?, ?, ?, '', 'sentence', 0, ?, 0)").run(req.userId, zh, ex, Date.now())
-        sentenceIds.push(Number(s.lastInsertRowid))
-        assignWordToSmallestGroup(req.userId, Number(s.lastInsertRowid))
-      }
-    }
+  if (t === 'word' && (Array.isArray(phrases) ? phrases : []).some((x) => String(x || '').trim())) {
+    try { phraseIds.push(...await resolveLinked(req.userId, 'phrase', e, phrases)) }
+    catch (err) { return res.status(400).json({ error: err.code === 'TRANSLATE_FAIL' ? '相关短语翻译失败，请稍后重试' : '相关短语需包含当前单词（含变形形式）', code: err.code }) }
   }
+  if (t !== 'sentence' && exList.some((x) => String(x || '').trim())) {
+    try { sentenceIds.push(...await resolveLinked(req.userId, 'sentence', e, exList)) }
+    catch (err) { return res.status(400).json({ error: err.code === 'TRANSLATE_FAIL' ? '例句翻译失败，请稍后重试' : '例句需包含当前单词（含变形形式）', code: err.code }) }
+  }
+  const linkedIds = [...phraseIds, ...sentenceIds]
   try {
     const info = db.prepare('INSERT INTO words (user_id, chinese, english, pos, type, count, created_at, case_sensitive, example_id) VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)').run(req.userId, c, e, p, t, Date.now(), caseSensitive ? 1 : 0, sentenceIds[0] || 0)
     const wordId = info.lastInsertRowid
-    if (sentenceIds.length) saveWordExamples(wordId, sentenceIds)
+    if (linkedIds.length) saveWordExamples(wordId, linkedIds)
     const word = rowToWord(db.prepare('SELECT * FROM words WHERE id = ?').get(wordId))
     assignWordToSmallestGroup(req.userId, wordId)
     word.groupId = db.prepare('SELECT group_id FROM word_groups WHERE word_id = ?').get(wordId)?.group_id || null
     res.json(word)
   } catch (err) {
     console.error('保存单词失败:', err.message)
-    // 回滚：删除本次新增且未被其他词句引用的句子
-    for (const sid of sentenceIds) {
+    // 回滚：删除本次新增且未被其他词句引用的关联词句
+    for (const sid of linkedIds) {
       const ref = db.prepare('SELECT COUNT(*) AS c FROM word_examples WHERE sentence_id = ?').get(sid)
       if (!ref || !ref.c) db.prepare('DELETE FROM words WHERE id = ?').run(sid)
     }
@@ -644,35 +658,26 @@ async function aiExampleContains(en, ex) {
 
 app.put('/api/words/:id', async (req, res) => {
   const id = Number(req.params.id)
-  const { chinese, english, pos, type, caseSensitive, examples, example } = req.body || {}
+  const { chinese, english, pos, type, caseSensitive, phrases, examples, example } = req.body || {}
   const c = (chinese||'').trim(), e = (english||'').trim(), p = (pos||'').trim()
   const t = ['word', 'phrase', 'sentence'].includes(type) ? type : 'word'
   if (!c || !e) return res.status(400).json({ error: '中文和英文不能为空' })
-  // 例句列表（仅单词/短语，最多5条）：兼容旧的单条 example 字段
+  // 相关短语（仅单词）+ 例句（仅单词/短语，兼容旧的单条 example 字段）
   const exList = (Array.isArray(examples) ? examples : (example ? [example] : []))
-    .map((x) => String(x || '').trim()).filter(Boolean).slice(0, 5)
+  const phraseIds = []
   const sentenceIds = []
-  if (exList.length && t !== 'sentence') {
-    for (const ex of exList) {
-      if (!(await aiExampleContains(e, ex))) return res.status(400).json({ error: '例句需包含当前单词（含变形形式）', code: 'EXAMPLE_NOT_CONTAIN' })
-      const dup = db.prepare("SELECT id FROM words WHERE user_id = ? AND type = 'sentence' AND LOWER(english) = LOWER(?)").get(req.userId, ex)
-      if (dup) {
-        sentenceIds.push(Number(dup.id))
-      } else {
-        let zh = ''
-        try { zh = await translateText(ex) } catch (err) {
-          console.error('例句翻译失败:', err.message)
-          return res.status(502).json({ error: '例句翻译失败，请稍后重试', code: 'TRANSLATE_FAIL' })
-        }
-        const s = db.prepare("INSERT INTO words (user_id, chinese, english, pos, type, count, created_at, case_sensitive) VALUES (?, ?, ?, '', 'sentence', 0, ?, 0)").run(req.userId, zh, ex, Date.now())
-        sentenceIds.push(Number(s.lastInsertRowid))
-        assignWordToSmallestGroup(req.userId, Number(s.lastInsertRowid))
-      }
-    }
+  if (t === 'word' && (Array.isArray(phrases) ? phrases : []).some((x) => String(x || '').trim())) {
+    try { phraseIds.push(...await resolveLinked(req.userId, 'phrase', e, phrases)) }
+    catch (err) { return res.status(400).json({ error: err.code === 'TRANSLATE_FAIL' ? '相关短语翻译失败，请稍后重试' : '相关短语需包含当前单词（含变形形式）', code: err.code }) }
   }
+  if (t !== 'sentence' && exList.some((x) => String(x || '').trim())) {
+    try { sentenceIds.push(...await resolveLinked(req.userId, 'sentence', e, exList)) }
+    catch (err) { return res.status(400).json({ error: err.code === 'TRANSLATE_FAIL' ? '例句翻译失败，请稍后重试' : '例句需包含当前单词（含变形形式）', code: err.code }) }
+  }
+  const linkedIds = [...phraseIds, ...sentenceIds]
   const info = db.prepare('UPDATE words SET chinese = ?, english = ?, pos = ?, type = ?, case_sensitive = ?, example_id = ? WHERE id = ? AND user_id = ?').run(c, e, p, t, caseSensitive ? 1 : 0, sentenceIds[0] || 0, id, req.userId)
   if (!info.changes) return res.status(404).json({ error: '单词不存在' })
-  saveWordExamples(id, sentenceIds)
+  saveWordExamples(id, linkedIds)
   db.prepare('UPDATE wrongbook SET chinese = ?, english = ?, pos = ? WHERE word_id = ? AND user_id = ?').run(c, e, p, String(id), req.userId)
   const word = rowToWord(db.prepare('SELECT * FROM words WHERE id = ?').get(id))
   res.json({ ok: true, exampleId: sentenceIds[0] || 0, examples: word.examples })

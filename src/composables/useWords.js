@@ -92,7 +92,10 @@ export function useWords() {
     if (idx === -1) return false
     words.value[idx] = { ...words.value[idx], ...patch }
     const w = words.value[idx]
-    api.updateWord(id, { chinese: w.chinese, english: w.english, pos: w.pos, type: w.type || 'word', caseSensitive: !!w.caseSensitive, examples: w.examples || [] }).then((r) => {
+    // 编辑表单的 phrases/examples 为纯字符串数组（含空框）；后端返回的 examples 为带 type 的混合列表
+    const phs = Array.isArray(patch.phrases) ? patch.phrases : []
+    const exs = Array.isArray(patch.examples) ? patch.examples : []
+    api.updateWord(id, { chinese: w.chinese, english: w.english, pos: w.pos, type: w.type || 'word', caseSensitive: !!w.caseSensitive, phrases: phs, examples: exs }).then((r) => {
       if (r && r.examples !== undefined) w.examples = r.examples
       if (r && r.exampleId !== undefined) w.exampleId = Number(r.exampleId)
     }).catch((err) =>

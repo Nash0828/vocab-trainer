@@ -15,7 +15,7 @@ const { words, updateWord, removeWord, checkDuplicate, resetCount, isMastered, s
   useWords()
 
 const editingId = ref(null)
-const editForm = reactive({ chinese: '', english: '', pos: '', type: 'word', caseSensitive: false, examples: [''] })
+const editForm = reactive({ chinese: '', english: '', pos: '', type: 'word', caseSensitive: false, phrases: [''], examples: [''] })
 const typeOptions = [
   { value: 'word', label: '单词' },
   { value: 'phrase', label: '短语' },
@@ -28,7 +28,7 @@ let tipTimer = null
 
 // ===== 词典查询弹窗 =====
 const dictModal = ref(null)
-// 把用户录入的例句（多条关联句子）插到有道例句列表最前面
+// 把用户录入的关联词句插到有道例句列表最前面：相关短语在上，例句在下
 function prependExampleSentences(data, wordText) {
   if (!data) return
   const cur = words.value.find((w) => w.english.trim().toLowerCase() === String(wordText).trim().toLowerCase())
@@ -41,10 +41,17 @@ function prependExampleSentences(data, wordText) {
   }
   if (!exs.length) return
   if (!Array.isArray(data.sentences)) data.sentences = []
-  for (let i = exs.length - 1; i >= 0; i--) {
-    const ex = exs[i]
-    if (ex && ex.english && !data.sentences.some((s) => s.en === ex.english)) {
-      data.sentences.unshift({ en: ex.english, zh: ex.chinese })
+  // 先插例句（在用户例句之后会排在前面），再插短语（unshift 后短语在最前）
+  const sentences = exs.filter((x) => x && x.type !== 'phrase' && x.english)
+  for (let i = sentences.length - 1; i >= 0; i--) {
+    if (!data.sentences.some((s) => s.en === sentences[i].english)) {
+      data.sentences.unshift({ en: sentences[i].english, zh: sentences[i].chinese })
+    }
+  }
+  const phrases = exs.filter((x) => x && x.type === 'phrase' && x.english)
+  for (let i = phrases.length - 1; i >= 0; i--) {
+    if (!data.sentences.some((s) => s.en === phrases[i].english)) {
+      data.sentences.unshift({ en: phrases[i].english, zh: phrases[i].chinese })
     }
   }
 }
@@ -594,9 +601,10 @@ function startEdit(word) {
   editForm.type = ['word', 'phrase', 'sentence'].includes(word.type) ? word.type : 'word'
   editForm.caseSensitive = !!word.caseSensitive
   // 带出关联例句（多条）；无关联时默认显示一个空框
-  const exs = (word.examples && word.examples.length)
-    ? word.examples.map((x) => x.english)
-    : (word.exampleId ? [words.value.find((x) => Number(x.id) === Number(word.exampleId) && x.type === 'sentence')].filter(Boolean).map((x) => x.english) : [])
+  const linked = (word.examples && word.examples.length) ? word.examples : (word.exampleId ? [words.value.find((x) => Number(x.id) === Number(word.exampleId) && x.type === 'sentence')].filter(Boolean) : [])
+  const phs = linked.filter((x) => x && x.type === 'phrase').map((x) => x.english)
+  const exs = linked.filter((x) => x && x.type === 'sentence').map((x) => x.english)
+  editForm.phrases = phs.length ? phs : ['']
   editForm.examples = exs.length ? exs : ['']
 }
 
@@ -632,6 +640,7 @@ function saveEdit(word) {
     pos: editForm.type === 'word' ? editForm.pos.trim() : '',
     type: editForm.type,
     caseSensitive: editForm.type === 'word' ? editForm.caseSensitive : false,
+    phrases: editForm.type === 'word' ? editForm.phrases.map((x) => String(x || '').trim()).filter(Boolean) : [],
     examples: editForm.type === 'sentence' ? [] : editForm.examples.map((x) => String(x || '').trim()).filter(Boolean),
   })
   if (ok) {
@@ -820,9 +829,20 @@ function formatTime(ts) {
                 <div class="mini-switch-knob"></div>
               </div>
             </div>
+            <div class="edit-ex-wrap">
+              <div class="edit-ex-label">相关短语</div>
+              <div v-for="(ph, i) in editForm.phrases" :key="'ph' + i" class="edit-ex-row">
+                <textarea v-model="editForm.phrases[i]" class="cell-input area" :placeholder="`短语${i + 1}`"></textarea>
+                <button type="button" class="edit-ex-del" @click="editForm.phrases.splice(i, 1)" title="删除该短语">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <button v-if="editForm.phrases.length < 5" type="button" class="edit-ex-add" @click="editForm.phrases.push('')">+ 添加短语</button>
+            </div>
           </template>
           <template v-if="editForm.type !== 'sentence'">
             <div class="edit-ex-wrap">
+              <div class="edit-ex-label">例句</div>
               <div v-for="(ex, i) in editForm.examples" :key="i" class="edit-ex-row">
                 <textarea v-model="editForm.examples[i]" class="cell-input area" :placeholder="`例句${i + 1}`"></textarea>
                 <button type="button" class="edit-ex-del" @click="editForm.examples.splice(i, 1)" title="删除该例句">
@@ -1593,6 +1613,11 @@ function formatTime(ts) {
 /* 编辑卡片：多条例句 */
 .edit-ex-wrap {
   margin-top: 8px;
+}
+.edit-ex-label {
+  font-size: 13px;
+  color: var(--text-sub);
+  margin-bottom: 6px;
 }
 .edit-ex-row {
   position: relative;

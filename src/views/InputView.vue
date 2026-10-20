@@ -6,6 +6,7 @@ import { api } from '../api/index.js'
 const { words, addWord, checkDuplicate } = useWords()
 const saving = ref(false)
 const showExampleTip = ref(false)
+const showPhraseTip = ref(false)
 
 const form = reactive({
   chinese: '',
@@ -13,6 +14,7 @@ const form = reactive({
   type: 'word',
   pos: '',
   caseSensitive: false,
+  phrases: [''],
   examples: [''],
 })
 
@@ -60,6 +62,7 @@ function togglePos(opt) {
 function closePosPicker() {
   showPosPicker.value = false
   showExampleTip.value = false
+  showPhraseTip.value = false
 }
 onMounted(() => document.addEventListener('click', closePosPicker))
 onUnmounted(() => document.removeEventListener('click', closePosPicker))
@@ -112,9 +115,10 @@ async function submit() {
     showTip(dupMsg, 'err')
     return
   }
-  // 带例句：先端保存（AI 包含校验 + 查重 + AI 翻译 + 例句自动入库），成功后再写入本地
+  // 带例句/相关短语：先端保存（AI 包含校验 + 查重 + AI 翻译 + 自动入库），成功后再写入本地
   const exList = form.examples.map((x) => String(x || '').trim()).filter(Boolean)
-  if (exList.length) {
+  const phList = form.phrases.map((x) => String(x || '').trim()).filter(Boolean)
+  if (exList.length || phList.length) {
     saving.value = true
     try {
       const real = await api.addWord({
@@ -123,14 +127,15 @@ async function submit() {
         pos: form.pos.trim(),
         type: form.type,
         caseSensitive: form.caseSensitive,
+        phrases: phList,
         examples: exList,
       })
       words.value.push({ ...real, count: 0 })
       showTip(`已保存：${real.english}（${real.chinese}）`, 'ok')
       resetForm()
     } catch (err) {
-      const msg = err.code === 'TRANSLATE_FAIL' ? '例句翻译失败，请稍后重试'
-        : err.code === 'EXAMPLE_NOT_CONTAIN' ? '例句需包含当前单词（含变形形式）'
+      const msg = err.code === 'TRANSLATE_FAIL' ? '翻译失败，请稍后重试'
+        : err.code === 'EXAMPLE_NOT_CONTAIN' ? '相关短语/例句需包含当前单词（含变形形式）'
         : '保存失败，请检查输入'
       showTip(msg, 'err')
     } finally {
@@ -153,6 +158,7 @@ function resetForm() {
   form.type = 'word'
   form.pos = ''
   form.caseSensitive = false
+  form.phrases = ['']
   form.examples = ['']
   posInput.value = ''
 }
@@ -162,16 +168,24 @@ function clearAllFields() {
   form.english = ''
   form.type = 'word'
   form.pos = ''
+  form.phrases = ['']
   form.examples = ['']
 }
 
-// 例句：最多5条
+// 例句/相关短语：最多5条
 function addExample() {
   if (form.examples.length >= 5) return
   form.examples.push('')
 }
 function removeExample(i) {
   form.examples.splice(i, 1)
+}
+function addPhrase() {
+  if (form.phrases.length >= 5) return
+  form.phrases.push('')
+}
+function removePhrase(i) {
+  form.phrases.splice(i, 1)
 }
 </script>
 
@@ -267,6 +281,29 @@ function removeExample(i) {
           </div>
         </div>
         </template>
+        <div v-if="form.type === 'word'" class="form-item ex-item">
+          <label>
+            相关短语
+            <span class="ex-help" @click.stop="showPhraseTip = !showPhraseTip">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b2b2b2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <transition name="fade">
+                <div v-if="showPhraseTip" class="ex-tip">保存时将自动翻译成中文并作为短语加入词句库，最多可添加5条</div>
+              </transition>
+            </span>
+          </label>
+          <div v-for="(ph, i) in form.phrases" :key="'ph' + i" class="ex-row">
+            <textarea
+              v-model="form.phrases[i]"
+              rows="2"
+              :placeholder="`短语${i + 1}`"
+              autocomplete="off"
+            ></textarea>
+            <button class="ex-del" type="button" @click="removePhrase(i)" title="删除该短语">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <button v-if="form.phrases.length < 5" type="button" class="ex-add" @click="addPhrase">+ 添加短语</button>
+        </div>
         <div v-if="form.type !== 'sentence'" class="form-item ex-item">
           <label>
             例句
