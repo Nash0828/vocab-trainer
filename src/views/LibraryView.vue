@@ -612,7 +612,7 @@ function cancelEdit() {
   editingId.value = null
 }
 
-function saveEdit(word) {
+async function saveEdit(word) {
   if (!editForm.chinese.trim() || !editForm.english.trim()) {
     showTip('中文和英文不能为空', 'warn')
     return
@@ -634,18 +634,23 @@ function saveEdit(word) {
     showTip(`⛔ ${parts.join(' 与 ')}与词句库中其他词句重复，保存失败`, 'err')
     return
   }
-  const ok = updateWord(word.id, {
-    chinese: editForm.chinese.trim(),
-    english: editForm.english.trim(),
-    pos: editForm.type === 'word' ? editForm.pos.trim() : '',
-    type: editForm.type,
-    caseSensitive: editForm.type === 'word' ? editForm.caseSensitive : false,
-    phrases: editForm.type === 'word' ? editForm.phrases.map((x) => String(x || '').trim()).filter(Boolean) : [],
-    examples: editForm.type === 'sentence' ? [] : editForm.examples.map((x) => String(x || '').trim()).filter(Boolean),
-  })
-  if (ok) {
+  try {
+    await updateWord(word.id, {
+      chinese: editForm.chinese.trim(),
+      english: editForm.english.trim(),
+      pos: editForm.type === 'word' ? editForm.pos.trim() : '',
+      type: editForm.type,
+      caseSensitive: editForm.type === 'word' ? editForm.caseSensitive : false,
+      phrases: editForm.type === 'word' ? editForm.phrases.map((x) => String(x || '').trim()).filter(Boolean) : [],
+      examples: editForm.type === 'sentence' ? [] : editForm.examples.map((x) => String(x || '').trim()).filter(Boolean),
+    })
     showTip(`已保存修改：${editForm.english}`, 'ok')
     editingId.value = null
+  } catch (err) {
+    const msg = err.code === 'TRANSLATE_FAIL' ? '翻译失败，请稍后重试'
+      : err.code === 'EXAMPLE_NOT_CONTAIN' ? '相关短语/例句需包含当前单词（含变形形式）'
+      : '保存失败，请检查输入'
+    showTip(msg, 'err')
   }
 }
 

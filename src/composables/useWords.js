@@ -89,19 +89,23 @@ export function useWords() {
 
   function updateWord(id, patch) {
     const idx = words.value.findIndex((w) => w.id === id)
-    if (idx === -1) return false
+    if (idx === -1) return Promise.reject(new Error('词句不存在'))
+    const prev = { ...words.value[idx] }
     words.value[idx] = { ...words.value[idx], ...patch }
     const w = words.value[idx]
     // 编辑表单的 phrases/examples 为纯字符串数组（含空框）；后端返回的 examples 为带 type 的混合列表
     const phs = Array.isArray(patch.phrases) ? patch.phrases : []
     const exs = Array.isArray(patch.examples) ? patch.examples : []
-    api.updateWord(id, { chinese: w.chinese, english: w.english, pos: w.pos, type: w.type || 'word', caseSensitive: !!w.caseSensitive, phrases: phs, examples: exs }).then((r) => {
+    return api.updateWord(id, { chinese: w.chinese, english: w.english, pos: w.pos, type: w.type || 'word', caseSensitive: !!w.caseSensitive, phrases: phs, examples: exs }).then((r) => {
       if (r && r.examples !== undefined) w.examples = r.examples
       if (r && r.exampleId !== undefined) w.exampleId = Number(r.exampleId)
-    }).catch((err) =>
+      return true
+    }).catch((err) => {
+      // 后端校验/保存失败：回滚本地乐观更新
+      words.value[idx] = prev
       console.error('updateWord 同步失败', err)
-    )
-    return true
+      throw err
+    })
   }
 
   function removeWord(id) {
