@@ -103,11 +103,34 @@ onBeforeUnmount(() => {
 
 // 播放发音：有道优先，失败回退百度 TTS，再失败回退系统 TTS
 let currentAudio = null
+let doneTimer = null
+function estimateDuration(text) {
+  return Math.max(10, Math.min(60, String(text || '').length * 0.3))
+}
+
+// 强制停止当前所有音频（Audio 对象 + 系统语音），防止旧音频残留叠加 / audioPlaying 状态残留
+function stopAudio() {
+  try {
+    if (currentAudio) {
+      currentAudio.onended = null
+      currentAudio.onpause = null
+      currentAudio.onerror = null
+      currentAudio.pause()
+    }
+  } catch (e) {}
+  currentAudio = null
+  try {
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+  } catch (e) {}
+}
+
 const audioPlaying = ref(false)
 const playingKey = ref('') // 当前正在播放的按钮标识
 function speak(word, type = 0, onDone = null, key = '') {
-  if (!word || audioPlaying.value) return
+  if (!word) return
   const text = String(word).trim()
+  // iOS 上音频播完可能不触发 ended/pause，导致 audioPlaying 残留、后续发音全部静默失效；先停旧音频并复位
+  stopAudio()
   audioPlaying.value = true
   playingKey.value = key
   try {
@@ -127,6 +150,11 @@ function speak(word, type = 0, onDone = null, key = '') {
     currentAudio.onpause = () => { audioPlaying.value = false; playingKey.value = '' }
     currentAudio.onerror = once
     currentAudio.play().catch(once)
+    // 兜底：iOS 上部分网络音频播完不触发 ended/pause，按时长上限强制收尾，防止 audioPlaying 残留
+    doneTimer = setTimeout(() => {
+      stopAudio()
+      if (audioPlaying.value) { audioPlaying.value = false; playingKey.value = '' }
+    }, estimateDuration(text) * 1000)
   } catch (e) {
     speakBaidu(text)
   }
@@ -157,6 +185,11 @@ function speakAccent(word, accent, key = '') {
   currentAudio.onpause = done
   currentAudio.onerror = once
   currentAudio.play().catch(once)
+  // 兜底：iOS 上网络音频可能不触发 ended/pause，按时长上限强制收尾
+  doneTimer = setTimeout(() => {
+    stopAudio()
+    if (audioPlaying.value) { audioPlaying.value = false; if (playingKey.value === key) playingKey.value = '' }
+  }, estimateDuration(text) * 1000)
 }
 
 // 百度 TTS（走本服务代理 /api/tts，支持任意句子）
@@ -174,6 +207,10 @@ function speakBaidu(text) {
     currentAudio.onpause = () => { audioPlaying.value = false; playingKey.value = '' }
     currentAudio.onerror = once
     currentAudio.play().catch(once)
+    doneTimer = setTimeout(() => {
+      stopAudio()
+      if (audioPlaying.value) { audioPlaying.value = false; playingKey.value = '' }
+    }, estimateDuration(text) * 1000)
   } catch (e) {
     speakViaSpeechSynthesis(text)
   }
@@ -298,7 +335,8 @@ async function openWordBubble(word, el) {
 }
 // 朗读例句（走本服务 /api/tts，豆包发音）
 function speakSentence(sentence, key = '') {
-  if (!sentence || audioPlaying.value) return
+  if (!sentence) return
+  stopAudio() // 先停掉残留音频（iOS 播完可能不触发 ended），防止 audioPlaying 残留导致发音静默失效
   try {
     audioPlaying.value = true
     playingKey.value = key
@@ -309,6 +347,10 @@ function speakSentence(sentence, key = '') {
     currentAudio.onpause = done
     currentAudio.onerror = done
     currentAudio.play().catch(done)
+    doneTimer = setTimeout(() => {
+      stopAudio()
+      if (audioPlaying.value) { audioPlaying.value = false; if (playingKey.value === key) playingKey.value = '' }
+    }, estimateDuration(String(sentence).trim()) * 1000)
   } catch (e) {
     audioPlaying.value = false
     if (playingKey.value === key) playingKey.value = ''
