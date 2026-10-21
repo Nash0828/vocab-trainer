@@ -54,6 +54,7 @@ export const api = {
   // 设置
   setThreshold: (value) => req('/api/settings/threshold', { method: 'PUT', body: { value } }),
   setAutoNext: (value) => req('/api/settings/autoNext', { method: 'PUT', body: { value } }),
+  setSentenceVoice: (voice) => req('/api/settings/sentenceVoice', { method: 'PUT', body: { voice } }),
 
   // 分组
   getGroups: () => req('/api/groups'),

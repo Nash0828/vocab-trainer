@@ -56,6 +56,24 @@ function getAutoNext(uid) {
   const row = db.prepare("SELECT value FROM settings WHERE user_id = ? AND key = 'autoNext'").get(uid)
   return row?.value !== '0'
 }
+// 句子朗读音色（豆包 TTS）：白名单校验，默认 Jenny
+const TTS_VOICES = {
+  'en_female_jenny_uranus_bigtts': 'Jenny（美音女声）',
+  'en_female_dacey_uranus_bigtts': 'Dacey（美音女声）',
+  'en_female_stokie_uranus_bigtts': 'Stokie（美音女声）',
+  'en_female_female_tutor_ms-jenny_uranus_bigtts': 'Holly（教学女声）',
+  'en_female_hayley_uranus_bigtts': 'Hayley（美音女声）',
+  'en_female_mel_uranus_bigtts': 'Mel（美音女声）',
+  'en_male_tim_uranus_bigtts': 'Tim（美音男声）',
+  'en_male_alex_uranus_bigtts': 'Alex（美音男声）',
+  'en_male_josh_uranus_bigtts': 'Josh（美音男声）',
+  'en_female_authoritative-british_uranus_bigtts': 'Charlotte（英音女声）',
+}
+const DEFAULT_VOICE = 'en_female_jenny_uranus_bigtts'
+function getSentenceVoice(uid) {
+  const row = db.prepare("SELECT value FROM settings WHERE user_id = ? AND key = 'sentenceVoice'").get(uid)
+  return row?.value && TTS_VOICES[row.value] ? row.value : DEFAULT_VOICE
+}
 function getClientIp(req) {
   return (req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim()
 }
@@ -323,7 +341,7 @@ app.get('/api/state', (req, res) => {
     id: String(w.word_id), chinese: w.chinese, english: w.english, pos: w.pos||'', addedAt: w.added_at,
   }))
   res.json({
-    words, settings: { masteryThreshold: getThreshold(uid), autoNext: getAutoNext(uid) }, records, wrongbook,
+    words, settings: { masteryThreshold: getThreshold(uid), autoNext: getAutoNext(uid), sentenceVoice: getSentenceVoice(uid) }, records, wrongbook,
     user: { isLoggedIn: !!req.username, username: req.username, isAdmin: req.isAdmin },
   })
 })
@@ -763,6 +781,13 @@ app.put('/api/settings/autoNext', (req, res) => {
   res.json({ ok: true, autoNext: !!v })
 })
 
+app.put('/api/settings/sentenceVoice', (req, res) => {
+  const v = String((req.body || {}).voice || '').trim()
+  if (!TTS_VOICES[v]) return res.status(400).json({ error: '不支持的音色' })
+  db.prepare("INSERT OR REPLACE INTO settings (user_id, key, value) VALUES (?, 'sentenceVoice', ?)").run(req.userId, v)
+  res.json({ ok: true, voice: v })
+})
+
 app.post('/api/records', (req, res) => {
   const { chinese, english, pos, correct, userAnswer, type } = req.body || {}
   const now = new Date()
@@ -936,19 +961,23 @@ app.get('/api/dict', async (req, res) => {
 app.get('/api/tts', async (req, res) => {
   const text = String(req.query.text || '').trim().slice(0, 300)
   if (!text) return res.status(400).json({ error: '缺少 text 参数' })
-  const cached = ttsCache.get(text)
+  // voice 参数（试听等指定音色）；未传时用该用户的句子音色设置
+  const voiceParam = String(req.query.voice || '').trim()
+  const speaker = voiceParam && TTS_VOICES[voiceParam] ? voiceParam : getSentenceVoice(req.userId)
+  const cacheKey = `${speaker}|${text}`
+  const cached = ttsCache.get(cacheKey)
   if (cached) {
     res.set('Content-Type', 'audio/mpeg')
     res.set('Cache-Control', 'public, max-age=86400')
     return res.send(cached)
   }
   let buf = null
-  // 纯单词（无空格）走百度：标准词典音、平实；短语/句子走豆包（Jenny）：自然平实语气
+  // 纯单词（无空格）走百度：标准词典音、平实；短语/句子走豆包（所选音色）：自然平实语气
   const isWord = !/\s/.test(text)
   if (!isWord) {
     // 1) 豆包语音合成（seed-tts-2.0 双向流式，低时延、音色自然）
     if (BYTEDANCE_TTS_KEY) {
-      try { buf = await volcTts(text) } catch (e) { console.error('豆包流式 TTS 失败:', e.message) }
+      try { buf = await volcTts(text, speaker) } catch (e) { console.error('豆包流式 TTS 失败:', e.message) }
     }
     // 2) 兜底：百度翻译发音
     if (!buf) buf = await baiduTts(text)
@@ -956,12 +985,12 @@ app.get('/api/tts', async (req, res) => {
     // 单词：百度优先（词典平实音），豆包兜底
     buf = await baiduTts(text)
     if (!buf && BYTEDANCE_TTS_KEY) {
-      try { buf = await volcTts(text) } catch (e) { console.error('豆包流式 TTS 失败:', e.message) }
+      try { buf = await volcTts(text, DEFAULT_VOICE) } catch (e) { console.error('豆包流式 TTS 失败:', e.message) }
     }
   }
   if (!buf) return res.status(502).json({ error: 'TTS 未生成音频' })
   if (ttsCache.size > 2000) ttsCache.clear()
-  ttsCache.set(text, buf)
+  ttsCache.set(cacheKey, buf)
   res.set('Content-Type', 'audio/mpeg')
   res.set('Cache-Control', 'public, max-age=86400')
   res.send(buf)
@@ -1015,7 +1044,7 @@ function volcParse(buf) {
   const pl = buf.readUInt32BE(pos); pos += 4
   return { event, sessionId, payload: buf.subarray(pos, pos + pl) }
 }
-async function volcTts(text) {
+async function volcTts(text, speaker = DEFAULT_VOICE) {
   return await new Promise((resolve, reject) => {
     const sid = crypto.randomUUID()
     const chunks = []
@@ -1041,7 +1070,7 @@ async function volcTts(text) {
       try { f = volcParse(Buffer.from(data)) } catch (e) { return }
       switch (f.event) {
         case VOLC_EV.CONNECTION_STARTED:
-          ws.send(volcFrame(VOLC_EV.START_SESSION, sid, JSON.stringify({ event: VOLC_EV.START_SESSION, req_params: { speaker: 'en_female_jenny_uranus_bigtts', audio_params: { format: 'mp3', sample_rate: 24000 } } })))
+          ws.send(volcFrame(VOLC_EV.START_SESSION, sid, JSON.stringify({ event: VOLC_EV.START_SESSION, req_params: { speaker, audio_params: { format: 'mp3', sample_rate: 24000 } } })))
           break
         case VOLC_EV.SESSION_STARTED:
           ws.send(volcFrame(VOLC_EV.TASK_REQUEST, sid, JSON.stringify({ event: VOLC_EV.TASK_REQUEST, req_params: { text } })))
@@ -1077,7 +1106,7 @@ app.get('/api/export', (req, res) => {
   }))
   res.json({
     app: 'vocab-trainer', version: 2, exportedAt: new Date().toISOString(),
-    settings: { masteryThreshold: getThreshold(uid), autoNext: getAutoNext(uid) }, words, records, wrongbook,
+    settings: { masteryThreshold: getThreshold(uid), autoNext: getAutoNext(uid), sentenceVoice: getSentenceVoice(uid) }, words, records, wrongbook,
   })
 })
 
@@ -1143,6 +1172,9 @@ app.post('/api/import', (req, res) => {
     }
     if (data.settings && typeof data.settings.autoNext === 'boolean') {
       db.prepare("INSERT OR REPLACE INTO settings (user_id, key, value) VALUES (?, 'autoNext', ?)").run(uid, data.settings.autoNext ? '1' : '0')
+    }
+    if (data.settings && TTS_VOICES[data.settings.sentenceVoice]) {
+      db.prepare("INSERT OR REPLACE INTO settings (user_id, key, value) VALUES (?, 'sentenceVoice', ?)").run(uid, data.settings.sentenceVoice)
     }
   })
   tx()

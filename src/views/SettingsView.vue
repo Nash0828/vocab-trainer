@@ -8,12 +8,64 @@ const {
   settings,
   setThreshold,
   setAutoNext,
+  setSentenceVoice,
   resetAllCounts,
   isMastered,
   exportData,
   validateImport,
   importData,
 } = useWords()
+
+// 句子朗读音色（豆包 TTS）
+const TTS_VOICES = [
+  { voice: 'en_female_jenny_uranus_bigtts', label: 'Jenny', desc: '美音女声' },
+  { voice: 'en_female_dacey_uranus_bigtts', label: 'Dacey', desc: '美音女声' },
+  { voice: 'en_female_stokie_uranus_bigtts', label: 'Stokie', desc: '美音女声' },
+  { voice: 'en_female_female_tutor_ms-jenny_uranus_bigtts', label: 'Holly', desc: '美音女声·教学' },
+  { voice: 'en_female_hayley_uranus_bigtts', label: 'Hayley', desc: '美音女声·教学' },
+  { voice: 'en_female_mel_uranus_bigtts', label: 'Mel', desc: '美音女声·教学' },
+  { voice: 'en_male_tim_uranus_bigtts', label: 'Tim', desc: '美音男声' },
+  { voice: 'en_male_alex_uranus_bigtts', label: 'Alex', desc: '美音男声' },
+  { voice: 'en_male_josh_uranus_bigtts', label: 'Josh', desc: '美音男声' },
+  { voice: 'en_female_authoritative-british_uranus_bigtts', label: 'Charlotte', desc: '英音女声' },
+]
+const currentVoiceName = computed(() => {
+  const v = TTS_VOICES.find((x) => x.voice === settings.value.sentenceVoice)
+  return v ? `${v.label}（${v.desc}）` : 'Jenny（美音女声）'
+})
+const showVoiceSheet = ref(false)
+const previewVoice = ref('') // 正在试听的音色
+let previewAudio = null
+function openVoiceSheet() {
+  previewVoice.value = ''
+  stopPreview()
+  showVoiceSheet.value = true
+}
+function closeVoiceSheet() {
+  stopPreview()
+  showVoiceSheet.value = false
+}
+function stopPreview() {
+  if (previewAudio) { try { previewAudio.pause() } catch (e) {} previewAudio = null }
+  previewVoice.value = ''
+}
+function previewSpeak(voice) {
+  if (previewVoice.value === voice) { stopPreview(); return }
+  stopPreview()
+  previewVoice.value = voice
+  const audio = new Audio(`/api/tts?text=${encodeURIComponent("Hello! Nice to meet you. Let's learn English together.")}&voice=${encodeURIComponent(voice)}`)
+  previewAudio = audio
+  audio.onended = () => { previewVoice.value = ''; previewAudio = null }
+  audio.onerror = () => { previewVoice.value = ''; previewAudio = null }
+  audio.play().catch(() => { previewVoice.value = ''; previewAudio = null })
+}
+function pickVoice(voice) {
+  setSentenceVoice(voice)
+  showVoiceSheet.value = false
+  stopPreview()
+  const v = TTS_VOICES.find((x) => x.voice === voice)
+  showTip(`句子音色已切换为 ${v ? v.label : 'Jenny'}`, 'ok')
+}
 
 const thresholdInput = ref(String(settings.value.masteryThreshold))
 const confirmResetAll = ref(false)
@@ -223,6 +275,19 @@ function cancelMigrate() {
       </div>
     </div>
 
+    <!-- 朗读设置 -->
+    <div class="menu-group">
+      <div class="menu-item" @click="openVoiceSheet">
+        <span class="menu-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        </span>
+        <span class="menu-label">句子音色</span>
+        <span class="menu-value">{{ currentVoiceName }}</span>
+        <span class="menu-arrow">›</span>
+      </div>
+      <div class="menu-desc">朗读句子时使用的豆包语音音色</div>
+    </div>
+
     <!-- 背熟规则 -->
     <div class="menu-group">
       <div class="menu-item">
@@ -264,6 +329,39 @@ function cancelMigrate() {
     <div class="menu-group">
       <div class="menu-item danger" @click="askResetAll">
         <span class="menu-label">重置所有背诵次数</span>
+      </div>
+    </div>
+
+    <!-- 句子音色选择器（微信 ActionSheet 风格） -->
+    <div v-if="showVoiceSheet" class="mask" @click.self="closeVoiceSheet" @touchmove.prevent>
+      <div class="voice-sheet">
+        <p class="voice-sheet-title">选择句子音色</p>
+        <div class="voice-sheet-list">
+          <div
+            v-for="(v, i) in TTS_VOICES"
+            :key="v.voice"
+            class="voice-option"
+            :class="{ active: v.voice === settings.sentenceVoice }"
+            @click="pickVoice(v.voice)"
+          >
+            <span class="voice-name">{{ v.label }}<span class="voice-desc">{{ v.desc }}</span></span>
+            <span class="voice-check" v-if="v.voice === settings.sentenceVoice">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </span>
+            <button
+              class="voice-preview"
+              :class="{ playing: previewVoice === v.voice }"
+              @click.stop="previewSpeak(v.voice)"
+              :title="`试听 ${v.label}`"
+            >
+              <span v-if="previewVoice !== v.voice" class="spk-static">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+              </span>
+              <span v-else class="spk-eq"><i></i><i></i><i></i></span>
+            </button>
+          </div>
+        </div>
+        <button class="voice-cancel" @click="closeVoiceSheet">取消</button>
       </div>
     </div>
 
@@ -479,6 +577,96 @@ function cancelMigrate() {
   text-align: center;
 }
 
+/* 句子音色选择器（微信 ActionSheet 风格，底部弹层） */
+.voice-sheet {
+  width: 100%;
+  max-width: 480px;
+  background: #f7f7f7;
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
+  align-self: flex-end;
+}
+.voice-sheet-title {
+  background: #fff;
+  padding: 14px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-sub);
+  border-bottom: 0.5px solid #e5e5e5;
+  margin: 0;
+}
+.voice-sheet-list {
+  background: #fff;
+  max-height: 52vh;
+  overflow-y: auto;
+}
+.voice-option {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  height: 52px;
+  border-bottom: 0.5px solid #e5e5e5;
+  cursor: pointer;
+  user-select: none;
+}
+.voice-option:active { background: #f5f5f5; }
+.voice-option.active .voice-name { color: var(--primary); }
+.voice-name {
+  flex: 1;
+  font-size: 16px;
+  color: var(--text-main);
+}
+.voice-desc {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.voice-check {
+  color: var(--primary);
+  display: flex;
+  margin-right: 6px;
+}
+.voice-preview {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: #576b95;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.voice-preview:active { background: #f0f3f8; }
+.voice-cancel {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  margin-top: 8px;
+  background: #fff;
+  border: none;
+  font-size: 16px;
+  color: var(--text-main);
+  cursor: pointer;
+  text-align: center;
+}
+.voice-cancel:active { background: #f5f5f5; }
+.voice-option .spk-eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 16px; }
+.voice-option .spk-eq i {
+  width: 3px;
+  border-radius: 2px;
+  background: #576b95;
+  animation: eq-bounce 0.9s ease-in-out infinite;
+}
+.voice-option .spk-eq i:nth-child(1) { height: 6px; animation-delay: 0s; }
+.voice-option .spk-eq i:nth-child(2) { height: 14px; animation-delay: 0.18s; }
+.voice-option .spk-eq i:nth-child(3) { height: 9px; animation-delay: 0.36s; }
+@keyframes eq-bounce {
+  0%, 100% { transform: scaleY(0.5); }
+  50% { transform: scaleY(1); }
+}
+
 .fade-enter-active,
 .fade-leave-active { transition: opacity 0.25s; }
 .fade-enter-from,
@@ -492,6 +680,14 @@ function cancelMigrate() {
   font-size: 15px;
   color: var(--primary);
   background: transparent;
+}
+
+/* cell 右侧当前值 */
+.menu-value {
+  margin-left: auto;
+  font-size: 14px;
+  color: var(--text-sub);
+  margin-right: 2px;
 }
 
 /* 微信风格开关 */

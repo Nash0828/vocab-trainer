@@ -7,9 +7,10 @@ import { api } from '../api/index.js'
  * 策略：启动时一次性从后端加载到 ref；写操作先乐观更新 ref，再异步同步到后端
  */
 const DEFAULT_THRESHOLD = 10
+const DEFAULT_VOICE = 'en_female_jenny_uranus_bigtts'
 
 const words = ref([])
-const settings = ref({ masteryThreshold: DEFAULT_THRESHOLD, autoNext: true })
+const settings = ref({ masteryThreshold: DEFAULT_THRESHOLD, autoNext: true, sentenceVoice: DEFAULT_VOICE })
 
 let idSeed = 0
 
@@ -22,6 +23,7 @@ export function loadState(state) {
   settings.value = {
     masteryThreshold: state.settings?.masteryThreshold || DEFAULT_THRESHOLD,
     autoNext: state.settings?.autoNext !== false,
+    sentenceVoice: state.settings?.sentenceVoice || DEFAULT_VOICE,
   }
   idSeed = words.value.reduce((max, w) => {
     const n = Number(w.id)
@@ -172,6 +174,13 @@ export function useWords() {
     return true
   }
 
+  /** 句子朗读音色 */
+  function setSentenceVoice(voice) {
+    settings.value.sentenceVoice = voice
+    api.setSentenceVoice(voice).catch((err) => console.error('setSentenceVoice 同步失败', err))
+    return true
+  }
+
   /** 判断单词是否已背熟 */
   function isMastered(word, threshold = settings.value.masteryThreshold) {
     return (word?.count || 0) >= threshold
@@ -219,6 +228,7 @@ export function useWords() {
     resetAllCounts,
     setThreshold,
     setAutoNext,
+    setSentenceVoice,
     isMastered,
     exportData,
     validateImport,
