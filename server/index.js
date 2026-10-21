@@ -785,6 +785,8 @@ app.put('/api/settings/sentenceVoice', (req, res) => {
   const v = String((req.body || {}).voice || '').trim()
   if (!TTS_VOICES[v]) return res.status(400).json({ error: '不支持的音色' })
   db.prepare("INSERT OR REPLACE INTO settings (user_id, key, value) VALUES (?, 'sentenceVoice', ?)").run(req.userId, v)
+  // 切换音色后清除已缓存的音频，避免旧音色占用内存
+  if (ttsCache.size) ttsCache.clear()
   res.json({ ok: true, voice: v })
 })
 

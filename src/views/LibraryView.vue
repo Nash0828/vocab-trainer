@@ -115,7 +115,7 @@ function speak(word, type = 0, onDone = null, key = '') {
     const isWord = !/\s/.test(text) && text.length <= 30
     const url = isWord
       ? `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=2`
-      : `/api/tts?text=${encodeURIComponent(text)}`
+      : `/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(settings.value.sentenceVoice)}`
     currentAudio = new Audio(url)
     let fallbacked = false
     const once = () => {
@@ -146,7 +146,7 @@ function speakAccent(word, accent, key = '') {
   const once = () => {
     if (fallbacked) return
     fallbacked = true
-    const u2 = `/api/tts?text=${encodeURIComponent(text)}`
+    const u2 = `/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(settings.value.sentenceVoice)}`
     currentAudio = new Audio(u2)
     currentAudio.onended = done
     currentAudio.onpause = done
@@ -162,7 +162,7 @@ function speakAccent(word, accent, key = '') {
 // 百度 TTS（走本服务代理 /api/tts，支持任意句子）
 function speakBaidu(text) {
   try {
-    const url = `/api/tts?text=${encodeURIComponent(text)}`
+    const url = `/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(settings.value.sentenceVoice)}`
     currentAudio = new Audio(url)
     let fallbacked = false
     const once = () => {
@@ -302,7 +302,7 @@ function speakSentence(sentence, key = '') {
   try {
     audioPlaying.value = true
     playingKey.value = key
-    const url = `/api/tts?text=${encodeURIComponent(String(sentence).trim())}`
+    const url = `/api/tts?text=${encodeURIComponent(String(sentence).trim())}&voice=${encodeURIComponent(settings.value.sentenceVoice)}`
     currentAudio = new Audio(url)
     const done = () => { audioPlaying.value = false; if (playingKey.value === key) playingKey.value = '' }
     currentAudio.onended = done
