@@ -474,7 +474,13 @@ function stopAudio() {
 }
 
 function speak(word, type = 0, onDone = null, key = '') {
-  if (!word || audioPlaying.value) return
+  if (!word) return
+  // 防卡死：上次音频未正常结束（audioPlaying 残留 true）时，先停掉并消费旧回调，保证本次能正常播放
+  if (audioPlaying.value) {
+    stopAudio()
+    audioPlaying.value = false
+    fireDone()
+  }
   if (onDone) audioDone = onDone
   const text = String(word).trim()
   audioPlaying.value = true
@@ -533,6 +539,11 @@ function speakAccent(word, accent, key = '') {
   currentAudio.onpause = done
   currentAudio.onerror = once
   currentAudio.play().catch(once)
+  // 兜底：iOS 上网络音频可能不触发 ended/pause，按时长上限强制收尾，防止 audioPlaying 残留导致答题卡死
+  doneTimer = setTimeout(() => {
+    stopAudio()
+    if (audioPlaying.value) { audioPlaying.value = false; if (playingKey.value === key) playingKey.value = '' }
+  }, estimateDuration(text) * 1000)
 }
 
 // 百度 TTS（走本服务代理 /api/tts，支持任意句子）
