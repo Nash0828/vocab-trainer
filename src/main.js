@@ -41,8 +41,8 @@ async function bootstrap() {
   app.mount('#app')
 
   // iOS 页面冻结恢复：回到前台且数据为空时，自动重新加载（无需手动刷新）。
-  // 多路兜底：visibilitychange / window focus / 挂载后延迟检查 / 可见时定时检查，
-  // 覆盖 iOS 冻结恢复时事件不触发或延迟的情况。
+  // 多路兜底：visibilitychange / window focus / 挂载后立即及多档延迟检查 / 可见时定时检查，
+  // 覆盖 iOS 冻结恢复时事件不触发、网络恢复慢或 bootstrap 重试全失败的数据为空场景。
   const { words } = useWords()
   let recovering = false
   async function recoverIfEmpty() {
@@ -50,14 +50,14 @@ async function bootstrap() {
     if (words.value.length > 0) return // 数据还在，无需补
     recovering = true
     let ok = false
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 4; i++) {
       try {
         await loadAll()
         ok = true
         break
       } catch (err) {
         console.error(`回到前台补数据失败（第 ${i + 1} 次）`, err)
-        if (i === 0) await new Promise((r) => setTimeout(r, 1000))
+        if (i < 3) await new Promise((r) => setTimeout(r, 400 * (i + 1)))
       }
     }
     recovering = false
@@ -65,8 +65,11 @@ async function bootstrap() {
   }
   document.addEventListener('visibilitychange', recoverIfEmpty)
   window.addEventListener('focus', recoverIfEmpty)
-  // 挂载后延迟检查：覆盖 bootstrap 重试全失败但网络已恢复的场景
-  setTimeout(recoverIfEmpty, 3000)
+  // 挂载后立即补 + 多档延迟兜底：首包网络恢复通常 1~3 秒内完成，尽量让数据尽快出现
+  recoverIfEmpty()
+  setTimeout(recoverIfEmpty, 800)
+  setTimeout(recoverIfEmpty, 2000)
+  setTimeout(recoverIfEmpty, 5000)
   // 可见时周期性兜底：冻结恢复后定时器会自动续跑，最多 30 秒内补上
   setInterval(recoverIfEmpty, 30000)
 }
