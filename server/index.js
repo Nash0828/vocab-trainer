@@ -623,8 +623,53 @@ async function translateText(text) {
   return content
 }
 
+// AI 判断句子答题是否正确：忽略缩写/全写、大小写、标点、空格差异；失败返回 null 由前端回退本地判定
+const sentenceCheckCache = new Map()
+async function aiCheckSentence(answer, input) {
+  const key = `${String(answer).trim().toLowerCase()}|${String(input).trim().toLowerCase()}`
+  if (sentenceCheckCache.has(key)) return sentenceCheckCache.get(key)
+  let ok = null
+  try {
+    const r = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${DEEPSEEK_KEY}` },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: '你是英语答题判分助手。比较参考答案与用户作答是否为同一句话，忽略不影响意思的形式差异。缩写与全写等价（don\'t=do not、can\'t=cannot、I\'m=I am、it\'s=it is、won\'t=will not、isn\'t=is not、aren\'t=are not、haven\'t=have not、hasn\'t=has not、doesn\'t=does not、didn\'t=did not、wouldn\'t=would not、couldn\'t=could not、shouldn\'t=should not、mustn\'t=must not、we\'re=we are、they\'re=they are、you\'re=you are、I\'ve=I have、I\'ll=I will、let\'s=let us 等）；忽略大小写、标点差异、多余空格及中文空格。单词拼写错误、漏词、多词、顺序不同，或单复数、时态不同，均判为错误。只输出 JSON：{"correct": true} 或 {"correct": false}，不要输出任何其他内容。' },
+          { role: 'user', content: `参考答案：${answer}\n用户作答：${input}` },
+        ],
+        temperature: 0,
+        max_tokens: 5,
+      }),
+      signal: AbortSignal.timeout(4000),
+    })
+    if (!r.ok) throw new Error('check http ' + r.status)
+    const j = await r.json()
+    const ans = (j?.choices?.[0]?.message?.content || '').trim()
+    if (ans.includes('true')) ok = true
+    else if (ans.includes('false')) ok = false
+  } catch (err) {
+    console.error('AI 句子判定失败，回退本地判定:', err.message)
+  }
+  if (ok !== null) sentenceCheckCache.set(key, ok)
+  return ok
+}
+
+app.post('/api/check-sentence', async (req, res) => {
+  const { answer, input } = req.body || {}
+  if (!answer || !input) return res.status(400).json({ error: '参数缺失' })
+  try {
+    const correct = await aiCheckSentence(String(answer), String(input))
+    res.json({ correct }) // null 表示 AI 不可用，前端回退本地逐词判定
+  } catch (err) {
+    res.status(500).json({ error: 'AI 判定失败' })
+  }
+})
+
 // AI 判断例句是否包含当前单词（含时态/单复数/派生等变形形式）
 const exampleContainsCache = new Map()
+
 async function aiExampleContains(en, ex) {
   const key = `${en.toLowerCase()}|${ex.toLowerCase()}`
   if (exampleContainsCache.has(key)) return exampleContainsCache.get(key)

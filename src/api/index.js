@@ -65,6 +65,9 @@ export const api = {
   clearDay: (date) => req(`/api/records/${date}`, { method: 'DELETE' }),
   clearAllRecords: () => req('/api/records', { method: 'DELETE' }),
 
+  // 句子答题 AI 判定（缩写/全写、标点、空格差异忽略）
+  checkSentence: (input, answer) => req('/api/check-sentence', { method: 'POST', body: { input, answer } }),
+
   // 错题本
   addWrong: (data) => req('/api/wrongbook', { method: 'POST', body: data }),
   removeWrong: (wordId) => req(`/api/wrongbook/${wordId}`, { method: 'DELETE' }),

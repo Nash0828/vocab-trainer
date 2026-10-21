@@ -134,6 +134,7 @@ const result = ref(null) // null | 'correct' | 'wrong'
 const revealed = ref(false) // 是否通过"显示答案"按钮作答
 const isRedo = ref(false) // 是否处于重做模式（重做答对不算答对、不移除错题本）
 const answeredLock = ref(false) // 答对后等待发音播报期间锁定输入框
+const aiChecking = ref(false) // 句子 AI 判定进行中，防重复提交
 const lastIndex = ref(-1)
 const answerInput = ref(null)
 const focusEnabled = ref(false)
@@ -345,6 +346,7 @@ function speakKeepFocus(word, type = 0, onDone = null, key = '') {
 
 function submit() {
   if (!current.value || !answer.value.trim()) return
+  if (aiChecking.value) return // AI 判定进行中，防重复提交
   // 重做答对后，再次回车/go：进入下一题作答
   if (isRedo.value && result.value === 'correct') {
     skip()
@@ -353,8 +355,28 @@ function submit() {
   if (result.value) return
   // 判定：单词整串比较；短语/句子忽略标点与空白（含中文空格、多空格），仅逐词比较
   const isPhrase = current.value.type !== 'word'
-  const isCorrect = isAnswerMatch(answer.value, current.value.english, !!current.value.caseSensitive, isPhrase)
+  let isCorrect = isAnswerMatch(answer.value, current.value.english, !!current.value.caseSensitive, isPhrase)
+  // 句子：AI 判定（处理缩写/全写、标点、空格差异），失败或超时回退本地判定
+  if (current.value.type === 'sentence') {
+    const handle = async () => {
+      aiChecking.value = true
+      try {
+        const r = await api.checkSentence(answer.value, current.value.english)
+        if (r && typeof r.correct === 'boolean') isCorrect = r.correct
+      } catch (e) {
+        // AI 失败：保留本地判定结果
+      } finally {
+        aiChecking.value = false
+      }
+      afterCheck(isCorrect)
+    }
+    handle()
+    return
+  }
+  afterCheck(isCorrect)
+}
 
+function afterCheck(isCorrect) {
   if (isRedo.value) {
     // 重做模式：无论对错都不算正式作答，只显示反馈，不更新 count、不移除/加入错题本
     result.value = isCorrect ? 'correct' : 'wrong'
