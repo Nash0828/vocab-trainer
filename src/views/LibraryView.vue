@@ -140,7 +140,8 @@ const playingKey = ref('') // 当前正在播放的按钮标识
 
 // 句子/短语：先完整下载音频（fetch→blob）再本地播放，避免流式播放中途断、以及资源未就绪导致的误兜底二次请求；失败最多重试一次
 function playTts(text, onEnded, onFail) {
-  const url = `/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(settings.value.sentenceVoice)}`
+  // _ 时间戳防缓存：历史上句子响应曾被浏览器缓存（max-age=86400），URL 加随机参数强制绕过浏览器/任何缓存层，保证每次实时生成
+  const url = `/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(settings.value.sentenceVoice)}&_=${Date.now()}`
   stopAudio()
   let tries = 0
   const attempt = () => {
