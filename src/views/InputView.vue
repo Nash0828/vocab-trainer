@@ -208,7 +208,7 @@ function removePhrase(i) {
         <div class="form-item">
           <label><em class="req">*</em>中文</label>
           <input
-            v-if="form.type === 'word'"
+            v-if="form.type !== 'sentence'"
             v-model="form.chinese"
             type="text"
             placeholder="请输入中文"
@@ -229,7 +229,7 @@ function removePhrase(i) {
         <div class="form-item">
           <label><em class="req">*</em>英文</label>
           <input
-            v-if="form.type === 'word'"
+            v-if="form.type !== 'sentence'"
             v-model="form.english"
             type="text"
             placeholder="请输入英文"
