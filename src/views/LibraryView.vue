@@ -1942,8 +1942,7 @@ function formatTime(ts) {
 .wb-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
 }
 .wb-word {
   font-size: 17px;
