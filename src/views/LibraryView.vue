@@ -823,8 +823,10 @@ function formatTime(ts) {
       <div v-for="(word, index) in pagedWords" :key="word.id" class="word-item">
         <!-- 编辑态 -->
         <div v-if="editingId === word.id" class="edit-row">
-          <textarea v-model="editForm.chinese" class="cell-input area" placeholder="中文"></textarea>
-          <textarea v-model="editForm.english" class="cell-input area" placeholder="英文"></textarea>
+          <input v-if="editForm.type !== 'sentence'" v-model="editForm.chinese" class="cell-input" type="text" placeholder="中文" autocomplete="off" />
+          <textarea v-else v-model="editForm.chinese" class="cell-input area" placeholder="中文"></textarea>
+          <input v-if="editForm.type !== 'sentence'" v-model="editForm.english" class="cell-input" type="text" placeholder="英文" autocomplete="off" />
+          <textarea v-else v-model="editForm.english" class="cell-input area" placeholder="英文"></textarea>
           <div class="type-row">
             <span class="type-label">类型</span>
             <div class="type-seg">

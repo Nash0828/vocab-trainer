@@ -1260,9 +1260,9 @@ next()
         </div>
 
         <div class="quiz-input">
-          <!-- 单词：单行输入框；短语/句子：多行文本框 -->
+          <!-- 单词/短语：单行输入框；句子：多行文本框 -->
           <input
-            v-if="current.type === 'word'"
+            v-if="current.type !== 'sentence'"
             ref="answerInput"
             v-model="answer"
             type="text"
