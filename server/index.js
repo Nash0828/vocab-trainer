@@ -966,16 +966,19 @@ app.get('/api/tts', async (req, res) => {
   // voice 参数（试听等指定音色）；未传时用该用户的句子音色设置
   const voiceParam = String(req.query.voice || '').trim()
   const speaker = voiceParam && TTS_VOICES[voiceParam] ? voiceParam : getSentenceVoice(req.userId)
-  const cacheKey = `${speaker}|${text}`
-  const cached = ttsCache.get(cacheKey)
-  if (cached) {
-    res.set('Content-Type', 'audio/mpeg')
-    res.set('Cache-Control', 'public, max-age=86400')
-    return res.send(cached)
-  }
-  let buf = null
   // 纯单词（无空格）走百度：标准词典音、平实；短语/句子走豆包（所选音色）：自然平实语气
   const isWord = !/\s/.test(text)
+  const cacheKey = `${speaker}|${text}`
+  // 仅单词走缓存；句子/短语每次实时调豆包，不做缓存（避免豆包偶发异常音频被复用）
+  if (isWord) {
+    const cached = ttsCache.get(cacheKey)
+    if (cached) {
+      res.set('Content-Type', 'audio/mpeg')
+      res.set('Cache-Control', 'public, max-age=86400')
+      return res.send(cached)
+    }
+  }
+  let buf = null
   if (!isWord) {
     // 1) 豆包语音合成（seed-tts-2.0 双向流式，低时延、音色自然）
     if (BYTEDANCE_TTS_KEY) {
@@ -1003,10 +1006,16 @@ app.get('/api/tts', async (req, res) => {
     }
   }
   if (!buf) return res.status(502).json({ error: 'TTS 未生成音频' })
-  if (ttsCache.size > 2000) ttsCache.clear()
-  ttsCache.set(cacheKey, buf)
   res.set('Content-Type', 'audio/mpeg')
-  res.set('Cache-Control', 'public, max-age=86400')
+  if (isWord) {
+    // 单词可缓存（百度词典音稳定）
+    if (ttsCache.size > 2000) ttsCache.clear()
+    ttsCache.set(cacheKey, buf)
+    res.set('Cache-Control', 'public, max-age=86400')
+  } else {
+    // 句子/短语不缓存：每次实时调豆包，浏览器也不缓存
+    res.set('Cache-Control', 'no-store')
+  }
   res.send(buf)
 })
 
