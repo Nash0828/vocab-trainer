@@ -979,7 +979,19 @@ app.get('/api/tts', async (req, res) => {
   if (!isWord) {
     // 1) 豆包语音合成（seed-tts-2.0 双向流式，低时延、音色自然）
     if (BYTEDANCE_TTS_KEY) {
-      try { buf = await volcTts(text, speaker) } catch (e) { console.error('豆包流式 TTS 失败:', e.message) }
+      try {
+        buf = await volcTts(text, speaker)
+        // 完整性校验：豆包偶发返回时长异常（如整段噪声/空白）的损坏音频，判定异常则丢弃重试一次
+        if (buf && ttsDurationSec(buf) > maxTtsSec(text)) {
+          console.error(`豆包 TTS 音频异常（${ttsDurationSec(buf).toFixed(1)}s 超出预期），丢弃重试`)
+          buf = null
+          try { buf = await volcTts(text, speaker) } catch (e) { console.error('豆包流式 TTS 重试失败:', e.message) }
+          if (buf && ttsDurationSec(buf) > maxTtsSec(text)) {
+            console.error('豆包 TTS 重试仍异常，回退百度')
+            buf = null
+          }
+        }
+      } catch (e) { console.error('豆包流式 TTS 失败:', e.message) }
     }
     // 2) 兜底：百度翻译发音
     if (!buf) buf = await baiduTts(text)
@@ -997,6 +1009,15 @@ app.get('/api/tts', async (req, res) => {
   res.set('Cache-Control', 'public, max-age=86400')
   res.send(buf)
 })
+
+// 估算 mp3 音频时长（豆包 24000Hz mp3 约 8KB/s，实测 7.7~8.4KB/s）
+function ttsDurationSec(buf) {
+  return buf.length / 8000
+}
+// 该文本朗读的合理时长上限（英文约 3.5 字符/秒朗读 + 停顿余量）
+function maxTtsSec(text) {
+  return Math.max(3, text.length * 0.28 * 1.5 + 1.5)
+}
 
 async function baiduTts(text) {
   try {
