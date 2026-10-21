@@ -356,8 +356,8 @@ function submit() {
   // 判定：单词整串比较；短语/句子忽略标点与空白（含中文空格、多空格），仅逐词比较
   const isPhrase = current.value.type !== 'word'
   let isCorrect = isAnswerMatch(answer.value, current.value.english, !!current.value.caseSensitive, isPhrase)
-  // 句子：AI 判定（处理缩写/全写、标点、空格差异），失败或超时回退本地判定
-  if (current.value.type === 'sentence') {
+  // 句子且本地判错时：用 AI 复核（处理缩写/全写、标点等差异导致的误判），失败或超时保留本地判定
+  if (current.value.type === 'sentence' && !isCorrect) {
     const handle = async () => {
       aiChecking.value = true
       try {
