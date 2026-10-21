@@ -124,6 +124,17 @@ function stopAudio() {
   } catch (e) {}
 }
 
+// iOS 流式播放缓冲不足会触发 pause（并非播放结束），尝试自动恢复；真正播完由 ended / doneTimer 兜底复位
+function resumeIfPaused() {
+  if (!currentAudio || currentAudio.ended) return
+  const d = currentAudio.duration
+  const notFinished = !Number.isFinite(d) || currentAudio.currentTime < d - 0.5
+  if (!notFinished) return
+  setTimeout(() => {
+    try { currentAudio && currentAudio.play().catch(() => {}) } catch (e) {}
+  }, 250)
+}
+
 const audioPlaying = ref(false)
 const playingKey = ref('') // 当前正在播放的按钮标识
 function speak(word, type = 0, onDone = null, key = '') {
@@ -147,7 +158,7 @@ function speak(word, type = 0, onDone = null, key = '') {
       speakBaidu(text)
     }
     currentAudio.onended = () => { audioPlaying.value = false; playingKey.value = '' }
-    currentAudio.onpause = () => { audioPlaying.value = false; playingKey.value = '' }
+    currentAudio.onpause = resumeIfPaused
     currentAudio.onerror = once
     currentAudio.play().catch(once)
     // 兜底：iOS 上部分网络音频播完不触发 ended/pause，按时长上限强制收尾，防止 audioPlaying 残留
@@ -177,12 +188,12 @@ function speakAccent(word, accent, key = '') {
     const u2 = `/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(settings.value.sentenceVoice)}`
     currentAudio = new Audio(u2)
     currentAudio.onended = done
-    currentAudio.onpause = done
+    currentAudio.onpause = resumeIfPaused
     currentAudio.onerror = done
     currentAudio.play().catch(done)
   }
   currentAudio.onended = done
-  currentAudio.onpause = done
+  currentAudio.onpause = resumeIfPaused
   currentAudio.onerror = once
   currentAudio.play().catch(once)
   // 兜底：iOS 上网络音频可能不触发 ended/pause，按时长上限强制收尾
@@ -204,7 +215,7 @@ function speakBaidu(text) {
       speakViaSpeechSynthesis(text)
     }
     currentAudio.onended = () => { audioPlaying.value = false; playingKey.value = '' }
-    currentAudio.onpause = () => { audioPlaying.value = false; playingKey.value = '' }
+    currentAudio.onpause = resumeIfPaused
     currentAudio.onerror = once
     currentAudio.play().catch(once)
     doneTimer = setTimeout(() => {
@@ -344,7 +355,7 @@ function speakSentence(sentence, key = '') {
     currentAudio = new Audio(url)
     const done = () => { audioPlaying.value = false; if (playingKey.value === key) playingKey.value = '' }
     currentAudio.onended = done
-    currentAudio.onpause = done
+    currentAudio.onpause = resumeIfPaused
     currentAudio.onerror = done
     currentAudio.play().catch(done)
     doneTimer = setTimeout(() => {
