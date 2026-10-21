@@ -295,12 +295,12 @@ function removePhrase(i) {
             </span>
           </label>
           <div v-for="(ph, i) in form.phrases" :key="'ph' + i" class="ex-row">
-            <textarea
+            <input
               v-model="form.phrases[i]"
-              rows="2"
+              type="text"
               :placeholder="`短语${i + 1}`"
               autocomplete="off"
-            ></textarea>
+            />
             <button class="ex-del" type="button" @click="removePhrase(i)" title="删除该短语">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
@@ -455,10 +455,14 @@ function removePhrase(i) {
   position: relative;
   margin-bottom: 10px;
 }
-.ex-row textarea {
+.ex-row textarea,
+.ex-row input {
   width: 100%;
   padding-right: 34px;
   box-sizing: border-box;
+}
+.ex-row input {
+  height: 40px;
 }
 .ex-del {
   position: absolute;

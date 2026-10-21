@@ -850,7 +850,7 @@ function formatTime(ts) {
             <div class="edit-ex-wrap">
               <div class="edit-ex-label">相关短语</div>
               <div v-for="(ph, i) in editForm.phrases" :key="'ph' + i" class="edit-ex-row">
-                <textarea v-model="editForm.phrases[i]" class="cell-input area" :placeholder="`短语${i + 1}`"></textarea>
+                <input v-model="editForm.phrases[i]" class="cell-input" type="text" :placeholder="`短语${i + 1}`" autocomplete="off" />
                 <button type="button" class="edit-ex-del" @click="editForm.phrases.splice(i, 1)" title="删除该短语">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
@@ -1657,10 +1657,14 @@ function formatTime(ts) {
   position: relative;
   margin-bottom: 8px;
 }
-.edit-ex-row textarea {
+.edit-ex-row textarea,
+.edit-ex-row input {
   width: 100%;
   padding-right: 30px;
   box-sizing: border-box;
+}
+.edit-ex-row input {
+  height: 36px;
 }
 .edit-ex-del {
   position: absolute;
