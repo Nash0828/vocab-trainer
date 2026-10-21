@@ -612,7 +612,7 @@ function startEdit(word) {
   const phs = linked.filter((x) => x && x.type === 'phrase').map((x) => x.english)
   const exs = linked.filter((x) => x && x.type === 'sentence').map((x) => x.english)
   editForm.phrases = phs
-  editForm.examples = exs.length ? exs : ['']
+  editForm.examples = exs // 无例句时为空数组，编辑态不显示例句输入框（省空间）
 }
 
 function cancelEdit() {
@@ -859,7 +859,7 @@ function formatTime(ts) {
             </div>
           </template>
           <template v-if="editForm.type !== 'sentence'">
-            <div class="edit-ex-wrap">
+            <div v-if="editForm.examples.length" class="edit-ex-wrap">
               <div class="edit-ex-label">例句</div>
               <div v-for="(ex, i) in editForm.examples" :key="i" class="edit-ex-row">
                 <textarea v-model="editForm.examples[i]" class="cell-input area" :placeholder="`例句${i + 1}`"></textarea>
@@ -867,8 +867,8 @@ function formatTime(ts) {
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
-              <button v-if="editForm.examples.length < 5" type="button" class="edit-ex-add" @click="editForm.examples.push('')">+ 添加例句</button>
             </div>
+            <button v-if="editForm.examples.length < 5" type="button" class="edit-ex-add" @click="editForm.examples.push('')">+ 添加例句</button>
           </template>
           <div class="edit-btns">
             <button class="btn primary mini" :disabled="savingEdit" @click="saveEdit(word)">
