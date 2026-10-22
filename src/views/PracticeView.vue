@@ -1064,7 +1064,8 @@ function onGlobalKeydown(e) {
     return
   }
   if (e.key !== 'Enter') return
-  const canSkip = result.value === 'wrong' || (result.value === 'correct' && isRedo.value)
+  // 回车跳下一题：答错、重做答对、或答对且关闭了自动下一题（此时停留在本题，回车等价于点「下一题」）
+  const canSkip = result.value === 'wrong' || (result.value === 'correct' && (isRedo.value || !settings.value.autoNext))
   if (!canSkip) return
   const tag = e.target && e.target.tagName
   if (tag === 'BUTTON' || tag === 'A' || tag === 'INPUT' || tag === 'TEXTAREA') return
