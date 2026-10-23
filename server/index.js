@@ -36,8 +36,8 @@ function genId(prefix = '') { return `${prefix}${Date.now()}-${Math.random().toS
 function rowToWord(row) {
   const w = { id: String(row.id), chinese: row.chinese, english: row.english, pos: row.pos || '', type: row.type || 'word', count: row.count || 0, createdAt: row.created_at, caseSensitive: !!row.case_sensitive, exampleId: row.example_id || 0 }
   // 关联词句（相关短语+例句+主动关联的单词/短语，多对多）：按关联表顺序返回，带类型
-  w.examples = (db.prepare('SELECT s.id, s.english, s.chinese, s.type FROM word_examples we JOIN words s ON s.id = we.sentence_id WHERE we.word_id = ? ORDER BY we.id ASC').all(row.id) || [])
-    .map((s) => ({ id: String(s.id), english: s.english, chinese: s.chinese, type: s.type || 'sentence' }))
+  w.examples = (db.prepare('SELECT s.id, s.english, s.chinese, s.type, s.updated_at FROM word_examples we JOIN words s ON s.id = we.sentence_id WHERE we.word_id = ? ORDER BY we.id ASC').all(row.id) || [])
+    .map((s) => ({ id: String(s.id), english: s.english, chinese: s.chinese, type: s.type || 'sentence', updatedAt: Number(s.updated_at) || 0 }))
   // 主动关联（短语/句子录入时添加的关联单词/短语，link_type='link'）：编辑时带出
   w.linkedWords = (db.prepare('SELECT s.id, s.english, s.chinese FROM word_examples we JOIN words s ON s.id = we.sentence_id WHERE we.word_id = ? AND we.link_type = \'link\' AND s.type = \'word\' ORDER BY we.id ASC').all(row.id) || [])
     .map((s) => ({ id: String(s.id), english: s.english, chinese: s.chinese }))
@@ -612,7 +612,7 @@ async function resolveLinked(userId, type, english, list) {
       console.error('关联词句翻译失败:', err.message)
       const e2 = new Error('TRANSLATE_FAIL'); e2.code = 'TRANSLATE_FAIL'; throw e2
     }
-    const s = db.prepare("INSERT INTO words (user_id, chinese, english, pos, type, count, created_at, case_sensitive) VALUES (?, ?, ?, '', ?, 0, ?, 0)").run(userId, zh, item, type, Date.now())
+    const s = db.prepare("INSERT INTO words (user_id, chinese, english, pos, type, count, created_at, updated_at, case_sensitive) VALUES (?, ?, ?, '', ?, 0, ?, ?, 0)").run(userId, zh, item, type, Date.now(), Date.now())
     ids.push(Number(s.lastInsertRowid))
     assignWordToSmallestGroup(userId, Number(s.lastInsertRowid))
   }
@@ -644,7 +644,7 @@ app.post('/api/words', async (req, res) => {
     if (t === 'sentence') linkPhraseIds = await resolveExisting(req.userId, 'phrase', linkPhrases)
   }
   try {
-    const info = db.prepare('INSERT INTO words (user_id, chinese, english, pos, type, count, created_at, case_sensitive, example_id) VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)').run(req.userId, c, e, p, t, Date.now(), caseSensitive ? 1 : 0, sentenceIds[0] || 0)
+    const info = db.prepare('INSERT INTO words (user_id, chinese, english, pos, type, count, created_at, updated_at, case_sensitive, example_id) VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?)').run(req.userId, c, e, p, t, Date.now(), Date.now(), caseSensitive ? 1 : 0, sentenceIds[0] || 0)
     const wordId = info.lastInsertRowid
     if (linkedIds.length) saveWordExamples(wordId, linkedIds)
     if (linkWordIds.length || linkPhraseIds.length) saveLinks(wordId, req.userId, linkWordIds, linkPhraseIds)
@@ -789,7 +789,7 @@ app.put('/api/words/:id', async (req, res) => {
     linkWordIds = await resolveExisting(req.userId, 'word', linkWords)
     if (t === 'sentence') linkPhraseIds = await resolveExisting(req.userId, 'phrase', linkPhrases)
   }
-  const info = db.prepare('UPDATE words SET chinese = ?, english = ?, pos = ?, type = ?, case_sensitive = ?, example_id = ? WHERE id = ? AND user_id = ?').run(c, e, p, t, caseSensitive ? 1 : 0, sentenceIds[0] || 0, id, req.userId)
+  const info = db.prepare('UPDATE words SET chinese = ?, english = ?, pos = ?, type = ?, case_sensitive = ?, example_id = ?, updated_at = ? WHERE id = ? AND user_id = ?').run(c, e, p, t, caseSensitive ? 1 : 0, sentenceIds[0] || 0, Date.now(), id, req.userId)
   if (!info.changes) return res.status(404).json({ error: '单词不存在' })
   saveWordExamples(id, linkedIds)
   if (t !== 'word') {
