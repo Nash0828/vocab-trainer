@@ -1111,7 +1111,7 @@ next()
           </button>
           <div class="stat-item">
             <span class="stat-num">{{ todayUnique.totalWords }}</span>
-            <span class="stat-label">已背</span>
+            <span class="stat-label">已背词句</span>
           </div>
           <div class="stat-item">
             <span class="stat-num">{{ accuracy }}%</span>
