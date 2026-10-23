@@ -334,7 +334,7 @@ function cancelMigrate() {
 
     <!-- 句子音色选择器（微信 ActionSheet 风格） -->
     <div v-if="showVoiceSheet" class="mask" @click.self="closeVoiceSheet" @touchmove.prevent>
-      <div class="voice-sheet">
+      <div class="voice-sheet" @touchmove.stop>
         <p class="voice-sheet-title">选择句子音色</p>
         <div class="voice-sheet-list">
           <div
@@ -599,6 +599,7 @@ function cancelMigrate() {
   background: #fff;
   max-height: 52vh;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .voice-option {
   display: flex;
