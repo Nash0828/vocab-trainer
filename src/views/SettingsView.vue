@@ -126,13 +126,13 @@ async function exportDataFile() {
     const d = new Date()
     const pad = (n) => String(n).padStart(2, '0')
     const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`
-    a.download = `词句助手数据_${stamp}.json`
+    a.download = `爱背诵数据_${stamp}.json`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
     showTip(
-      `已导出 ${data.words.length} 个单词（含背诵次数）与背熟阈值，文件名：词句助手数据_${stamp}.json`,
+      `已导出 ${data.words.length} 个单词（含背诵次数）与背熟阈值，文件名：爱背诵数据_${stamp}.json`,
       'ok'
     )
   } catch (err) {
