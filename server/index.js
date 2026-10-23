@@ -64,18 +64,22 @@ async function resolveExisting(userId, type, list) {
 }
 // 保存主记录的主动关联（双向）：正向 (主记录, 关联词, 'link') 供编辑带出；反向 (关联词, 主记录, 'link') 供单词/短语侧可见
 function saveLinks(wordId, userId, linkWordIds, linkPhraseIds) {
-  const newIds = [...(linkWordIds || []), ...(linkPhraseIds || [])]
+  const rawNewIds = [...(linkWordIds || []), ...(linkPhraseIds || [])]
   const oldRows = db.prepare('SELECT sentence_id FROM word_examples WHERE word_id = ? AND link_type = ?').all(wordId, 'link')
   const oldIds = oldRows.map((r) => Number(r.sentence_id))
   // 删除不再关联的：正向 + 反向（反向只删 link 类型，保留其他词句手动录入例句建立的 example 关联）
   for (const oid of oldIds) {
-    if (!newIds.includes(oid)) {
+    if (!rawNewIds.includes(oid)) {
       db.prepare('DELETE FROM word_examples WHERE word_id = ? AND sentence_id = ? AND link_type = ?').run(wordId, oid, 'link')
       db.prepare('DELETE FROM word_examples WHERE word_id = ? AND sentence_id = ? AND link_type = ?').run(oid, wordId, 'link')
     }
   }
+  // 限制：被关联词（单词/短语）已有的句子关联数（含手动例句与反向关联）达 5 条时，跳过【新增】的该关联（双向都不建立）；已有关联不受影响
+  const sentenceCount = (sid) =>
+    db.prepare("SELECT COUNT(*) AS c FROM word_examples we JOIN words s ON s.id = we.sentence_id WHERE we.word_id = ? AND s.type = 'sentence'").get(sid)?.c || 0
   const st = db.prepare('INSERT OR IGNORE INTO word_examples (word_id, sentence_id, link_type, created_at) VALUES (?, ?, ?, ?)')
-  for (const sid of newIds) {
+  for (const sid of rawNewIds) {
+    if (!oldIds.includes(sid) && sentenceCount(sid) >= 5) continue // 新增关联且被关联词已满 5 条句子：静默跳过
     st.run(wordId, sid, 'link', Date.now())
     st.run(sid, wordId, 'link', Date.now())
   }
