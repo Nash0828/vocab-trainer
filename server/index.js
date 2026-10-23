@@ -107,7 +107,7 @@ const TTS_VOICES = {
   'en_male_josh_uranus_bigtts': 'Josh（美音男声）',
   'en_female_authoritative-british_uranus_bigtts': 'Charlotte（英音女声）',
 }
-const DEFAULT_VOICE = 'en_female_jenny_uranus_bigtts'
+const DEFAULT_VOICE = 'en_male_tim_uranus_bigtts'
 function getSentenceVoice(uid) {
   const row = db.prepare("SELECT value FROM settings WHERE user_id = ? AND key = 'sentenceVoice'").get(uid)
   return row?.value && TTS_VOICES[row.value] ? row.value : DEFAULT_VOICE

@@ -7,7 +7,7 @@ import { api } from '../api/index.js'
  * 策略：启动时一次性从后端加载到 ref；写操作先乐观更新 ref，再异步同步到后端
  */
 const DEFAULT_THRESHOLD = 10
-const DEFAULT_VOICE = 'en_female_jenny_uranus_bigtts'
+const DEFAULT_VOICE = 'en_male_tim_uranus_bigtts'
 
 const words = ref([])
 const settings = ref({ masteryThreshold: DEFAULT_THRESHOLD, autoNext: true, sentenceVoice: DEFAULT_VOICE })
