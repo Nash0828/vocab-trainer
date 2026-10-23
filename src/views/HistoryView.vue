@@ -167,8 +167,8 @@ function isWordRecord(r) {
             <div class="day-info">
               <span class="day-date">{{ formatDate(day.date) }}</span>
               <span class="day-stats">
-                <span class="stat-ok">对 {{ day.correct }}</span>
-                <span class="stat-bad">错 {{ day.wrong }}</span>
+                <span class="stat-ok">正确 {{ day.correct }}</span>
+                <span class="stat-bad">错误 {{ day.wrong }}</span>
                 <span class="stat-rate">正确率 {{ day.correct + day.wrong ? Math.round(day.correct * 100 / (day.correct + day.wrong)) : 0 }}%</span>
                 <span class="stat-total">已背词句 {{ day.totalWords }}</span>
               </span>
