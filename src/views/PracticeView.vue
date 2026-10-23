@@ -42,6 +42,13 @@ async function loadGroups() {
 }
 // 词库变化（录入/删除/背诵次数）时刷新分组统计
 watch(() => words.value, loadGroups, { deep: true })
+// 词库变化且当前无题时自动出题（如空词库时先录入了词句再回到背诵页）
+watch(
+  () => words.value.length,
+  () => {
+    if (!current.value && available.value.length) next()
+  }
+)
 // 类型筛选：'all' | 'word' | 'phrase' | 'sentence'
 const typeFilter = ref('all')
 const typeFilterOptions = [
@@ -1072,6 +1079,8 @@ onActivated(() => {
   // KeepAlive 切回：静默刷新分组与今日统计（不打断当前题目，保留答题现场）
   loadGroups()
   refreshToday()
+  // 当前无题且出题池有词时自动出题（覆盖：空词库进入背诵页→去录入→切回的场景）
+  if (!current.value && available.value.length) next()
 })
 
 watch(
@@ -1268,8 +1277,8 @@ next()
         </div>
       </transition>
 
-      <!-- 答题区 -->
-      <div class="quiz-card">
+      <!-- 答题区（current 为空时不渲染，避免空指针崩溃） -->
+      <div v-if="current" class="quiz-card">
         <p class="quiz-label">中文</p>
         <p class="quiz-word" :class="quizWordClass">{{ current.chinese }}</p>
         <p v-if="current.type && current.type !== 'word'" class="quiz-type">{{ current.type === 'phrase' ? '短语' : '句子' }}</p>
@@ -1360,6 +1369,7 @@ next()
           </template>
         </div>
       </div>
+      <div v-else class="quiz-loading">正在准备题目…</div>
     </template>
   </div>
 
@@ -2240,6 +2250,12 @@ next()
 }
 
 /* 答题卡片 */
+.quiz-loading {
+  padding: 40px 0;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+}
 .quiz-card {
   background: #fff;
   margin: 0 16px;
