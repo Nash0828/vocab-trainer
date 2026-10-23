@@ -10,6 +10,8 @@ const { words, addWord, checkDuplicate } = useWords()
 const saving = ref(false)
 const showExampleTip = ref(false)
 const showPhraseTip = ref(false)
+const showLinkWordTip = ref(false)
+const showLinkPhraseTip = ref(false)
 
 const form = reactive({
   chinese: '',
@@ -70,6 +72,8 @@ function closePosPicker() {
   showPosPicker.value = false
   showExampleTip.value = false
   showPhraseTip.value = false
+  showLinkWordTip.value = false
+  showLinkPhraseTip.value = false
 }
 onMounted(() => document.addEventListener('click', closePosPicker))
 onUnmounted(() => document.removeEventListener('click', closePosPicker))
@@ -359,8 +363,15 @@ function removeLinkPhrase(i) {
           <button v-if="form.examples.length < 5" type="button" class="ex-add" @click="addExample">+ 添加例句</button>
         </div>
         <div v-if="form.type !== 'word'" class="form-item ex-item">
-          <label>关联单词</label>
-          <p class="ex-desc">从词句库中关联已有的单词，不存在的将自动忽略</p>
+          <label>
+            关联单词
+            <span class="ex-help" @click.stop="showLinkWordTip = !showLinkWordTip">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b2b2b2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <transition name="fade">
+                <div v-if="showLinkWordTip" class="ex-tip">从词句库中关联已有的单词，不存在的将自动忽略</div>
+              </transition>
+            </span>
+          </label>
           <div v-for="(lw, i) in form.linkWords" :key="'lw' + i" class="ex-row">
             <input
               v-model="form.linkWords[i]"
@@ -375,8 +386,15 @@ function removeLinkPhrase(i) {
           <button v-if="form.linkWords.length < 5" type="button" class="ex-add" @click="addLinkWord">+ 添加关联单词</button>
         </div>
         <div v-if="form.type === 'sentence'" class="form-item ex-item">
-          <label>关联短语</label>
-          <p class="ex-desc">从词句库中关联已有的短语，不存在的将自动忽略</p>
+          <label>
+            关联短语
+            <span class="ex-help" @click.stop="showLinkPhraseTip = !showLinkPhraseTip">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b2b2b2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <transition name="fade">
+                <div v-if="showLinkPhraseTip" class="ex-tip">从词句库中关联已有的短语，不存在的将自动忽略</div>
+              </transition>
+            </span>
+          </label>
           <div v-for="(lp, i) in form.linkPhrases" :key="'lp' + i" class="ex-row">
             <input
               v-model="form.linkPhrases[i]"
@@ -587,12 +605,7 @@ function removeLinkPhrase(i) {
   z-index: 22;
 }
 
-.ex-desc {
-  margin: 0 0 10px;
-  font-size: 12px;
-  color: #b2b2b2;
-  line-height: 1.5;
-}
+
 
 .pos-row {
   display: flex;
