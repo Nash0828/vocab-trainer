@@ -285,7 +285,7 @@ function cancelMigrate() {
         <span class="menu-value">{{ currentVoiceName }}</span>
         <span class="menu-arrow">›</span>
       </div>
-      <div class="menu-desc">朗读句子时使用的豆包语音音色</div>
+      <div class="menu-desc">朗读句子时使用的 AI 语音音色</div>
     </div>
 
     <!-- 背熟规则 -->
@@ -297,7 +297,7 @@ function cancelMigrate() {
         <span class="menu-label">背熟阈值</span>
         <input v-model="thresholdInput" class="threshold-input" type="number" min="1" max="999" @change="saveThreshold" />
       </div>
-      <div class="menu-desc">答对多少次后视为已背熟，已背熟的单词不再出题</div>
+      <div class="menu-desc">答对多少次后视为已背熟，已背熟的词句不再出题</div>
     </div>
 
     <!-- 数据管理 -->
