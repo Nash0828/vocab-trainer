@@ -53,8 +53,10 @@ function prependExampleSentences(data, wordText) {
   }
   // 例句 → data.sentences 最前
   const sentences = exs.filter((x) => x && x.type === 'sentence' && x.english) // 只放句子进例句区块，关联的单词/短语不进
-  // 手动添加的例句按最后修改时间倒序（越近越靠前）
-  sentences.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+  // 手动添加的例句按最后修改时间倒序（越近越靠前）；老数据无 updatedAt 时按关联顺序倒排（最近关联的在前）
+  const hasTime = sentences.some((x) => (x.updatedAt || 0) > 0)
+  if (hasTime) sentences.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+  else sentences.reverse()
   if (sentences.length) {
     if (!Array.isArray(data.sentences)) data.sentences = []
     for (let i = sentences.length - 1; i >= 0; i--) {
