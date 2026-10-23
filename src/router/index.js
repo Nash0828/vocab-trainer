@@ -16,13 +16,13 @@ const router = createRouter({
       path: '/',
       name: 'input',
       component: InputView,
-      meta: { title: '单词录入' },
+      meta: { title: '录入' },
     },
     {
       path: '/input',
       name: 'input-page',
       component: InputView,
-      meta: { title: '单词录入' },
+      meta: { title: '录入' },
     },
     {
       path: '/practice',
