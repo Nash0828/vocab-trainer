@@ -180,11 +180,6 @@ function isWordRecord(r) {
             <div v-if="expanded === day.date" class="day-detail" @click.stop>
               <div class="detail-head">
                 <span class="muted small">当天作答明细</span>
-                <button v-if="confirmClearDay !== day.date" class="mini-clear" @click="askClearDay(day.date)">清空</button>
-                <span v-else class="mini-confirm">
-                  <button class="mini-yes" @click="doClearDay(day.date)">是</button>
-                  <button class="mini-no" @click="cancelClearDay">否</button>
-                </span>
               </div>
               <div class="record-list">
                 <div
@@ -224,14 +219,6 @@ function isWordRecord(r) {
         </div>
       </div>
 
-      <!-- 清空按钮（底部，微信风格：白底圆角卡片内红色文字按钮） -->
-      <div class="clear-bar">
-        <button v-if="!confirmClearAll" class="clear-btn" @click="askClearAll">清空全部历史</button>
-        <span v-else class="clear-confirm">
-          <button class="clear-yes" @click="doClearAll">确认清空</button>
-          <button class="clear-no" @click="cancelClearAll">取消</button>
-        </span>
-      </div>
     </template>
   </div>
 </template>
@@ -314,12 +301,7 @@ function isWordRecord(r) {
 }
 
 /* 清空按钮（微信风格：底部白底圆角卡片内红色文字按钮） */
-.clear-bar {
-  margin: 12px 16px 8px;
-  background: #fff;
-  border-radius: 12px;
-  overflow: hidden;
-}
+
 
 .clear-btn {
   width: 100%;
@@ -437,13 +419,7 @@ function isWordRecord(r) {
   padding: 8px 0;
 }
 
-.mini-clear {
-  border: none;
-  background: transparent;
-  color: var(--danger);
-  font-size: 12px;
-  cursor: pointer;
-}
+
 
 .mini-confirm {
   display: flex;
