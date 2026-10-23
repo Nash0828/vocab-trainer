@@ -1182,7 +1182,7 @@ next()
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
       </div>
       <p class="empty-title">词句库还是空的</p>
-      <p class="empty-desc">先去录入一些单词，再来这里练习吧</p>
+      <p class="empty-desc">先去录入一些词句，再来这里练习吧</p>
       <button class="empty-btn" @click="router.push('/input')">去录入单词</button>
     </div>
 
