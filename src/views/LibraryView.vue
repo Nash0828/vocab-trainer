@@ -624,6 +624,36 @@ function showTip(text, kind = 'ok') {
   tipTimer = setTimeout(() => (tip.value = ''), 2800)
 }
 
+// 复制词句英文到剪贴板（优先 Clipboard API，失败降级隐藏 textarea + execCommand，兼容 iOS）
+function copyWord(word) {
+  const text = word.english || ''
+  const done = () => {
+    const brief = text.length > 20 ? text.slice(0, 20) + '…' : text
+    showTip(`已复制：${brief}`, 'ok')
+  }
+  const fallback = () => {
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none'
+      document.body.appendChild(ta)
+      ta.focus()
+      ta.select()
+      const ok = document.execCommand('copy')
+      document.body.removeChild(ta)
+      if (ok) done()
+      else showTip('复制失败，请长按选择复制', 'err')
+    } catch (e) {
+      showTip('复制失败，请长按选择复制', 'err')
+    }
+  }
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(done).catch(fallback)
+  } else {
+    fallback()
+  }
+}
+
 // 背诵进度百分比（0~100）
 function pct(word) {
   const t = threshold.value || 1
@@ -963,6 +993,9 @@ function formatTime(ts) {
               </button>
               <button class="op-btn del" title="删除" @click="askDelete(word)">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+              <button class="op-btn" title="复制" @click="copyWord(word)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
               </button>
             </template>
           </div>
