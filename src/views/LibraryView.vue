@@ -447,7 +447,7 @@ const typeFilter = ref('all') // 'all' | 'word' | 'phrase' | 'sentence'
 
 const filteredWords = computed(() => {
   const kw = keyword.value.trim().toLowerCase()
-  return sortedWords.value.filter((w) => {
+  const list = sortedWords.value.filter((w) => {
     const matchKw =
       !kw ||
       w.chinese.toLowerCase().includes(kw) ||
@@ -462,6 +462,12 @@ const filteredWords = computed(() => {
       (statusFilter.value === 'notMastered' && !mastered)
     return matchKw && matchType && matchStatus
   })
+  // 搜索结果（有关键词时）：单词优先排在前面，短语/句子在后，各组内保持原有相对顺序
+  if (kw) {
+    const rank = { word: 0, phrase: 1, sentence: 2 }
+    list.sort((a, b) => (rank[a.type || 'word'] ?? 0) - (rank[b.type || 'word'] ?? 0))
+  }
+  return list
 })
 
 const noMatch = computed(() => totalCount.value > 0 && filteredWords.value.length === 0)
