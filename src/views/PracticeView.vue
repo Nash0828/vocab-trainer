@@ -380,7 +380,7 @@ function afterCheck(isCorrect) {
   if (isRedo.value) {
     // 重做模式：无论对错都不算正式作答，只显示反馈，不更新 count、不移除/加入错题本
     result.value = isCorrect ? 'correct' : 'wrong'
-    speak(current.value.english, 0, null, 'main')
+    speak(current.value.english, current.value.type || 'word', null, 'main')
     // 重做答对后停在当前题，等用户点"下一题"；答错也停在当前题
     clearAutoTimer()
     return
@@ -411,7 +411,7 @@ function afterCheck(isCorrect) {
     result.value = 'correct'
     // 锁定输入，等正确发音播报完成后按设置决定是否自动切换下一题
     answeredLock.value = true
-    speak(answeredWord, 0, () => {
+    speak(answeredWord, current.value.type || 'word', () => {
       answeredLock.value = false
       if (settings.value.autoNext) {
         next()
@@ -421,7 +421,7 @@ function afterCheck(isCorrect) {
       }
     }, 'main')
   } else {
-    speak(answeredWord, 0, null, 'main')
+    speak(answeredWord, current.value.type || 'word', null, 'main')
     result.value = 'wrong'
   }
 }
@@ -484,10 +484,11 @@ function resumeIfPaused() {
   }, 250)
 }
 
-// 句子/短语：先完整下载音频（fetch→blob）再本地播放，避免流式播放中途断、以及资源未就绪导致的误兜底二次请求；失败最多重试一次
-function playTts(text, onEnded, onFail) {
+// 词句发音：先完整下载音频（fetch→blob）再本地播放，避免流式播放中途断、以及资源未就绪导致的误兜底二次请求；失败最多重试一次
+// type：word/phrase/sentence，后端据此决定兜底（单词/短语→有道，句子→百度）
+function playTts(text, onEnded, onFail, type = 'word') {
   // _ 时间戳防缓存：历史上句子响应曾被浏览器缓存（max-age=86400），URL 加随机参数强制绕过浏览器/任何缓存层，保证每次实时生成
-  const url = `/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(settings.value.sentenceVoice)}&_=${Date.now()}`
+  const url = `/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(settings.value.sentenceVoice)}&type=${encodeURIComponent(type)}&_=${Date.now()}`
   stopAudio()
   let tries = 0
   const attempt = () => {
@@ -514,7 +515,7 @@ function playTts(text, onEnded, onFail) {
   attempt()
 }
 
-function speak(word, type = 0, onDone = null, key = '') {
+function speak(word, type = 'word', onDone = null, key = '') {
   if (!word) return
   // 防卡死：上次音频未正常结束（audioPlaying 残留 true）时，先停掉并消费旧回调，保证本次能正常播放
   if (audioPlaying.value) {
@@ -524,34 +525,16 @@ function speak(word, type = 0, onDone = null, key = '') {
   }
   if (onDone) audioDone = onDone
   const text = String(word).trim()
+  // 兼容旧调用（type 传数字 0 时按文本推断）；否则按调用方传入的词句类型
+  const wordType = type && typeof type === 'string' ? type : (/\s/.test(text) ? 'phrase' : 'word')
   audioPlaying.value = true
   playingKey.value = key
   stopAudio() // 先停掉任何残留音频，再播新的
   try {
-    // 单词（无空格）走有道美音词典音；短语/句子走本服务 /api/tts（豆包自然，完整下载后本地播放）
-    const isWord = !/\s/.test(text) && text.length <= 30
-    if (isWord) {
-      const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=2`
-      currentAudio = new Audio(url)
-      let fallbacked = false
-      const once = () => {
-        if (fallbacked) return
-        fallbacked = true
-        speakBaidu(text)
-      }
-      currentAudio.onended = () => { audioPlaying.value = false; fireDone() }
-      currentAudio.onerror = once
-      currentAudio.play().catch(once)
-      // 兜底：iOS 上部分网络音频播完不触发 ended，按时长上限强制收尾
-      doneTimer = setTimeout(() => {
-        stopAudio()
-        if (audioPlaying.value) { audioPlaying.value = false; fireDone() }
-      }, estimateDuration(text) * 1000)
-    } else {
-      playTts(text, () => { audioPlaying.value = false; fireDone() }, () => speakViaSpeechSynthesis(text))
-    }
+    // 统一走本服务 /api/tts：豆包优先（每次实时调用），单词/短语失败后端回退有道，句子回退百度
+    playTts(text, () => { audioPlaying.value = false; fireDone() }, () => speakViaSpeechSynthesis(text), wordType)
   } catch (e) {
-    speakBaidu(text)
+    speakViaSpeechSynthesis(text)
   }
 }
 
@@ -586,11 +569,6 @@ function speakAccent(word, accent, key = '') {
     stopAudio()
     if (audioPlaying.value) { audioPlaying.value = false; if (playingKey.value === key) playingKey.value = '' }
   }, estimateDuration(text) * 1000)
-}
-
-// 百度 TTS（走本服务代理 /api/tts，完整下载后本地播放）
-function speakBaidu(text) {
-  playTts(text, () => { audioPlaying.value = false; fireDone() }, () => speakViaSpeechSynthesis(text))
 }
 
 // 系统 TTS 朗读（保底）
@@ -856,7 +834,7 @@ function revealAnswer() {
     userAnswer: '',
   })
   refreshToday()
-  speak(current.value.english), 0, null, 'main'
+  speak(current.value.english, current.value.type || 'word', null, 'main')
 }
 
 // 切换出题来源
@@ -1046,7 +1024,7 @@ function onGlobalKeydown(e) {
   // Ctrl+P（Mac 为 Cmd+P）：朗读当前单词，阻止浏览器打印对话框，焦点留在输入框
   if ((e.ctrlKey || e.metaKey) && key === 'p') {
     e.preventDefault()
-    if (current.value) speak(current.value.english)
+    if (current.value) speak(current.value.english, current.value.type || 'word')
     return
   }
   // Ctrl+R：答错后重做这一题（答错时阻止浏览器默认刷新并重做；未答错时放行）
@@ -1428,7 +1406,7 @@ next()
         <div class="dict-body">
           <AiUsageCard v-if="dictModal" :word="dictModal.word" :type="dictModal.type || 'word'" />
           <div v-if="dictModal.type === 'phrase'" class="dict-speak-row">
-            <button class="dict-speak-btn" :class="{ 'is-playing': playingKey === 'dict-main' }" @click="speak(dictModal.word, 0, null, 'dict-main')" title="朗读"><span class="spk-static">
+            <button class="dict-speak-btn" :class="{ 'is-playing': playingKey === 'dict-main' }" @click="speak(dictModal.word, dictModal.type || 'word', null, 'dict-main')" title="朗读"><span class="spk-static">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span><span class="spk-eq"><i></i><i></i><i></i></span><span class="dict-speak-text">朗读</span>
             </button>
           </div>
@@ -1440,7 +1418,7 @@ next()
               <div class="trans-block" @click="onDictTextClick">
                 <div class="trans-src-row">
                   <p class="trans-src" v-html="wordify(dictModal.word, '')"></p>
-                  <button class="speak-mini" :class="{ 'is-playing': playingKey === 'read' }" @click="speak(dictModal.word, 0, null, 'read')" title="朗读"><span class="spk-static">
+                  <button class="speak-mini" :class="{ 'is-playing': playingKey === 'read' }" @click="speak(dictModal.word, dictModal.type || 'word', null, 'read')" title="朗读"><span class="spk-static">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span><span class="spk-eq"><i></i><i></i><i></i></span>
                   </button>
                 </div>
@@ -1515,7 +1493,7 @@ next()
           <template v-else-if="wordBubble.data">
             <div class="wb-head">
               <span class="wb-word">{{ wordBubble.word }}</span>
-              <button class="speak-mini" :class="{ 'is-playing': playingKey === 'bubble' }" @click="speak(wordBubble.word, 0, null, 'bubble')" title="朗读"><span class="spk-static">
+              <button class="speak-mini" :class="{ 'is-playing': playingKey === 'bubble' }" @click="speak(wordBubble.word, 'word', null, 'bubble')" title="朗读"><span class="spk-static">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span><span class="spk-eq"><i></i><i></i><i></i></span>
               </button>
             </div>

@@ -966,58 +966,54 @@ app.get('/api/tts', async (req, res) => {
   // voice 参数（试听等指定音色）；未传时用该用户的句子音色设置
   const voiceParam = String(req.query.voice || '').trim()
   const speaker = voiceParam && TTS_VOICES[voiceParam] ? voiceParam : getSentenceVoice(req.userId)
-  // 纯单词（无空格）走百度：标准词典音、平实；短语/句子走豆包（所选音色）：自然平实语气
+  // type 参数：word/phrase/sentence（前端词句类型）；未传时按是否含空格推断
+  const typeParam = String(req.query.type || '').trim()
   const isWord = !/\s/.test(text)
-  const cacheKey = `${speaker}|${text}`
-  // 仅单词走缓存；句子/短语每次实时调豆包，不做缓存（避免豆包偶发异常音频被复用）
-  if (isWord) {
-    const cached = ttsCache.get(cacheKey)
-    if (cached) {
-      res.set('Content-Type', 'audio/mpeg')
-      res.set('Cache-Control', 'public, max-age=86400')
-      return res.send(cached)
-    }
-  }
+  // 兜底链：单词/短语 豆包优先 → 有道美音；句子 豆包优先 → 百度
+  const fallbackYoudao = typeParam === 'word' || typeParam === 'phrase' || (!typeParam && isWord)
   let buf = null
-  if (!isWord) {
-    // 1) 豆包语音合成（seed-tts-2.0 双向流式，低时延、音色自然）
-    if (BYTEDANCE_TTS_KEY) {
-      try {
-        buf = await volcTts(text, speaker)
-        // 完整性校验：豆包偶发返回时长异常（如整段噪声/空白）的损坏音频，判定异常则丢弃重试一次
+  // 1) 豆包语音合成（seed-tts-2.0 双向流式，低时延、音色自然）——单词/短语/句子统一优先豆包
+  if (BYTEDANCE_TTS_KEY) {
+    try {
+      buf = await volcTts(text, speaker)
+      // 完整性校验：豆包偶发返回时长异常（如整段噪声/空白）的损坏音频，判定异常则丢弃重试一次
+      if (buf && ttsDurationSec(buf) > maxTtsSec(text)) {
+        console.error(`豆包 TTS 音频异常（${ttsDurationSec(buf).toFixed(1)}s 超出预期），丢弃重试`)
+        buf = null
+        try { buf = await volcTts(text, speaker) } catch (e) { console.error('豆包流式 TTS 重试失败:', e.message) }
         if (buf && ttsDurationSec(buf) > maxTtsSec(text)) {
-          console.error(`豆包 TTS 音频异常（${ttsDurationSec(buf).toFixed(1)}s 超出预期），丢弃重试`)
+          console.error('豆包 TTS 重试仍异常，切换兜底发音')
           buf = null
-          try { buf = await volcTts(text, speaker) } catch (e) { console.error('豆包流式 TTS 重试失败:', e.message) }
-          if (buf && ttsDurationSec(buf) > maxTtsSec(text)) {
-            console.error('豆包 TTS 重试仍异常，回退百度')
-            buf = null
-          }
         }
-      } catch (e) { console.error('豆包流式 TTS 失败:', e.message) }
-    }
-    // 2) 兜底：百度翻译发音
-    if (!buf) buf = await baiduTts(text)
-  } else {
-    // 单词：百度优先（词典平实音），豆包兜底
-    buf = await baiduTts(text)
-    if (!buf && BYTEDANCE_TTS_KEY) {
-      try { buf = await volcTts(text, DEFAULT_VOICE) } catch (e) { console.error('豆包流式 TTS 失败:', e.message) }
-    }
+      }
+    } catch (e) { console.error('豆包流式 TTS 失败:', e.message) }
   }
+  // 2) 兜底：单词/短语 → 有道美音；句子 → 百度
+  if (!buf) buf = fallbackYoudao ? await youdaoTts(text) : await baiduTts(text)
   if (!buf) return res.status(502).json({ error: 'TTS 未生成音频' })
+  // 统一不缓存：豆包每次实时调用；兜底发音也无缓存价值
   res.set('Content-Type', 'audio/mpeg')
-  if (isWord) {
-    // 单词可缓存（百度词典音稳定）
-    if (ttsCache.size > 2000) ttsCache.clear()
-    ttsCache.set(cacheKey, buf)
-    res.set('Cache-Control', 'public, max-age=86400')
-  } else {
-    // 句子/短语不缓存：每次实时调豆包，浏览器也不缓存
-    res.set('Cache-Control', 'no-store')
-  }
+  res.set('Cache-Control', 'no-store')
   res.send(buf)
 })
+
+// 有道词典发音（美音 type=2）
+async function youdaoTts(text) {
+  try {
+    const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=2`
+    const r = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+      signal: AbortSignal.timeout(8000),
+    })
+    if (r.ok) {
+      const audio = Buffer.from(await r.arrayBuffer())
+      if (audio.length >= 500) return audio
+    }
+  } catch (e) {
+    console.error('有道 TTS 失败:', e.message)
+  }
+  return null
+}
 
 // 估算 mp3 音频时长（豆包 24000Hz mp3 约 8KB/s，实测 7.7~8.4KB/s）
 function ttsDurationSec(buf) {

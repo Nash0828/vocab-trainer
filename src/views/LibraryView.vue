@@ -138,10 +138,11 @@ function resumeIfPaused() {
 const audioPlaying = ref(false)
 const playingKey = ref('') // 当前正在播放的按钮标识
 
-// 句子/短语：先完整下载音频（fetch→blob）再本地播放，避免流式播放中途断、以及资源未就绪导致的误兜底二次请求；失败最多重试一次
-function playTts(text, onEnded, onFail) {
+// 词句发音：先完整下载音频（fetch→blob）再本地播放，避免流式播放中途断、以及资源未就绪导致的误兜底二次请求；失败最多重试一次
+// type：word/phrase/sentence，后端据此决定兜底（单词/短语→有道，句子→百度）
+function playTts(text, onEnded, onFail, type = 'word') {
   // _ 时间戳防缓存：历史上句子响应曾被浏览器缓存（max-age=86400），URL 加随机参数强制绕过浏览器/任何缓存层，保证每次实时生成
-  const url = `/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(settings.value.sentenceVoice)}&_=${Date.now()}`
+  const url = `/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(settings.value.sentenceVoice)}&type=${encodeURIComponent(type)}&_=${Date.now()}`
   stopAudio()
   let tries = 0
   const attempt = () => {
@@ -168,38 +169,19 @@ function playTts(text, onEnded, onFail) {
   attempt()
 }
 
-function speak(word, type = 0, onDone = null, key = '') {
+function speak(word, type = 'word', onDone = null, key = '') {
   if (!word) return
   const text = String(word).trim()
-  // iOS 上音频播完可能不触发 ended/pause，导致 audioPlaying 残留、后续发音全部静默失效；先停旧音频并复位
+  // 兼容旧调用（type 传数字 0 时按文本推断）；否则按调用方传入的词句类型
+  const wordType = type && typeof type === 'string' ? type : (/\s/.test(text) ? 'phrase' : 'word')
   stopAudio()
   audioPlaying.value = true
   playingKey.value = key
   try {
-    // 单词（无空格）走有道美音词典音；短语/句子走本服务 /api/tts（豆包自然，完整下载后本地播放）
-    const isWord = !/\s/.test(text) && text.length <= 30
-    if (isWord) {
-      const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=2`
-      currentAudio = new Audio(url)
-      let fallbacked = false
-      const once = () => {
-        if (fallbacked) return
-        fallbacked = true
-        speakBaidu(text)
-      }
-      currentAudio.onended = () => { audioPlaying.value = false; playingKey.value = '' }
-      currentAudio.onerror = once
-      currentAudio.play().catch(once)
-      // 兜底：iOS 上部分网络音频播完不触发 ended，按时长上限强制收尾，防止 audioPlaying 残留
-      doneTimer = setTimeout(() => {
-        stopAudio()
-        if (audioPlaying.value) { audioPlaying.value = false; playingKey.value = '' }
-      }, estimateDuration(text) * 1000)
-    } else {
-      playTts(text, () => { audioPlaying.value = false; playingKey.value = '' }, () => speakViaSpeechSynthesis(text))
-    }
+    // 统一走本服务 /api/tts：豆包优先（每次实时调用），单词/短语失败后端回退有道，句子回退百度
+    playTts(text, () => { audioPlaying.value = false; playingKey.value = '' }, () => speakViaSpeechSynthesis(text), wordType)
   } catch (e) {
-    speakBaidu(text)
+    speakViaSpeechSynthesis(text)
   }
 }
 
@@ -217,7 +199,7 @@ function speakAccent(word, accent, key = '') {
   const once = () => {
     if (fallbacked) return
     fallbacked = true
-    const u2 = `/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(settings.value.sentenceVoice)}`
+    const u2 = `/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(settings.value.sentenceVoice)}&type=word&_=${Date.now()}`
     currentAudio = new Audio(u2)
     currentAudio.onended = done
     currentAudio.onpause = resumeIfPaused
@@ -233,11 +215,6 @@ function speakAccent(word, accent, key = '') {
     stopAudio()
     if (audioPlaying.value) { audioPlaying.value = false; if (playingKey.value === key) playingKey.value = '' }
   }, estimateDuration(text) * 1000)
-}
-
-// 百度 TTS（走本服务代理 /api/tts，完整下载后本地播放）
-function speakBaidu(text) {
-  playTts(text, () => { audioPlaying.value = false; playingKey.value = '' }, () => speakViaSpeechSynthesis(text))
 }
 
 // 系统 TTS 朗读（保底）
@@ -368,7 +345,7 @@ function speakSentence(sentence, key = '') {
   }, () => {
     audioPlaying.value = false
     if (playingKey.value === key) playingKey.value = ''
-  })
+  }, 'sentence')
 }
 
 // 弹窗打开时禁止背景滚动（iOS 全版本可靠的 body 滚动锁）
@@ -939,7 +916,7 @@ function formatTime(ts) {
           <div class="word-main">
             <div class="word-left">
               <span class="word-en" title="查看详情" @click="lookupWord(word.english, word.type || 'word')">{{ word.english }}</span>
-              <button class="speak-btn" :class="{ 'is-playing': playingKey === 'card' + word.id }" title="发音" @click.stop="speak(word.english, 0, null, 'card' + word.id)"><span class="spk-static">
+              <button class="speak-btn" :class="{ 'is-playing': playingKey === 'card' + word.id }" title="发音" @click.stop="speak(word.english, word.type || 'word', null, 'card' + word.id)"><span class="spk-static">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span><span class="spk-eq"><i></i><i></i><i></i></span>
               </button>
               <span v-if="word.type && word.type !== 'word'" class="type-tag">{{ word.type === 'phrase' ? '短语' : '句子' }}</span>
@@ -1023,7 +1000,7 @@ function formatTime(ts) {
         <div class="dict-body">
           <AiUsageCard v-if="dictModal" :word="dictModal.word" :type="dictModal.type || 'word'" />
           <div v-if="dictModal.type === 'phrase'" class="dict-speak-row">
-            <button class="dict-speak-btn" :class="{ 'is-playing': playingKey === 'dict-main' }" @click="speak(dictModal.word, 0, null, 'dict-main')" title="朗读"><span class="spk-static">
+            <button class="dict-speak-btn" :class="{ 'is-playing': playingKey === 'dict-main' }" @click="speak(dictModal.word, dictModal.type || 'word', null, 'dict-main')" title="朗读"><span class="spk-static">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span><span class="spk-eq"><i></i><i></i><i></i></span><span class="dict-speak-text">朗读</span>
             </button>
           </div>
@@ -1035,7 +1012,7 @@ function formatTime(ts) {
               <div class="trans-block" @click="onDictTextClick">
                 <div class="trans-src-row">
                   <p class="trans-src" v-html="wordify(dictModal.word, '')"></p>
-                  <button class="speak-mini" :class="{ 'is-playing': playingKey === 'read' }" @click="speak(dictModal.word, 0, null, 'read')" title="朗读"><span class="spk-static">
+                  <button class="speak-mini" :class="{ 'is-playing': playingKey === 'read' }" @click="speak(dictModal.word, dictModal.type || 'word', null, 'read')" title="朗读"><span class="spk-static">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span><span class="spk-eq"><i></i><i></i><i></i></span>
                   </button>
                 </div>
@@ -1110,7 +1087,7 @@ function formatTime(ts) {
           <template v-else-if="wordBubble.data">
             <div class="wb-head">
               <div class="wb-word">{{ wordBubble.word }}</div>
-              <button class="speak-mini" :class="{ 'is-playing': playingKey === 'bubble' }" @click="speak(wordBubble.word, 0, null, 'bubble')" title="朗读"><span class="spk-static">
+              <button class="speak-mini" :class="{ 'is-playing': playingKey === 'bubble' }" @click="speak(wordBubble.word, 'word', null, 'bubble')" title="朗读"><span class="spk-static">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span><span class="spk-eq"><i></i><i></i><i></i></span>
               </button>
             </div>
