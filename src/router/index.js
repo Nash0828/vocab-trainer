@@ -3,7 +3,12 @@ import InputView from '../views/InputView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  scrollBehavior() {
+  scrollBehavior(to, from, savedPosition) {
+    // KeepAlive 缓存的页面（录入/背诵/词句库）不强制滚顶，由页面自身在 onActivated 恢复滚动位置（切回保留现场）
+    if (['input', 'input-page', 'practice', 'library'].includes(to.name)) {
+      if (savedPosition) return savedPosition
+      return {}
+    }
     return { top: 0 }
   },
   routes: [

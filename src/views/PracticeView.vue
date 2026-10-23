@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, nextTick, onMounted, onActivated, onBeforeUnmount, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useWords, loadState, weightedPickIndex } from '../composables/useWords'
 import { useHistory } from '../composables/useHistory'
@@ -1062,6 +1062,12 @@ onMounted(() => {
   setPendingFromQuery()
   if (pendingWord.value) next()
   loadGroups()
+})
+
+onActivated(() => {
+  // KeepAlive 切回：静默刷新分组与今日统计（不打断当前题目，保留答题现场）
+  loadGroups()
+  refreshToday()
 })
 
 watch(

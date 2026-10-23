@@ -48,7 +48,7 @@ onMounted(async () => {
     <div class="app-body">
       <main class="app-main">
         <RouterView v-slot="{ Component }">
-          <KeepAlive include="InputView">
+          <KeepAlive include="InputView,PracticeView,LibraryView">
             <component :is="Component" />
           </KeepAlive>
         </RouterView>

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onActivated, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWords } from '../composables/useWords'
 import AiUsageCard from '../components/AiUsageCard.vue'
@@ -94,11 +94,25 @@ function onKeydown(e) {
 
 onMounted(() => {
   document.addEventListener('keydown', onKeydown)
+  window.addEventListener('scroll', onScroll, { passive: true })
+  savedScrollTop = 0 // 首次进入滚顶
 })
+
+onActivated(() => {
+  // KeepAlive 切回：恢复离开时的滚动位置（筛选/分页等状态随组件实例保留）
+  window.scrollTo(0, savedScrollTop)
+})
+
+// 记录词句库页面滚动位置（KeepAlive 场景切回时恢复现场）
+let savedScrollTop = 0
+function onScroll() {
+  savedScrollTop = window.scrollY || document.documentElement.scrollTop || 0
+}
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', closeWordBubble)
   document.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('scroll', onScroll)
 })
 
 // 播放发音：有道优先，失败回退百度 TTS，再失败回退系统 TTS
