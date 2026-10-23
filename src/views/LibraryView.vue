@@ -52,7 +52,7 @@ function prependExampleSentences(data, wordText) {
     }
   }
   // 例句 → data.sentences 最前
-  const sentences = exs.filter((x) => x && x.type !== 'phrase' && x.english)
+  const sentences = exs.filter((x) => x && x.type === 'sentence' && x.english) // 只放句子进例句区块，关联的单词/短语不进
   if (sentences.length) {
     if (!Array.isArray(data.sentences)) data.sentences = []
     for (let i = sentences.length - 1; i >= 0; i--) {
