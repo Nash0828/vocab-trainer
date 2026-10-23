@@ -1,6 +1,6 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
-import { useWords } from '../composables/useWords'
+import { useWords, refreshAll } from '../composables/useWords'
 import { api } from '../api/index.js'
 import { defineOptions } from 'vue'
 
@@ -19,6 +19,8 @@ const form = reactive({
   caseSensitive: false,
   phrases: [],
   examples: [''],
+  linkWords: [],
+  linkPhrases: [],
 })
 
 const typeOptions = [
@@ -29,6 +31,8 @@ const typeOptions = [
 const showTypePicker = ref(false)
 function pickType(t) {
   form.type = t
+  form.linkWords = []
+  form.linkPhrases = []
   showTypePicker.value = false
 }
 
@@ -118,10 +122,12 @@ async function submit() {
     showTip(dupMsg, 'err')
     return
   }
-  // 带例句/相关短语：先端保存（AI 包含校验 + 查重 + AI 翻译 + 自动入库），成功后再写入本地
+  // 带例句/相关短语/关联词：先端保存（AI 包含校验 + 查重 + AI 翻译 + 自动入库 + 关联词解析），成功后再写入本地
   const exList = form.examples.map((x) => String(x || '').trim()).filter(Boolean)
   const phList = form.phrases.map((x) => String(x || '').trim()).filter(Boolean)
-  if (exList.length || phList.length) {
+  const linkWordList = form.linkWords.map((x) => String(x || '').trim()).filter(Boolean)
+  const linkPhraseList = form.linkPhrases.map((x) => String(x || '').trim()).filter(Boolean)
+  if (exList.length || phList.length || linkWordList.length || linkPhraseList.length) {
     saving.value = true
     try {
       const real = await api.addWord({
@@ -132,10 +138,13 @@ async function submit() {
         caseSensitive: form.caseSensitive,
         phrases: phList,
         examples: exList,
+        linkWords: linkWordList,
+        linkPhrases: linkPhraseList,
       })
       words.value.push({ ...real, count: 0 })
       showTip(`已保存：${real.english}（${real.chinese}）`, 'ok')
       resetForm()
+      refreshAll() // 刷新关联词句的反向可见性（如该词被关联为相关短语/例句）
     } catch (err) {
       const msg = err.code === 'TRANSLATE_FAIL' ? '翻译失败，请稍后重试'
         : err.code === 'EXAMPLE_NOT_CONTAIN' ? '相关短语/例句需包含当前单词（含变形形式）'
@@ -163,6 +172,8 @@ function resetForm() {
   form.caseSensitive = false
   form.phrases = []
   form.examples = ['']
+  form.linkWords = []
+  form.linkPhrases = []
   posInput.value = ''
 }
 
@@ -173,6 +184,8 @@ function clearAllFields() {
   form.pos = ''
   form.phrases = []
   form.examples = ['']
+  form.linkWords = []
+  form.linkPhrases = []
 }
 
 // 例句/相关短语：最多5条
@@ -189,6 +202,21 @@ function addPhrase() {
 }
 function removePhrase(i) {
   form.phrases.splice(i, 1)
+}
+// 主动关联（短语/句子的关联单词、句子的关联短语）：默认不显示输入框，点按钮添加，最多5条
+function addLinkWord() {
+  if (form.linkWords.length >= 5) return
+  form.linkWords.push('')
+}
+function removeLinkWord(i) {
+  form.linkWords.splice(i, 1)
+}
+function addLinkPhrase() {
+  if (form.linkPhrases.length >= 5) return
+  form.linkPhrases.push('')
+}
+function removeLinkPhrase(i) {
+  form.linkPhrases.splice(i, 1)
 }
 </script>
 
@@ -329,6 +357,38 @@ function removePhrase(i) {
             </button>
           </div>
           <button v-if="form.examples.length < 5" type="button" class="ex-add" @click="addExample">+ 添加例句</button>
+        </div>
+        <div v-if="form.type !== 'word'" class="form-item ex-item">
+          <label>关联单词</label>
+          <p class="ex-desc">从词句库中关联已有的单词，不存在的将自动忽略</p>
+          <div v-for="(lw, i) in form.linkWords" :key="'lw' + i" class="ex-row">
+            <input
+              v-model="form.linkWords[i]"
+              type="text"
+              :placeholder="`关联单词${i + 1}`"
+              autocomplete="off"
+            />
+            <button class="ex-del" type="button" @click="removeLinkWord(i)" title="删除该关联">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <button v-if="form.linkWords.length < 5" type="button" class="ex-add" @click="addLinkWord">+ 添加关联单词</button>
+        </div>
+        <div v-if="form.type === 'sentence'" class="form-item ex-item">
+          <label>关联短语</label>
+          <p class="ex-desc">从词句库中关联已有的短语，不存在的将自动忽略</p>
+          <div v-for="(lp, i) in form.linkPhrases" :key="'lp' + i" class="ex-row">
+            <input
+              v-model="form.linkPhrases[i]"
+              type="text"
+              :placeholder="`关联短语${i + 1}`"
+              autocomplete="off"
+            />
+            <button class="ex-del" type="button" @click="removeLinkPhrase(i)" title="删除该关联">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <button v-if="form.linkPhrases.length < 5" type="button" class="ex-add" @click="addLinkPhrase">+ 添加关联短语</button>
         </div>
       </div>
 
@@ -525,6 +585,13 @@ function removePhrase(i) {
   border: 4px solid transparent;
   border-top-color: #fff;
   z-index: 22;
+}
+
+.ex-desc {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: #b2b2b2;
+  line-height: 1.5;
 }
 
 .pos-row {

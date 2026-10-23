@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted, onActivated, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { useWords } from '../composables/useWords'
+import { useWords, refreshAll } from '../composables/useWords'
 import AiUsageCard from '../components/AiUsageCard.vue'
 
 const router = useRouter()
@@ -16,7 +16,7 @@ const { words, updateWord, removeWord, checkDuplicate, resetCount, isMastered, s
 
 const editingId = ref(null)
 const savingEdit = ref(false)
-const editForm = reactive({ chinese: '', english: '', pos: '', type: 'word', caseSensitive: false, phrases: [], examples: [''] })
+const editForm = reactive({ chinese: '', english: '', pos: '', type: 'word', caseSensitive: false, phrases: [], examples: [''], linkWords: [], linkPhrases: [] })
 const typeOptions = [
   { value: 'word', label: '单词' },
   { value: 'phrase', label: '短语' },
@@ -696,6 +696,9 @@ function startEdit(word) {
   const exs = linked.filter((x) => x && x.type === 'sentence').map((x) => x.english)
   editForm.phrases = phs
   editForm.examples = exs // 无例句时为空数组，编辑态不显示例句输入框（省空间）
+  // 带出主动关联（短语/句子的关联单词、句子的关联短语）
+  editForm.linkWords = (word.linkedWords || []).map((x) => x.english)
+  editForm.linkPhrases = (word.linkedPhrases || []).map((x) => x.english)
 }
 
 function cancelEdit() {
@@ -735,9 +738,12 @@ async function saveEdit(word) {
       caseSensitive: editForm.type === 'word' ? editForm.caseSensitive : false,
       phrases: editForm.type === 'word' ? editForm.phrases.map((x) => String(x || '').trim()).filter(Boolean) : [],
       examples: editForm.type === 'sentence' ? [] : editForm.examples.map((x) => String(x || '').trim()).filter(Boolean),
+      linkWords: editForm.type === 'word' ? [] : editForm.linkWords.map((x) => String(x || '').trim()).filter(Boolean),
+      linkPhrases: editForm.type === 'sentence' ? editForm.linkPhrases.map((x) => String(x || '').trim()).filter(Boolean) : [],
     })
     showTip(`已保存修改：${editForm.english}`, 'ok')
     editingId.value = null
+    refreshAll() // 刷新关联词句的反向可见性
   } catch (err) {
     const msg = err.code === 'TRANSLATE_FAIL' ? '翻译失败，请稍后重试'
       : err.code === 'EXAMPLE_NOT_CONTAIN' ? '相关短语/例句需包含当前单词（含变形形式）'
@@ -952,6 +958,30 @@ function formatTime(ts) {
               </div>
             </div>
             <button v-if="editForm.examples.length < 5" type="button" class="edit-ex-add" @click="editForm.examples.push('')">+ 添加例句</button>
+          </template>
+          <template v-if="editForm.type !== 'word'">
+            <div v-if="editForm.linkWords.length" class="edit-ex-wrap">
+              <div class="edit-ex-label">关联单词</div>
+              <div v-for="(lw, i) in editForm.linkWords" :key="'lw' + i" class="edit-ex-row">
+                <input v-model="editForm.linkWords[i]" class="cell-input" type="text" :placeholder="`关联单词${i + 1}`" autocomplete="off" />
+                <button type="button" class="edit-ex-del" @click="editForm.linkWords.splice(i, 1)" title="删除该关联">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            </div>
+            <button v-if="editForm.linkWords.length < 5" type="button" class="edit-ex-add" @click="editForm.linkWords.push('')">+ 添加关联单词</button>
+          </template>
+          <template v-if="editForm.type === 'sentence'">
+            <div v-if="editForm.linkPhrases.length" class="edit-ex-wrap">
+              <div class="edit-ex-label">关联短语</div>
+              <div v-for="(lp, i) in editForm.linkPhrases" :key="'lp' + i" class="edit-ex-row">
+                <input v-model="editForm.linkPhrases[i]" class="cell-input" type="text" :placeholder="`关联短语${i + 1}`" autocomplete="off" />
+                <button type="button" class="edit-ex-del" @click="editForm.linkPhrases.splice(i, 1)" title="删除该关联">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            </div>
+            <button v-if="editForm.linkPhrases.length < 5" type="button" class="edit-ex-add" @click="editForm.linkPhrases.push('')">+ 添加关联短语</button>
           </template>
           <div class="edit-btns">
             <button class="btn primary mini" :disabled="savingEdit" @click="saveEdit(word)">

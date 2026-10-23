@@ -35,16 +35,50 @@ const ttsCache = new Map()
 function genId(prefix = '') { return `${prefix}${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }
 function rowToWord(row) {
   const w = { id: String(row.id), chinese: row.chinese, english: row.english, pos: row.pos || '', type: row.type || 'word', count: row.count || 0, createdAt: row.created_at, caseSensitive: !!row.case_sensitive, exampleId: row.example_id || 0 }
-  // 关联词句（相关短语+例句，多对多）：按关联表顺序返回，带类型
+  // 关联词句（相关短语+例句+主动关联的单词/短语，多对多）：按关联表顺序返回，带类型
   w.examples = (db.prepare('SELECT s.id, s.english, s.chinese, s.type FROM word_examples we JOIN words s ON s.id = we.sentence_id WHERE we.word_id = ? ORDER BY we.id ASC').all(row.id) || [])
     .map((s) => ({ id: String(s.id), english: s.english, chinese: s.chinese, type: s.type || 'sentence' }))
+  // 主动关联（短语/句子录入时添加的关联单词/短语，link_type='link'）：编辑时带出
+  w.linkedWords = (db.prepare('SELECT s.id, s.english, s.chinese FROM word_examples we JOIN words s ON s.id = we.sentence_id WHERE we.word_id = ? AND we.link_type = \'link\' AND s.type = \'word\' ORDER BY we.id ASC').all(row.id) || [])
+    .map((s) => ({ id: String(s.id), english: s.english, chinese: s.chinese }))
+  w.linkedPhrases = (db.prepare('SELECT s.id, s.english, s.chinese FROM word_examples we JOIN words s ON s.id = we.sentence_id WHERE we.word_id = ? AND we.link_type = \'link\' AND s.type = \'phrase\' ORDER BY we.id ASC').all(row.id) || [])
+    .map((s) => ({ id: String(s.id), english: s.english, chinese: s.chinese }))
   return w
 }
-// 写入词句的关联词句：清空旧关联后写入新列表
+// 写入词句的关联词句（例句/相关短语）：清空旧的非主动关联后写入新列表（保留 link_type='link' 的主动关联）
 function saveWordExamples(wordId, sentenceIds) {
-  db.prepare('DELETE FROM word_examples WHERE word_id = ?').run(wordId)
-  const st = db.prepare('INSERT OR IGNORE INTO word_examples (word_id, sentence_id, created_at) VALUES (?, ?, ?)')
-  for (const sid of sentenceIds) st.run(wordId, sid, Date.now())
+  db.prepare('DELETE FROM word_examples WHERE word_id = ? AND (link_type IS NULL OR link_type != ?)').run(wordId, 'link')
+  const st = db.prepare('INSERT OR IGNORE INTO word_examples (word_id, sentence_id, link_type, created_at) VALUES (?, ?, ?, ?)')
+  for (const sid of sentenceIds) st.run(wordId, sid, 'example', Date.now())
+}
+// 解析用户主动输入的关联词：只匹配词库中已存在（同类型、英文忽略大小写）的，不存在则静默忽略（不翻译、不创建、不提示）
+async function resolveExisting(userId, type, list) {
+  const items = (Array.isArray(list) ? list : []).map((x) => String(x || '').trim()).filter(Boolean).slice(0, 5)
+  if (!items.length) return []
+  const ids = []
+  for (const item of items) {
+    const dup = db.prepare('SELECT id FROM words WHERE user_id = ? AND type = ? AND LOWER(english) = LOWER(?)').get(userId, type, item)
+    if (dup) ids.push(Number(dup.id))
+  }
+  return ids
+}
+// 保存主记录的主动关联（双向）：正向 (主记录, 关联词, 'link') 供编辑带出；反向 (关联词, 主记录, 'link') 供单词/短语侧可见
+function saveLinks(wordId, userId, linkWordIds, linkPhraseIds) {
+  const newIds = [...(linkWordIds || []), ...(linkPhraseIds || [])]
+  const oldRows = db.prepare('SELECT sentence_id FROM word_examples WHERE word_id = ? AND link_type = ?').all(wordId, 'link')
+  const oldIds = oldRows.map((r) => Number(r.sentence_id))
+  // 删除不再关联的：正向 + 反向（反向只删 link 类型，保留其他词句手动录入例句建立的 example 关联）
+  for (const oid of oldIds) {
+    if (!newIds.includes(oid)) {
+      db.prepare('DELETE FROM word_examples WHERE word_id = ? AND sentence_id = ? AND link_type = ?').run(wordId, oid, 'link')
+      db.prepare('DELETE FROM word_examples WHERE word_id = ? AND sentence_id = ? AND link_type = ?').run(oid, wordId, 'link')
+    }
+  }
+  const st = db.prepare('INSERT OR IGNORE INTO word_examples (word_id, sentence_id, link_type, created_at) VALUES (?, ?, ?, ?)')
+  for (const sid of newIds) {
+    st.run(wordId, sid, 'link', Date.now())
+    st.run(sid, wordId, 'link', Date.now())
+  }
 }
 function getThreshold(uid) {
   const row = db.prepare("SELECT value FROM settings WHERE user_id = ? AND key = 'masteryThreshold'").get(uid)
@@ -582,7 +616,7 @@ async function resolveLinked(userId, type, english, list) {
 }
 
 app.post('/api/words', async (req, res) => {
-  const { chinese, english, pos, type, caseSensitive, phrases, examples, example } = req.body || {}
+  const { chinese, english, pos, type, caseSensitive, phrases, examples, example, linkWords, linkPhrases } = req.body || {}
   const c = (chinese||'').trim(), e = (english||'').trim(), p = (pos||'').trim()
   const t = ['word', 'phrase', 'sentence'].includes(type) ? type : 'word'
   if (!c || !e) return res.status(400).json({ error: '中文和英文不能为空' })
@@ -599,10 +633,17 @@ app.post('/api/words', async (req, res) => {
     catch (err) { return res.status(400).json({ error: err.code === 'TRANSLATE_FAIL' ? '例句翻译失败，请稍后重试' : '例句需包含当前单词（含变形形式）', code: err.code }) }
   }
   const linkedIds = [...phraseIds, ...sentenceIds]
+  // 主动关联（仅短语/句子）：关联单词（短语/句子）+ 关联短语（仅句子）；词库不存在则静默忽略
+  let linkWordIds = [], linkPhraseIds = []
+  if (t !== 'word') {
+    linkWordIds = await resolveExisting(req.userId, 'word', linkWords)
+    if (t === 'sentence') linkPhraseIds = await resolveExisting(req.userId, 'phrase', linkPhrases)
+  }
   try {
     const info = db.prepare('INSERT INTO words (user_id, chinese, english, pos, type, count, created_at, case_sensitive, example_id) VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)').run(req.userId, c, e, p, t, Date.now(), caseSensitive ? 1 : 0, sentenceIds[0] || 0)
     const wordId = info.lastInsertRowid
     if (linkedIds.length) saveWordExamples(wordId, linkedIds)
+    if (linkWordIds.length || linkPhraseIds.length) saveLinks(wordId, req.userId, linkWordIds, linkPhraseIds)
     const word = rowToWord(db.prepare('SELECT * FROM words WHERE id = ?').get(wordId))
     assignWordToSmallestGroup(req.userId, wordId)
     word.groupId = db.prepare('SELECT group_id FROM word_groups WHERE word_id = ?').get(wordId)?.group_id || null
@@ -721,7 +762,7 @@ async function aiExampleContains(en, ex) {
 
 app.put('/api/words/:id', async (req, res) => {
   const id = Number(req.params.id)
-  const { chinese, english, pos, type, caseSensitive, phrases, examples, example } = req.body || {}
+  const { chinese, english, pos, type, caseSensitive, phrases, examples, example, linkWords, linkPhrases } = req.body || {}
   const c = (chinese||'').trim(), e = (english||'').trim(), p = (pos||'').trim()
   const t = ['word', 'phrase', 'sentence'].includes(type) ? type : 'word'
   if (!c || !e) return res.status(400).json({ error: '中文和英文不能为空' })
@@ -738,12 +779,26 @@ app.put('/api/words/:id', async (req, res) => {
     catch (err) { return res.status(400).json({ error: err.code === 'TRANSLATE_FAIL' ? '例句翻译失败，请稍后重试' : '例句需包含当前单词（含变形形式）', code: err.code }) }
   }
   const linkedIds = [...phraseIds, ...sentenceIds]
+  // 主动关联（仅短语/句子）：关联单词（短语/句子）+ 关联短语（仅句子）；词库不存在则静默忽略
+  let linkWordIds = [], linkPhraseIds = []
+  if (t !== 'word') {
+    linkWordIds = await resolveExisting(req.userId, 'word', linkWords)
+    if (t === 'sentence') linkPhraseIds = await resolveExisting(req.userId, 'phrase', linkPhrases)
+  }
   const info = db.prepare('UPDATE words SET chinese = ?, english = ?, pos = ?, type = ?, case_sensitive = ?, example_id = ? WHERE id = ? AND user_id = ?').run(c, e, p, t, caseSensitive ? 1 : 0, sentenceIds[0] || 0, id, req.userId)
   if (!info.changes) return res.status(404).json({ error: '单词不存在' })
   saveWordExamples(id, linkedIds)
+  if (t !== 'word') {
+    saveLinks(id, req.userId, linkWordIds, linkPhraseIds)
+  } else {
+    // 从短语/句子改回单词：清理原主动关联（正向+反向 link）
+    const olds = db.prepare('SELECT sentence_id FROM word_examples WHERE word_id = ? AND link_type = ?').all(id, 'link').map((r) => Number(r.sentence_id))
+    db.prepare('DELETE FROM word_examples WHERE word_id = ? AND link_type = ?').run(id, 'link')
+    for (const oid of olds) db.prepare('DELETE FROM word_examples WHERE word_id = ? AND sentence_id = ? AND link_type = ?').run(oid, id, 'link')
+  }
   db.prepare('UPDATE wrongbook SET chinese = ?, english = ?, pos = ? WHERE word_id = ? AND user_id = ?').run(c, e, p, String(id), req.userId)
   const word = rowToWord(db.prepare('SELECT * FROM words WHERE id = ?').get(id))
-  res.json({ ok: true, exampleId: sentenceIds[0] || 0, examples: word.examples })
+  res.json({ ok: true, exampleId: sentenceIds[0] || 0, examples: word.examples, linkedWords: word.linkedWords, linkedPhrases: word.linkedPhrases })
 })
 
 app.delete('/api/words/:id', (req, res) => {

@@ -133,6 +133,8 @@ tryMigrate("ALTER TABLE words ADD COLUMN example_id INTEGER DEFAULT 0")
 tryMigrate("CREATE TABLE IF NOT EXISTS word_examples (id INTEGER PRIMARY KEY AUTOINCREMENT, word_id INTEGER NOT NULL, sentence_id INTEGER NOT NULL, created_at INTEGER DEFAULT 0, UNIQUE(word_id, sentence_id))")
 // 迁移旧单例句数据到关联表
 tryMigrate("INSERT OR IGNORE INTO word_examples (word_id, sentence_id, created_at) SELECT id, example_id, created_at FROM words WHERE example_id > 0")
+tryMigrate("ALTER TABLE word_examples ADD COLUMN link_type TEXT DEFAULT 'example'")
+tryMigrate("UPDATE word_examples SET link_type = 'example' WHERE link_type IS NULL")
 tryMigrate("ALTER TABLE records ADD COLUMN user_id INTEGER DEFAULT 0")
 tryMigrate("ALTER TABLE records ADD COLUMN user_answer TEXT DEFAULT ''")
 tryMigrate("ALTER TABLE records ADD COLUMN type TEXT DEFAULT 'word'")

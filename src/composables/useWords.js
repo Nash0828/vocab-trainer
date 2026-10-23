@@ -31,6 +31,11 @@ export function loadState(state) {
   }, 0)
 }
 
+/** 从后端全量刷新本地状态（录入/编辑后调用，保证关联词句的反向可见性即时生效） */
+export function refreshAll() {
+  return api.getState().then(loadState).catch((err) => console.error('refreshAll 失败', err))
+}
+
 /**
  * 加权随机抽题：熟练程度低的单词优先出现（背诵次数越少，权重越大）。
  */
@@ -57,7 +62,7 @@ export function weightedPickIndex(counts, threshold, lastIndex = -1) {
 }
 
 export function useWords() {
-  function addWord({ chinese, english, pos, type, caseSensitive }) {
+  function addWord({ chinese, english, pos, type, caseSensitive, linkWords, linkPhrases }) {
     const c = (chinese || '').trim()
     const e = (english || '').trim()
     const p = (pos || '').trim()
@@ -75,7 +80,7 @@ export function useWords() {
     }
     words.value.push(word)
     // 异步同步到后端，成功后用真实 id 替换临时 id
-    api.addWord({ chinese: c, english: e, pos: p, type: t, caseSensitive: !!caseSensitive })
+    api.addWord({ chinese: c, english: e, pos: p, type: t, caseSensitive: !!caseSensitive, linkWords: Array.isArray(linkWords) ? linkWords : [], linkPhrases: Array.isArray(linkPhrases) ? linkPhrases : [] })
       .then((real) => {
         const idx = words.value.findIndex((w) => w.id === word.id)
         if (idx !== -1) words.value[idx] = { ...real, count: 0 }
@@ -98,9 +103,13 @@ export function useWords() {
     // 编辑表单的 phrases/examples 为纯字符串数组（含空框）；后端返回的 examples 为带 type 的混合列表
     const phs = Array.isArray(patch.phrases) ? patch.phrases : []
     const exs = Array.isArray(patch.examples) ? patch.examples : []
-    return api.updateWord(id, { chinese: w.chinese, english: w.english, pos: w.pos, type: w.type || 'word', caseSensitive: !!w.caseSensitive, phrases: phs, examples: exs }).then((r) => {
+    const lws = Array.isArray(patch.linkWords) ? patch.linkWords : []
+    const lps = Array.isArray(patch.linkPhrases) ? patch.linkPhrases : []
+    return api.updateWord(id, { chinese: w.chinese, english: w.english, pos: w.pos, type: w.type || 'word', caseSensitive: !!w.caseSensitive, phrases: phs, examples: exs, linkWords: lws, linkPhrases: lps }).then((r) => {
       if (r && r.examples !== undefined) w.examples = r.examples
       if (r && r.exampleId !== undefined) w.exampleId = Number(r.exampleId)
+      if (r && r.linkedWords !== undefined) w.linkedWords = r.linkedWords
+      if (r && r.linkedPhrases !== undefined) w.linkedPhrases = r.linkedPhrases
       return true
     }).catch((err) => {
       // 后端校验/保存失败：回滚本地乐观更新
