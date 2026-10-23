@@ -87,7 +87,7 @@ function saveLinks(wordId, userId, linkWordIds, linkPhraseIds) {
 function getThreshold(uid) {
   const row = db.prepare("SELECT value FROM settings WHERE user_id = ? AND key = 'masteryThreshold'").get(uid)
   const t = Number(row?.value)
-  return Number.isFinite(t) && t >= 1 ? Math.floor(t) : 5
+  return Number.isFinite(t) && t >= 1 ? Math.floor(t) : 10
 }
 // 答对自动下一题：默认开启
 function getAutoNext(uid) {
