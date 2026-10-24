@@ -133,11 +133,23 @@ function parseUA(ua) {
   else if (/firefox/i.test(u)) br = 'Firefox'
   return br ? `${dev} / ${br}` : dev
 }
+// 两次操作间隔超过该阈值：上一次操作判定为"已离开"，本次为"活跃"（两者落库为日志条目）
+const AWAY_MS = 30 * 60 * 1000
 function logUser(userId, username, action, ip, detail = '', ua = '') {
   try {
+    const now = Date.now()
     const dev = ua ? `；设备：${parseUA(ua)}` : ''
+    // 距上次操作超过阈值：补记"已离开"（离开时刻=上次操作+阈值）与"活跃"（本次为新会话开始）
+    const last = db.prepare("SELECT ts, ip FROM user_logs WHERE user_id = ? ORDER BY ts DESC LIMIT 1").get(userId)
+    if (last && now - last.ts > AWAY_MS) {
+      const awayTs = last.ts + AWAY_MS
+      db.prepare("INSERT INTO user_logs (user_id, username, action, ip, detail, ts) VALUES (?, ?, ?, ?, ?, ?)")
+        .run(userId, username, '已离开', last.ip || ip || '', `超过${AWAY_MS / 60000}分钟无操作，判定离开`, awayTs)
+      db.prepare("INSERT INTO user_logs (user_id, username, action, ip, detail, ts) VALUES (?, ?, ?, ?, ?, ?)")
+        .run(userId, username, '活跃', ip || '', `间隔约${Math.round((now - last.ts) / 60000)}分钟，重新开始使用`, now)
+    }
     db.prepare("INSERT INTO user_logs (user_id, username, action, ip, detail, ts) VALUES (?, ?, ?, ?, ?, ?)")
-      .run(userId, username, action, ip || '', detail + dev, Date.now())
+      .run(userId, username, action, ip || '', detail + dev, now)
   } catch (e) {}
 }
 

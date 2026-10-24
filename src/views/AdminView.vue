@@ -32,19 +32,10 @@ async function loadUsers() {
   }
 }
 
-// 日志按降序返回（新→旧）；相邻两条间隔超过阈值 → 更早那条标记"已离开"；最新一条恒"活跃"
-const AWAY_MS = 30 * 60 * 1000
-function decorateLogs(logs) {
-  const ls = logs.map((l) => ({ ...l, away: false }))
-  for (let i = 0; i + 1 < ls.length; i++) {
-    if (ls[i].ts - ls[i + 1].ts > AWAY_MS) ls[i + 1].away = true
-  }
-  return ls
-}
 async function showLogs(user) {
   try {
     const res = await api.adminUserLogs(user.id)
-    selectedLogs.value = { user, logs: decorateLogs(res.logs) }
+    selectedLogs.value = { user, logs: res.logs }
   } catch (e) {
     alert(e.message)
   }
@@ -144,7 +135,6 @@ onMounted(loadUsers)
               <div class="log-main">
                 <span class="log-action">{{ l.action }}</span>
                 <span class="log-time">{{ fmtTime(l.ts) }}</span>
-                <span class="log-state" :class="l.away ? 'away' : 'active'"><i class="log-dot"></i>{{ l.away ? '已离开' : '活跃' }}</span>
               </div>
               <div class="log-sub">
                 <span class="log-ip">IP：{{ l.ip }}</span>
@@ -404,26 +394,6 @@ onMounted(loadUsers)
 }
 .log-action { font-weight: 600; color: var(--text-main); font-size: 15px; }
 .log-time { color: var(--text-sub); font-size: 13px; }
-.log-state {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  margin-left: 8px;
-  flex-shrink: 0;
-}
-.log-state .log-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  display: inline-block;
-}
-.log-state.active { color: #07c160; background: rgba(7, 193, 96, 0.1); }
-.log-state.active .log-dot { background: #07c160; }
-.log-state.away { color: var(--text-sub); background: rgba(0, 0, 0, 0.05); }
-.log-state.away .log-dot { background: #b2b2b2; }
 .log-sub { display: flex; flex-direction: column; gap: 2px; }
 .log-ip { color: var(--text-sub); font-size: 13px; }
 .log-detail { color: var(--text-sub); font-size: 13px; }
