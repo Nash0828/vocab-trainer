@@ -1043,10 +1043,10 @@ function onGlobalKeydown(e) {
     if (current.value) lookupWord(current.value.english, current.value.type || 'word')
     return
   }
-  // Ctrl+P（Mac 为 Cmd+P）：朗读当前单词，阻止浏览器打印对话框，焦点留在输入框
+  // Ctrl+P（Mac 为 Cmd+P）：朗读当前单词，阻止浏览器打印对话框；带 key 触发主发音按钮波浪动画，焦点留在输入框
   if ((e.ctrlKey || e.metaKey) && key === 'p') {
     e.preventDefault()
-    if (current.value) speak(current.value.english, current.value.type || 'word')
+    if (current.value) speakKeepFocus(current.value.english, 0, null, 'main')
     return
   }
   // Ctrl+R：答错后重做这一题（答错时阻止浏览器默认刷新并重做；未答错时放行）
