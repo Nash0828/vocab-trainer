@@ -115,10 +115,29 @@ function getSentenceVoice(uid) {
 function getClientIp(req) {
   return (req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim()
 }
-function logUser(userId, username, action, ip, detail = '') {
+function parseUA(ua) {
+  if (!ua) return ''
+  const u = String(ua).toLowerCase()
+  let dev = '其他'
+  if (/ipad/i.test(u)) dev = 'iPad'
+  else if (/iphone|ipod/i.test(u)) dev = 'iPhone'
+  else if (/android/i.test(u)) dev = 'Android'
+  else if (/windows/i.test(u)) dev = 'Windows'
+  else if (/mac os|macintosh/i.test(u)) dev = 'Mac'
+  else if (/linux/i.test(u)) dev = 'Linux'
+  let br = ''
+  if (/micromessenger/i.test(u)) br = '微信'
+  else if (/edg/i.test(u)) br = 'Edge'
+  else if (/chrome|crios/i.test(u)) br = 'Chrome'
+  else if (/safari/i.test(u)) br = 'Safari'
+  else if (/firefox/i.test(u)) br = 'Firefox'
+  return br ? `${dev} / ${br}` : dev
+}
+function logUser(userId, username, action, ip, detail = '', ua = '') {
   try {
+    const dev = ua ? `；设备：${parseUA(ua)}` : ''
     db.prepare("INSERT INTO user_logs (user_id, username, action, ip, detail, ts) VALUES (?, ?, ?, ?, ?, ?)")
-      .run(userId, username, action, ip || '', detail, Date.now())
+      .run(userId, username, action, ip || '', detail + dev, Date.now())
   } catch (e) {}
 }
 
@@ -152,7 +171,7 @@ function auth(req, res, next) {
       try {
         db.prepare("INSERT OR REPLACE INTO guest_meta (user_id, last_ip, last_visit) VALUES (?, ?, ?)")
           .run(userId, ip, Date.now())
-        logUser(userId, '访客', 'visit', ip)
+        logUser(userId, '访客', 'visit', ip, '', req.headers['user-agent'])
       } catch (e) {}
     }
   }
@@ -190,7 +209,7 @@ app.post('/api/register', (req, res) => {
   res.clearCookie('vt_anon')
   const ip = getClientIp(req)
   db.prepare("UPDATE users SET last_login_at = ?, last_login_ip = ? WHERE id = ?").run(Date.now(), ip, userId)
-  logUser(userId, u, 'register', ip, '注册并登录')
+  logUser(userId, u, 'register', ip, '注册并登录', req.headers['user-agent'])
   res.json({ ok: true, user: { username: u, isAdmin: false } })
 })
 
@@ -214,7 +233,7 @@ app.post('/api/login', (req, res) => {
   res.clearCookie('vt_anon')
   const ip = getClientIp(req)
   db.prepare("UPDATE users SET last_login_at = ?, last_login_ip = ? WHERE id = ?").run(Date.now(), ip, user.id)
-  logUser(user.id, user.username, 'login', ip)
+  logUser(user.id, user.username, 'login', ip, '', req.headers['user-agent'])
   res.json({ ok: true, user: { username: user.username, isAdmin: !!user.is_admin } })
 })
 
@@ -224,7 +243,7 @@ app.post('/api/logout', (req, res) => {
     const sess = db.prepare("SELECT * FROM sessions WHERE token = ?").get(token)
     if (sess) {
       const u = db.prepare("SELECT username FROM users WHERE id = ?").get(sess.user_id)
-      logUser(sess.user_id, u?.username || '', 'logout', getClientIp(req))
+      logUser(sess.user_id, u?.username || '', 'logout', getClientIp(req), '', req.headers['user-agent'])
     }
     db.prepare("DELETE FROM sessions WHERE token = ?").run(token)
   }
@@ -244,7 +263,7 @@ app.put('/api/me/password', (req, res) => {
   if (!newPassword || newPassword.length < 6) return res.status(400).json({ error: '新密码至少 6 位' })
   const hash = bcrypt.hashSync(newPassword, 10)
   db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(hash, user.id)
-  logUser(user.id, user.username, 'change_password', getClientIp(req))
+  logUser(user.id, user.username, 'change_password', getClientIp(req), '', req.headers['user-agent'])
   res.json({ ok: true })
 })
 
@@ -303,7 +322,7 @@ app.put('/api/admin/users/:id/password', (req, res) => {
   const newPass = Math.random().toString(36).slice(-8)
   const hash = bcrypt.hashSync(newPass, 10)
   db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(hash, id)
-  logUser(id, user.username, 'admin_reset_password', getClientIp(req), `管理员 ${req.username} 重置了密码`)
+  logUser(id, user.username, 'admin_reset_password', getClientIp(req), `管理员 ${req.username} 重置了密码`, req.headers['user-agent'])
   res.json({ ok: true, newPassword: newPass })
 })
 
@@ -316,7 +335,7 @@ app.put('/api/admin/users/:id/disable', (req, res) => {
   if (user.is_admin) return res.status(400).json({ error: '不能禁用管理员' })
   const newVal = user.is_disabled ? 0 : 1
   db.prepare("UPDATE users SET is_disabled = ? WHERE id = ?").run(newVal, id)
-  logUser(id, user.username, newVal ? 'admin_disable' : 'admin_enable', getClientIp(req))
+  logUser(id, user.username, newVal ? 'admin_disable' : 'admin_enable', getClientIp(req), '', req.headers['user-agent'])
   res.json({ ok: true, isDisabled: !!newVal })
 })
 
@@ -336,7 +355,7 @@ app.delete('/api/admin/users/:id', (req, res) => {
   db.prepare("DELETE FROM settings WHERE user_id = ?").run(id)
   db.prepare("DELETE FROM sessions WHERE user_id = ?").run(id)
   db.prepare("DELETE FROM users WHERE id = ?").run(id)
-  logUser(null, user.username, 'admin_delete', getClientIp(req), `管理员 ${req.username} 删除了该用户`)
+  logUser(null, user.username, 'admin_delete', getClientIp(req), `管理员 ${req.username} 删除了该用户`, req.headers['user-agent'])
   res.json({ ok: true })
 })
 

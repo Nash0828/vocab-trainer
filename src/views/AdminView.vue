@@ -105,7 +105,6 @@ onMounted(loadUsers)
             <span>单词：{{ u.wordCount }}</span>
             <span>创建：{{ fmtTime(u.createdAt) }}</span>
             <span>最近活跃：{{ fmtTime(u.lastLoginAt) }}</span>
-            <span v-if="u.lastLoginIp">IP：{{ u.lastLoginIp }}</span>
           </div>
           <div class="user-actions">
             <button class="action-btn" @click="showLogs(u)">日志</button>
@@ -444,7 +443,6 @@ onMounted(loadUsers)
   .user-table td:nth-child(2)::before { content: '单词数：'; color: var(--text-faint); }
   .user-table td:nth-child(3)::before { content: '创建时间：'; color: var(--text-faint); }
   .user-table td:nth-child(4)::before { content: '最近登录：'; color: var(--text-faint); }
-  .user-table td:nth-child(5)::before { content: 'IP：'; color: var(--text-faint); }
   .user-table td:nth-child(6)::before { content: '状态：'; color: var(--text-faint); }
   .user-table td.actions {
     margin-top: 8px;
