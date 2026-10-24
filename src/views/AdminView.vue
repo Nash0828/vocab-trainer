@@ -62,7 +62,7 @@ async function toggleDisable(user) {
 
 async function doDelete(user) {
   try {
-    await api.adminDeleteUser(user.id)
+    await api.adminDeleteUser(user.guestId || user.id) // 访客按真实 user_id 删除
     confirmDelete.value = null
     await loadUsers()
   } catch (e) {
@@ -112,7 +112,7 @@ onMounted(loadUsers)
             <button v-if="!u.isAdmin && !u.isGuest" class="action-btn" @click="confirmToggle = u">
               {{ u.isDisabled ? '启用' : '禁用' }}
             </button>
-            <button v-if="!u.isAdmin && !u.isGuest" class="action-btn danger" @click="confirmDelete = u">删除</button>
+            <button v-if="!u.isAdmin" class="action-btn danger" @click="confirmDelete = u">删除</button>
           </div>
         </div>
         <div v-if="!filteredUsers.length" class="empty-state">
@@ -170,7 +170,7 @@ onMounted(loadUsers)
           <button class="modal-close" @click="confirmDelete = null">✕</button>
         </div>
         <div class="modal-body" @touchmove.stop>
-          <p class="confirm-text">确定要删除用户 <strong>{{ confirmDelete.username }}</strong> 吗？</p>
+          <p class="confirm-text">确定要删除{{ confirmDelete.isGuest ? '访客' : '用户' }} <strong>{{ confirmDelete.username }}</strong> 吗？删除后其词句库、背诵记录等数据将全部清除，且无法恢复。</p>
           <p class="muted small">该用户的所有单词、记录、错题本都会被删除，不可恢复！</p>
           <div class="row">
             <button class="btn danger" @click="doDelete(confirmDelete)">确认删除</button>

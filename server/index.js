@@ -291,6 +291,7 @@ app.get('/api/admin/users', (req, res) => {
   `).all()
   const guests = guestRows.map((g, i) => ({
     id: -1000 - i,
+    guestId: g.user_id,
     username: '访客-' + (g.user_id || '').slice(-6),
     isAdmin: false,
     isDisabled: false,
@@ -308,7 +309,8 @@ app.get('/api/admin/users', (req, res) => {
 // 管理员：查看用户登录日志
 app.get('/api/admin/users/:id/logs', (req, res) => {
   if (!req.isAdmin) return res.status(403).json({ error: '需要管理员权限' })
-  const logs = db.prepare("SELECT * FROM user_logs WHERE user_id = ? ORDER BY ts DESC LIMIT 50").all(req.params.id)
+  const uid = /^anon_[a-z0-9]+$/.test(req.params.id) ? req.params.id : Number(req.params.id)
+  const logs = db.prepare("SELECT * FROM user_logs WHERE user_id = ? ORDER BY ts DESC LIMIT 50").all(uid)
   res.json({ logs })
 })
 
@@ -339,10 +341,33 @@ app.put('/api/admin/users/:id/disable', (req, res) => {
   res.json({ ok: true, isDisabled: !!newVal })
 })
 
-// 管理员：删除用户
+// 删除访客的全部数据（词句库/分组/记录/错题本/设置/访客信息/日志）
+function deleteGuestData(guestId) {
+  const wids = db.prepare("SELECT id FROM words WHERE user_id = ?").all(guestId).map((r) => r.id)
+  if (wids.length) {
+    const ph = wids.map(() => '?').join(',')
+    db.prepare(`DELETE FROM word_examples WHERE word_id IN (${ph}) OR sentence_id IN (${ph})`).run(...wids, ...wids)
+    db.prepare(`DELETE FROM word_groups WHERE word_id IN (${ph})`).run(...wids)
+  }
+  db.prepare("DELETE FROM words WHERE user_id = ?").run(guestId)
+  db.prepare("DELETE FROM groups WHERE user_id = ?").run(guestId)
+  db.prepare("DELETE FROM records WHERE user_id = ?").run(guestId)
+  db.prepare("DELETE FROM wrongbook WHERE user_id = ?").run(guestId)
+  db.prepare("DELETE FROM settings WHERE user_id = ?").run(guestId)
+  db.prepare("DELETE FROM guest_meta WHERE user_id = ?").run(guestId)
+  db.prepare("DELETE FROM user_logs WHERE user_id = ?").run(guestId)
+}
+
+// 管理员：删除用户（注册用户按 id，访客按 anon_ 开头的 user_id）
 app.delete('/api/admin/users/:id', (req, res) => {
   if (!req.isAdmin) return res.status(403).json({ error: '需要管理员权限' })
-  const id = Number(req.params.id)
+  const rawId = req.params.id
+  if (/^anon_[a-z0-9]+$/.test(rawId)) {
+    deleteGuestData(rawId)
+    logUser(null, '访客-' + rawId.slice(-6), 'admin_delete', getClientIp(req), `管理员 ${req.username} 删除了访客`, req.headers['user-agent'])
+    return res.json({ ok: true })
+  }
+  const id = Number(rawId)
   const user = db.prepare("SELECT * FROM users WHERE id = ?").get(id)
   if (!user) return res.status(404).json({ error: '用户不存在' })
   if (user.is_admin) return res.status(400).json({ error: '不能删除管理员' })
