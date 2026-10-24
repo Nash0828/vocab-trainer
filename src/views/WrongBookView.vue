@@ -150,7 +150,7 @@ function goPractice(word) {
               </template>
               <template v-else>
                 <span class="w-diff">
-                  <span v-for="(d, i) in diffUserWords(lastWrongAnswer(w.english), w.english, !!w.caseSensitive)" :key="i" :class="d.ok ? 'diff-ok' : 'diff-bad'">{{ d.word }}</span>
+                  <span v-for="(d, i) in diffUserWords(lastWrongAnswer(w.english), w.english, !!w.caseSensitive)" :key="i" :class="d.ok === null ? '' : (d.ok ? 'diff-ok' : 'diff-bad')">{{ d.word }}</span>
                 </span>
               </template>
             </div>

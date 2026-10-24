@@ -10,6 +10,17 @@ export function tokensOf(input, caseSensitive = false) {
   return m.map((t) => (caseSensitive ? t : t.toLowerCase()))
 }
 
+// 展示用拆分：词（含词内撇号/连字符及词尾撇号）与独立标点分开，保留原文
+const DISPLAY_TOKEN_RE = /[a-zA-Z0-9]+(?:['’-][a-zA-Z0-9]+)*['’]*|[^\s]+/g
+export function displayTokensOf(input) {
+  return String(input || '').match(DISPLAY_TOKEN_RE) || []
+}
+// 展示 token 的词干（用于对错比对）；纯标点返回空串
+export function stemOf(token) {
+  const m = String(token).match(/[a-zA-Z0-9]+(?:['’-][a-zA-Z0-9]+)*/)
+  return m ? m[0].toLowerCase() : ''
+}
+
 /**
  * 判定用户输入是否与答案一致
  * @param {string} userInput 用户输入
@@ -31,12 +42,20 @@ export function isAnswerMatch(userInput, rightAnswer, caseSensitive = false, isP
 
 /**
  * 逐词对比：返回用户输入各词的匹配标记（忽略标点/空白），用于着色展示
- * 展示层保留原文大小写；比对时忽略大小写（除非 caseSensitive）
- * @returns {Array<{word: string, ok: boolean}>}
+ * 展示层保留原文大小写与标点；标点（ok=null）中性显示不参与对错；比对忽略大小写（除非 caseSensitive）
+ * @returns {Array<{word: string, ok: boolean|null}>}
  */
 export function diffUserWords(userInput, rightAnswer, caseSensitive = false) {
   const right = tokensOf(rightAnswer, caseSensitive)
-  const user = tokensOf(userInput, true) // 保留原文大小写用于展示
-  const userNorm = caseSensitive ? user : user.map((t) => t.toLowerCase())
-  return user.map((w, i) => ({ word: w, ok: i < right.length && userNorm[i] === right[i] }))
+  const userTokens = tokensOf(userInput, true)
+  const userNorm = caseSensitive ? userTokens : userTokens.map((t) => t.toLowerCase())
+  const words = displayTokensOf(userInput)
+  let idx = 0
+  return words.map((w) => {
+    const stem = stemOf(w)
+    if (!stem) return { word: w, ok: null } // 标点：中性
+    const ok = idx < right.length && idx < userTokens.length && userNorm[idx] === right[idx]
+    idx++
+    return { word: w, ok }
+  })
 }

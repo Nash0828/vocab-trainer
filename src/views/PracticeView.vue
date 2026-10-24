@@ -4,7 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useWords, loadState, weightedPickIndex } from '../composables/useWords'
 import { useHistory } from '../composables/useHistory'
 import { useWrongBook } from '../composables/useWrongBook'
-import { isAnswerMatch, tokensOf } from '../utils/wordDiff'
+import { isAnswerMatch, tokensOf, displayTokensOf, stemOf } from '../utils/wordDiff'
 import { api } from '../api/index.js'
 import AiUsageCard from '../components/AiUsageCard.vue'
 
@@ -326,14 +326,19 @@ const inputDisabled = computed(() => {
 })
 
 // 短语/句子答错时：逐词对比用户输入与正确答案，标记对/错单词（忽略标点/空白）
+// 展示保留正确答案原文（含尾部撇号/句号等标点）；标点中性显示（ok=null）不参与对错
 const diffResult = computed(() => {
   if (!current.value || result.value !== 'wrong' || current.value.type === 'word') return []
   const cs = !!current.value.caseSensitive
-  // 正确答案保留原文大小写展示；比对时忽略大小写（除非区分大小写）
-  const right = tokensOf(current.value.english, true)
+  const right = tokensOf(current.value.english, cs)
   const user = tokensOf(answer.value, cs)
-  return right.map((w, i) => {
-    const ok = i < user.length && (cs ? user[i] === w : user[i] === w.toLowerCase())
+  const words = displayTokensOf(current.value.english)
+  let idx = 0
+  return words.map((w) => {
+    const stem = stemOf(w)
+    if (!stem) return { word: w, ok: null } // 标点：中性
+    const ok = idx < user.length && user[idx] === right[idx]
+    idx++
     return { word: w, ok }
   })
 })
@@ -1346,7 +1351,7 @@ next()
           </template>
           <template v-else>
             <span class="correct-word diff">
-              <span v-for="(w, i) in diffResult" :key="i" :class="w.ok ? 'diff-ok' : 'diff-bad'">{{ w.word }}</span>
+              <span v-for="(w, i) in diffResult" :key="i" :class="w.ok === null ? '' : (w.ok ? 'diff-ok' : 'diff-bad')">{{ w.word }}</span>
             </span>
           </template>
         </div>

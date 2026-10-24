@@ -207,7 +207,7 @@ function isWordRecord(r) {
                       </template>
                       <template v-else>
                         <span class="rec-diff">
-                          <span v-for="(d, i) in diffUserWords(r.userAnswer, r.english)" :key="i" :class="d.ok ? 'diff-ok' : 'diff-bad'">{{ d.word }}</span>
+                          <span v-for="(d, i) in diffUserWords(r.userAnswer, r.english)" :key="i" :class="d.ok === null ? '' : (d.ok ? 'diff-ok' : 'diff-bad')">{{ d.word }}</span>
                         </span>
                       </template>
                     </div>
