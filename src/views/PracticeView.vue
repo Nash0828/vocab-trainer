@@ -648,6 +648,12 @@ function wordify(text, hlWord) {
   } catch (e) { return esc }
 }
 
+// 正确答案单词点击：弹气泡查询，并保持答题输入框焦点（键盘不收起）
+function onAnswerWordClick(e) {
+  onDictTextClick(e)
+  refocusInput()
+}
+
 // 例句/词形变化点击事件委托：点中词链接则弹气泡查询
 function onDictTextClick(e) {
   const el = e.target && e.target.closest ? e.target.closest('.word-link') : null
@@ -1350,8 +1356,13 @@ next()
             <strong class="correct-word">{{ current.english }}</strong>
           </template>
           <template v-else>
-            <span class="correct-word diff">
-              <span v-for="(w, i) in diffResult" :key="i" :class="w.ok === null ? '' : (w.ok ? 'diff-ok' : 'diff-bad')">{{ w.word }}</span>
+            <span class="correct-word diff" @click="onAnswerWordClick">
+              <span
+                v-for="(w, i) in diffResult"
+                :key="i"
+                :class="w.ok === null ? '' : 'word-link ' + (w.ok ? 'diff-ok' : 'diff-bad')"
+                :data-word="w.ok === null ? undefined : stemOf(w.word)"
+              >{{ w.word }}</span>
             </span>
           </template>
         </div>
@@ -2825,6 +2836,17 @@ next()
 .dict-meaning :deep(.word-link) {
   color: #576b95;
   cursor: pointer;
+}
+.correct-word.diff .word-link {
+  cursor: pointer;
+  border-bottom: 1px dashed rgba(87, 107, 149, 0.55);
+  padding: 0 1px;
+}
+.correct-word.diff .word-link.diff-ok {
+  border-bottom-color: rgba(7, 193, 96, 0.45);
+}
+.correct-word.diff .word-link.diff-bad {
+  border-bottom-color: rgba(250, 81, 81, 0.45);
 }
 .dict-meaning :deep(.word-link.sent-hl) {
   color: var(--primary);
