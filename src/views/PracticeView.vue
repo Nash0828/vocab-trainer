@@ -1521,6 +1521,9 @@ next()
           </div>
         </div>
 
+      </div>
+    </div>
+
         <!-- 单词气泡 -->
         <div v-if="wordBubble" ref="wbEl" class="wb-pop" :style="{ top: wordBubble.top + 'px', left: wordBubble.left + 'px', width: wordBubble.width + 'px', opacity: wordBubble.ready ? 1 : 0 }" @click.stop>
           <div class="wb-arrow" :class="{ flip: wordBubble.flip }" :style="{ left: wordBubble.arrowLeft + 'px' }"></div>
@@ -1543,8 +1546,6 @@ next()
             <div v-else-if="wordBubble.data.translation" class="wb-trans">{{ wordBubble.data.translation }}</div>
           </template>
         </div>
-      </div>
-    </div>
 
     <!-- 选择分组（微信风格底部弹层） -->
     <div v-if="showGroupPicker" class="picker-mask" @click.self="showGroupPicker = false" @touchmove.prevent>
