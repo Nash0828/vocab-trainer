@@ -113,19 +113,10 @@ onMounted(loadUsers)
             <span>创建于 {{ fmtTime(u.createdAt) }}</span>
           </div>
           <div class="uc-actions">
-            <button class="uc-icon-btn" title="日志" @click="showLogs(u)">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            </button>
-            <button v-if="!u.isAdmin && !u.isGuest" class="uc-icon-btn" title="重置密码" @click="confirmResetPwd = u">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-            </button>
-            <button v-if="!u.isAdmin && !u.isGuest" class="uc-icon-btn" :title="u.isDisabled ? '启用' : '禁用'" @click="confirmToggle = u">
-              <svg v-if="!u.isDisabled" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-              <svg v-else width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            </button>
-            <button v-if="!u.isAdmin" class="uc-icon-btn danger" title="删除" @click="confirmDelete = u">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-            </button>
+            <button class="uc-btn" @click="showLogs(u)">日志</button>
+            <button v-if="!u.isAdmin && !u.isGuest" class="uc-btn" @click="confirmResetPwd = u">重置密码</button>
+            <button v-if="!u.isAdmin && !u.isGuest" class="uc-btn" @click="confirmToggle = u">{{ u.isDisabled ? '启用' : '禁用' }}</button>
+            <button v-if="!u.isAdmin" class="uc-btn danger" @click="confirmDelete = u">删除</button>
           </div>
         </div>
         <div v-if="!filteredUsers.length" class="empty-state">
@@ -354,29 +345,26 @@ onMounted(loadUsers)
 }
 .uc-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
+  gap: 8px;
   border-top: 0.5px solid #f0f0f0;
   padding-top: 10px;
   margin-top: 10px;
 }
-.uc-icon-btn {
-  width: 34px;
-  height: 34px;
+.uc-btn {
+  flex: 1;
+  padding: 7px 0;
   border: none;
   background: #f5f5f5;
-  border-radius: 50%;
+  border-radius: 6px;
+  font-size: 14px;
   color: var(--text-main);
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   transition: background 0.15s;
 }
-.uc-icon-btn.danger {
+.uc-btn.danger {
   color: #fa5151;
 }
-.uc-icon-btn:active {
+.uc-btn:active {
   background: #e0e0e0;
 }
 
