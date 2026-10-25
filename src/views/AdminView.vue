@@ -95,24 +95,37 @@ onMounted(loadUsers)
 
       <div class="user-list">
         <div v-for="u in filteredUsers" :key="u.id" class="user-card">
-          <div class="user-main">
-            <span class="user-name">{{ u.username }}</span>
-            <span v-if="u.isAdmin" class="tag-admin">管理员</span>
-            <span v-if="u.isGuest" class="tag-guest">访客</span>
-            <span v-if="u.isDisabled" class="tag-disabled">已禁用</span>
+          <div class="uc-head">
+            <div class="uc-avatar" :class="{ admin: u.isAdmin, guest: u.isGuest }">{{ u.username.charAt(0).toUpperCase() }}</div>
+            <div class="uc-info">
+              <div class="uc-name-row">
+                <span class="uc-name">{{ u.username }}</span>
+                <span v-if="u.isAdmin" class="tag-admin">管理员</span>
+                <span v-if="u.isGuest" class="tag-guest">访客</span>
+                <span v-if="u.isDisabled" class="tag-disabled">已禁用</span>
+              </div>
+              <div class="uc-meta">最近活跃 {{ fmtTime(u.lastLoginAt) }}</div>
+            </div>
           </div>
-          <div class="user-info">
-            <span>单词：{{ u.wordCount }}</span>
-            <span>创建：{{ fmtTime(u.createdAt) }}</span>
-            <span>最近活跃：{{ fmtTime(u.lastLoginAt) }}</span>
+          <div class="uc-stats">
+            <span>{{ u.wordCount }} 词句</span>
+            <span class="uc-dot">·</span>
+            <span>创建于 {{ fmtTime(u.createdAt) }}</span>
           </div>
-          <div class="user-actions">
-            <button class="action-btn" @click="showLogs(u)">日志</button>
-            <button v-if="!u.isAdmin && !u.isGuest" class="action-btn" @click="confirmResetPwd = u">重置密码</button>
-            <button v-if="!u.isAdmin && !u.isGuest" class="action-btn" @click="confirmToggle = u">
-              {{ u.isDisabled ? '启用' : '禁用' }}
+          <div class="uc-actions">
+            <button class="uc-icon-btn" title="日志" @click="showLogs(u)">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             </button>
-            <button v-if="!u.isAdmin" class="action-btn danger" @click="confirmDelete = u">删除</button>
+            <button v-if="!u.isAdmin && !u.isGuest" class="uc-icon-btn" title="重置密码" @click="confirmResetPwd = u">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+            </button>
+            <button v-if="!u.isAdmin && !u.isGuest" class="uc-icon-btn" :title="u.isDisabled ? '启用' : '禁用'" @click="confirmToggle = u">
+              <svg v-if="!u.isDisabled" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+              <svg v-else width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </button>
+            <button v-if="!u.isAdmin" class="uc-icon-btn danger" title="删除" @click="confirmDelete = u">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            </button>
           </div>
         </div>
         <div v-if="!filteredUsers.length" class="empty-state">
@@ -251,69 +264,120 @@ onMounted(loadUsers)
   background: #fff;
   border-radius: 12px;
   padding: 14px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
-.user-main {
+.uc-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 12px;
 }
-.user-name {
+.uc-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #e7ebf3;
+  color: #576b95;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.uc-avatar.admin {
+  background: rgba(250, 81, 81, 0.1);
+  color: #fa5151;
+}
+.uc-avatar.guest {
+  background: rgba(250, 157, 59, 0.12);
+  color: #fa9d3b;
+}
+.uc-info {
+  flex: 1;
+  min-width: 0;
+}
+.uc-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+.uc-name {
   font-size: 16px;
   font-weight: 600;
   color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .tag-admin {
-  background: #ff4d4f;
-  color: #fff;
+  background: rgba(250, 81, 81, 0.1);
+  color: #fa5151;
   font-size: 11px;
-  padding: 2px 8px;
+  padding: 1px 6px;
   border-radius: 4px;
+  flex-shrink: 0;
 }
 .tag-guest {
-  background: #fa9d3b;
-  color: #fff;
+  background: rgba(250, 157, 59, 0.12);
+  color: #fa9d3b;
   font-size: 11px;
-  padding: 2px 8px;
+  padding: 1px 6px;
   border-radius: 4px;
+  flex-shrink: 0;
 }
 .tag-disabled {
   background: #f5f5f5;
   color: var(--text-sub);
   font-size: 11px;
-  padding: 2px 8px;
+  padding: 1px 6px;
   border-radius: 4px;
+  flex-shrink: 0;
 }
-.user-info {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 16px;
+.uc-meta {
   font-size: 13px;
   color: var(--text-sub);
-  margin-bottom: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.user-actions {
+.uc-stats {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-sub);
+  margin: 10px 0 0 54px;
+}
+.uc-dot {
+  color: #d0d0d0;
+}
+.uc-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
   border-top: 0.5px solid #f0f0f0;
   padding-top: 10px;
+  margin-top: 10px;
 }
-.action-btn {
-  flex: 1;
-  padding: 8px;
+.uc-icon-btn {
+  width: 34px;
+  height: 34px;
   border: none;
   background: #f5f5f5;
-  border-radius: 6px;
-  font-size: 14px;
+  border-radius: 50%;
   color: var(--text-main);
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
 }
-.action-btn.danger {
+.uc-icon-btn.danger {
   color: #fa5151;
 }
-.action-btn:active {
-  background: #e8e8e8;
+.uc-icon-btn:active {
+  background: #e0e0e0;
 }
 
 .mask {
