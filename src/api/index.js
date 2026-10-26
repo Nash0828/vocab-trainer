@@ -5,7 +5,7 @@
 
 async function req(path, options = {}) {
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), 15000) // 兜底超时：防止 iOS 后台挂起导致请求永久 pending
+  const timer = setTimeout(() => controller.abort(), 30000) // 兜底超时：防止 iOS 后台挂起导致请求永久 pending（首包全量 state 较大，放宽到 30s）
   try {
     const res = await fetch(path, {
       headers: { 'Content-Type': 'application/json' },
