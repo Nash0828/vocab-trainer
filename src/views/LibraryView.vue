@@ -1957,9 +1957,10 @@ function formatTime(ts) {
 
 .dict-phonetic {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 16px;
+  row-gap: 6px;
   margin-bottom: 16px;
   font-size: 15px;
   color: var(--text-sub);
