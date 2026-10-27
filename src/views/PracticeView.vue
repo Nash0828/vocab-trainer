@@ -620,7 +620,8 @@ function isFlection(word, base) {
   if (word === base) return true
   if (!base || base.length < 2 || word.length <= base.length) return false
   const suf = word.slice(base.length)
-  if (['s', 'es', 'ed', 'ing', 'd', "'s"].includes(suf)) return true
+  // 必须同时以词根开头才算变形（避免 sheets 对 bring 截出 s 误判）
+  if (word.startsWith(base) && ['s', 'es', 'ed', 'ing', 'd', "'s"].includes(suf)) return true
   // 词尾辅音双写 + ed/ing（permit→permitted）
   const last = base.slice(-1)
   if (/[bcdfghjklmnpqrstvwxyz]/.test(last) && word.startsWith(base + last)) {
