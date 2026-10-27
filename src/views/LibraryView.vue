@@ -2,6 +2,7 @@
 import { ref, reactive, computed, watch, onMounted, onActivated, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWords, refreshAll } from '../composables/useWords'
+import { api } from '../api/index.js'
 import AiUsageCard from '../components/AiUsageCard.vue'
 
 const router = useRouter()
