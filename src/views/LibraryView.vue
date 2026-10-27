@@ -77,6 +77,7 @@ async function lookupWord(word, type = 'word') {
     }
     dictModal.value.data = await res.json()
     prependExampleSentences(dictModal.value.data, word)
+    fillAiFlections(dictModal.value.data, word)
   } catch (e) {
     dictModal.value.error = e.message || '查询失败，请稍后重试'
   } finally {
@@ -300,16 +301,42 @@ function highlightWord(word, sentence) {
 }
 
 // 把英文单词拆成可点击的词链接；hlWord 匹配的词额外高亮
-function wordify(text, hlWord) {
+function wordify(text, hlWord, extraHl) {
   const esc = escapeHtml(text)
   const w = String(hlWord || '').trim().toLowerCase()
+  const extra = new Set((Array.isArray(extraHl) ? extraHl : []).map((x) => String(x).toLowerCase()))
   try {
     return esc.replace(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g, (m) => {
-      const isHl = w && isFlection(m.toLowerCase(), w)
+      const low = m.toLowerCase()
+      const isHl = w && (isFlection(low, w) || extra.has(low))
       const cls = isHl ? 'word-link sent-hl' : 'word-link'
       return `<span class="${cls}" data-word="${m}">${m}</span>`
     })
   } catch (e) { return esc }
+}
+
+// AI 词形补全：本地规则未命中且例句含目标词根时才调 AI 判断变形词（内存缓存，失败静默不高亮）
+const flectionCache = new Map()
+function fillAiFlections(data, word) {
+  if (!data || !Array.isArray(data.sentences) || !data.sentences.length || !word) return
+  const w = String(word).trim().toLowerCase()
+  for (const s of data.sentences) {
+    if (s.aiHlDone || s.aiHl) continue
+    s.aiHlDone = true
+    const toks = String(s.en || '').match(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g) || []
+    // 本地规则已命中 → 不需要 AI
+    if (toks.some((m) => isFlection(m.toLowerCase(), w))) continue
+    const key = w + '|' + s.en
+    const cached = flectionCache.get(key)
+    if (cached) { s.aiHl = cached; continue }
+    api.matchFlection(w, s.en)
+      .then((j) => {
+        const matched = Array.isArray(j && j.matched) ? j.matched : []
+        flectionCache.set(key, matched)
+        s.aiHl = matched
+      })
+      .catch(() => {})
+  }
 }
 
 // 例句/词形变化点击事件委托：点中词链接则弹气泡查询
@@ -1157,7 +1184,7 @@ function formatTime(ts) {
               <ul class="sent-list">
                 <li v-for="(s, i) in dictModal.data.phrases" :key="'ph' + i" class="sent-item">
                   <div class="sent-line">
-                    <p class="sent-en" v-html="wordify(s.en, dictModal.word)"></p>
+                    <p class="sent-en" v-html="wordify(s.en, dictModal.word, s.aiHl)"></p>
                     <button class="sent-speak" :class="{ 'is-playing': playingKey === 'ph' + i }" @click="speakSentence(s.en, 'ph' + i)" title="朗读短语"><span class="spk-static">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span><span class="spk-eq"><i></i><i></i><i></i></span>
                     </button>
@@ -1171,7 +1198,7 @@ function formatTime(ts) {
               <ul class="sent-list">
                 <li v-for="(s, i) in dictModal.data.sentences" :key="i" class="sent-item">
                   <div class="sent-line">
-                    <p class="sent-en" v-html="wordify(s.en, dictModal.word)"></p>
+                    <p class="sent-en" v-html="wordify(s.en, dictModal.word, s.aiHl)"></p>
                     <button class="sent-speak" :class="{ 'is-playing': playingKey === 's' + i }" @click="speakSentence(s.en, 's' + i)" title="朗读例句"><span class="spk-static">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span><span class="spk-eq"><i></i><i></i><i></i></span>
                     </button>

@@ -69,6 +69,9 @@ export const api = {
   // 句子答题 AI 判定（缩写/全写、标点、空格差异忽略）
   checkSentence: (input, answer) => req('/api/check-sentence', { method: 'POST', body: { input, answer } }),
 
+  // AI 词形匹配：例句中本地规则未命中时，判断哪些词是给定单词的变形
+  matchFlection: (word, sentence) => req('/api/match-flection', { method: 'POST', body: { word, sentence } }),
+
   // 错题本
   addWrong: (data) => req('/api/wrongbook', { method: 'POST', body: data }),
   removeWrong: (wordId) => req(`/api/wrongbook/${wordId}`, { method: 'DELETE' }),

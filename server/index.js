@@ -1007,6 +1007,63 @@ app.get('/api/usage', async (req, res) => {
   }
 })
 
+// AI 词形匹配：本地规则匹配不到时，用 AI 判断例句中哪些词是给定单词的变形（permit→permitted 等）
+const flectionCache = new Map() // key = word|sentence，内存缓存 1 小时
+const flectionPending = new Map() // 并发锁：同 key 同时只调一次 AI
+app.post('/api/match-flection', async (req, res) => {
+  const word = String(req.body?.word || '').trim().slice(0, 100)
+  const sentence = String(req.body?.sentence || '').trim().slice(0, 1000)
+  if (!word || !sentence) return res.status(400).json({ error: '参数缺失' })
+  const key = word.toLowerCase() + '|' + sentence
+  const cached = flectionCache.get(key)
+  if (cached && Date.now() - cached.ts < 3600e3) return res.json({ matched: cached.matched })
+  if (!DEEPSEEK_KEY) return res.json({ matched: [] })
+  if (flectionPending.has(key)) {
+    try {
+      const matched = await flectionPending.get(key)
+      return res.json({ matched })
+    } catch (e) {
+      return res.json({ matched: [] })
+    }
+  }
+  const task = (async () => {
+    const sys = '你是英语词形变化判断助手。给定一个英文单词和一个英文例句，找出例句中所有属于该单词词形变化（变形）的单词，词形变化包括：单复数（book→books）、时态（go→went、take→took、make→made、permit→permitted、run→running）、派生（happy→happily）等，但仅限例句中实际出现的单词。注意：即使某词形似也不是变形的，不要算。\n只输出一个 JSON 数组，数组元素是例句中实际出现的、保持例句原拼写的变形单词；没有则输出 []。不要输出任何其他文字、解释或 Markdown。'
+    const user = `单词: ${word}\n例句: ${sentence}`
+    const r = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${DEEPSEEK_KEY}` },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: sys },
+          { role: 'user', content: user },
+        ],
+        temperature: 0,
+        max_tokens: 200,
+      }),
+      signal: AbortSignal.timeout(15000),
+    })
+    const j = await r.json()
+    const content = j?.choices?.[0]?.message?.content
+    if (!content) throw new Error(j?.error?.message || 'AI 返回为空')
+    // 容错提取 JSON 数组（AI 偶尔带 ```json 包裹或前后说明）
+    const m = content.match(/\[[\s\S]*?\]/)
+    const arr = m ? JSON.parse(m[0]) : []
+    const matched = (Array.isArray(arr) ? arr : []).map((x) => String(x).trim()).filter(Boolean)
+    flectionCache.set(key, { ts: Date.now(), matched })
+    return matched
+  })()
+  flectionPending.set(key, task)
+  try {
+    const matched = await task
+    res.json({ matched })
+  } catch (e) {
+    res.json({ matched: [] })
+  } finally {
+    flectionPending.delete(key)
+  }
+})
+
 async function baiduTranslate(text) {
   const q = String(text || '').trim().slice(0, 2000)
   if (!q) return null
