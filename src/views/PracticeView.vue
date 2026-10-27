@@ -615,17 +615,38 @@ function escapeHtml(s) {
   // 文本内容场景：不转义引号，避免后端已解码的引号被二次转义成 &quot;
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
+// 判断候选词是否为词根 base 的常见词形变化（permit→permitted/permitting、stop→stopped、carry→carries）
+function isFlection(word, base) {
+  if (word === base) return true
+  if (!base || base.length < 2 || word.length <= base.length) return false
+  const suf = word.slice(base.length)
+  if (['s', 'es', 'ed', 'ing', 'd', "'s"].includes(suf)) return true
+  // 词尾辅音双写 + ed/ing（permit→permitted）
+  const last = base.slice(-1)
+  if (/[bcdfghjklmnpqrstvwxyz]/.test(last) && word.startsWith(base + last)) {
+    const suf2 = word.slice(base.length + 1)
+    if (suf2 === 'ed' || suf2 === 'ing') return true
+  }
+  // 词根以 e 结尾（非 ee）：去 e + ing/ed/es（make→making、use→using）
+  if (/[^e]e$/.test(base) && base.length > 2) {
+    const stem = base.slice(0, -1)
+    if (word === stem + 'ing' || word === stem + 'ed' || word === stem + 'es') return true
+  }
+  // 辅音+y → ies（carry→carries）
+  if (/[bcdfghjklmnpqrstvwxyz]y$/.test(base) && word === base.slice(0, -1) + 'ies') return true
+  return false
+}
 function highlightWord(word, sentence) {
   const esc = escapeHtml(sentence)
-  const w = String(word || '').trim()
+  const w = String(word || '').trim().toLowerCase()
   if (!w) return esc
   try {
-    const base = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const suffixes = ['s', 'es', 'ed', 'ing', 'd', "'s"]
-    if (/[^aeiou]y$/i.test(w)) suffixes.push('ies')
     // 不用 lookbehind（部分移动端浏览器不支持），前缀用捕获组保留
-    const re = new RegExp(`([^a-zA-Z]|^)(${base}(?:${suffixes.join('|')})?)(?![a-zA-Z])`, 'gi')
-    return esc.replace(re, (m, prefix, wordPart) => `${prefix}<span class="sent-hl">${wordPart}</span>`)
+    const re = /([^a-zA-Z]|^)([A-Za-z]+(?:['’-][A-Za-z]+)*)(?![a-zA-Z])/gi
+    return esc.replace(re, (m, prefix, wordPart) => {
+      const isHl = isFlection(wordPart.toLowerCase(), w)
+      return `${prefix}${isHl ? `<span class="sent-hl">${wordPart}</span>` : wordPart}`
+    })
   } catch (e) {
     return esc
   }
@@ -636,12 +657,8 @@ function wordify(text, hlWord) {
   const esc = escapeHtml(text)
   const w = String(hlWord || '').trim().toLowerCase()
   try {
-    const base = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const suffixes = ['s', 'es', 'ed', 'ing', 'd', "'s"]
-    if (/[^aeiou]y$/i.test(w)) suffixes.push('ies')
-    const re = new RegExp(`^(?:${base})(?:${suffixes.join('|')})?$`, 'i')
     return esc.replace(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g, (m) => {
-      const isHl = w && re.test(m.toLowerCase())
+      const isHl = w && isFlection(m.toLowerCase(), w)
       const cls = isHl ? 'word-link sent-hl' : 'word-link'
       return `<span class="${cls}" data-word="${m}">${m}</span>`
     })
