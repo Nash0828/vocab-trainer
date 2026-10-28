@@ -1361,6 +1361,7 @@ next()
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
         <p class="quiz-label">中文</p>
+        <p class="quiz-word" :class="quizWordClass">{{ current.chinese }}</p>
         <p v-if="current.type && current.type !== 'word'" class="quiz-type">{{ current.type === 'phrase' ? '短语' : '句子' }}</p>
         <p v-if="current.pos" class="quiz-pos">{{ current.pos }}</p>
 
@@ -2357,11 +2358,11 @@ next()
   margin-bottom: 8px;
 }
 
-/* 更正当前词句：铅笔图标绝对定位在卡片左上角（不占文档流，不影响"中文"居中） */
+/* 更正当前词句：铅笔图标绝对定位在卡片右上角（不占文档流，不影响"中文"居中） */
 .quiz-edit-btn {
   position: absolute;
   top: 12px;
-  left: 12px;
+  right: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
