@@ -320,22 +320,21 @@ function removeLinkPhrase(i) {
             </transition>
           </div>
         </div>
-        <!-- 备注：单词放在词性下方、区分大小写上方；默认收起，点"+"展开 -->
+        <!-- 备注：label 常显，控件位未展开时显示"+"，点击展开多行文本框并自动聚焦 -->
         <div v-if="form.type === 'word'" class="form-item">
-          <button v-if="!showRemark" type="button" class="ex-add" @click="openRemark"><span class="remark-plus">＋</span>备注</button>
-          <template v-else>
-            <label>备注</label>
-            <textarea
-              ref="remarkInput"
-              v-model="form.remark"
-              rows="2"
-              placeholder="补充说明（选填）"
-              autocomplete="off"
-              maxlength="500"
-              @keydown.ctrl.enter.prevent="submit"
-              @keydown.meta.enter.prevent="submit"
-            ></textarea>
-          </template>
+          <label>备注</label>
+          <button v-if="!showRemark" type="button" class="ex-add" @click="openRemark"><span class="remark-plus">＋</span></button>
+          <textarea
+            v-else
+            ref="remarkInput"
+            v-model="form.remark"
+            rows="2"
+            placeholder="补充说明（选填）"
+            autocomplete="off"
+            maxlength="500"
+            @keydown.ctrl.enter.prevent="submit"
+            @keydown.meta.enter.prevent="submit"
+          ></textarea>
         </div>
         <div class="form-item">
           <label>区分大小写</label>
@@ -347,20 +346,19 @@ function removeLinkPhrase(i) {
         </div>
         </template>
         <div v-if="form.type !== 'word'" class="form-item">
-          <button v-if="!showRemark" type="button" class="ex-add" @click="openRemark"><span class="remark-plus">＋</span>备注</button>
-          <template v-else>
-            <label>备注</label>
-            <textarea
-              ref="remarkInput"
-              v-model="form.remark"
-              rows="2"
-              placeholder="补充说明（选填）"
-              autocomplete="off"
-              maxlength="500"
-              @keydown.ctrl.enter.prevent="submit"
-              @keydown.meta.enter.prevent="submit"
-            ></textarea>
-          </template>
+          <label>备注</label>
+          <button v-if="!showRemark" type="button" class="ex-add" @click="openRemark"><span class="remark-plus">＋</span></button>
+          <textarea
+            v-else
+            ref="remarkInput"
+            v-model="form.remark"
+            rows="2"
+            placeholder="补充说明（选填）"
+            autocomplete="off"
+            maxlength="500"
+            @keydown.ctrl.enter.prevent="submit"
+            @keydown.meta.enter.prevent="submit"
+          ></textarea>
         </div>
         <div v-if="form.type === 'word'" class="form-item ex-item">
           <label>
