@@ -613,17 +613,18 @@ function removeLinkPhrase(i) {
   line-height: 1;
   font-weight: 500;
 }
-/* 备注输入框：初始与普通 input 同高，聚焦或有内容时展开为多行（需覆盖 .form-item textarea 的 min-height） */
+/* 备注输入框：初始与普通 input 同高，聚焦或有内容时展开为多行；
+   样式与录入页其他输入框一致（无边框、透明背景），需覆盖 .form-item textarea 的 min-height */
 .form-item .remark-area {
   height: 36px;
   min-height: 36px;
-  padding: 8px 10px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
+  padding: 8px 0;
+  border: none;
+  border-radius: 0;
+  font-size: 15px;
   line-height: 1.4;
   outline: none;
-  background: #fff;
+  background: transparent;
   resize: none;
   overflow-y: hidden;
   transition: height 0.18s ease;
@@ -631,9 +632,6 @@ function removeLinkPhrase(i) {
 .form-item .remark-area.expanded {
   height: 76px;
   min-height: 76px;
-}
-.form-item .remark-area:focus {
-  border-color: #576b95;
 }
 .ex-help {
   position: relative;
