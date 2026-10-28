@@ -2865,6 +2865,9 @@ next()
 }
 
 .remark-text {
+  background: #f7f7f7;
+  border-radius: 8px;
+  padding: 10px 12px;
   font-size: 14px;
   line-height: 1.6;
   color: #333;
