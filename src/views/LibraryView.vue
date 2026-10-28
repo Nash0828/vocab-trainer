@@ -1584,24 +1584,44 @@ function formatTime(ts) {
   align-items: flex-start;
   gap: 10px;
   width: 100%;
+  flex-wrap: nowrap;
 }
 .cell-label {
   font-size: 14px;
   color: var(--text-sub);
   flex-shrink: 0;
+  flex-grow: 0;
+  min-width: 2em;
+  white-space: nowrap;
   padding-top: 8px;
+  line-height: 1.4;
+}
+.cell-row .cell-input {
+  flex: 1;
+  min-width: 0;
+  width: auto;
 }
 .remark-row {
   display: flex;
   align-items: flex-start;
   gap: 10px;
   width: 100%;
+  flex-wrap: nowrap;
 }
 .remark-label {
   font-size: 14px;
   color: var(--text-sub);
   flex-shrink: 0;
+  flex-grow: 0;
+  min-width: 2em;
+  white-space: nowrap;
   padding-top: 8px;
+  line-height: 1.4;
+}
+.remark-row .cell-input {
+  flex: 1;
+  min-width: 0;
+  width: auto;
 }
 .cell-plus {
   font-size: 14px;
