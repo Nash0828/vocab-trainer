@@ -721,9 +721,10 @@ function removeLinkPhrase(i) {
 
 .sheet-enter-active, .sheet-leave-active { transition: transform 0.25s ease; }
 .sheet-enter-from, .sheet-leave-to { transform: translateY(100%); }
-.sheet-mask.fade-enter-active { transition: none; } /* 遮罩进入时瞬间遮盖，不参与过渡 */
-.sheet-mask.fade-leave-active { transition: opacity 0.25s; } /* 关闭时遮罩淡出 */
-.sheet-mask.fade-enter-from, .sheet-mask.fade-leave-to { opacity: 0; }
+/* 遮罩不参与面板的位移动画：进入时瞬间遮盖，关闭时淡出 */
+.sheet-mask.sheet-enter-active { transition: none !important; transform: none !important; }
+.sheet-mask.sheet-leave-active { transition: opacity 0.25s; transform: none !important; }
+.sheet-mask.sheet-enter-from, .sheet-mask.sheet-leave-to { transform: none !important; }
 
 
 
