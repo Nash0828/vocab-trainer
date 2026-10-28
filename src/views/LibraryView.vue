@@ -1043,8 +1043,8 @@ function formatTime(ts) {
             </div>
           </template>
           <template v-if="editForm.type !== 'sentence'">
-            <div class="edit-ex-label edit-ex-label-top">例句</div>
             <div v-if="editForm.examples.length" class="edit-ex-wrap">
+              <div class="edit-ex-label">例句</div>
               <div v-for="(ex, i) in editForm.examples" :key="i" class="edit-ex-row">
                 <textarea v-model="editForm.examples[i]" class="cell-input area" :placeholder="`例句${i + 1}`"></textarea>
                 <button type="button" class="edit-ex-del" @click="editForm.examples.splice(i, 1)" title="删除该例句">
@@ -1967,9 +1967,6 @@ function formatTime(ts) {
   font-size: 13px;
   color: var(--text-sub);
   margin-bottom: 6px;
-}
-.edit-ex-label-top {
-  margin-top: 8px;
 }
 .edit-ex-row {
   position: relative;
