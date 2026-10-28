@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useWords, refreshAll } from '../composables/useWords'
 import { api } from '../api/index.js'
 import { defineOptions } from 'vue'
@@ -32,13 +32,8 @@ const typeOptions = [
   { value: 'sentence', label: '句子' },
 ]
 const showTypePicker = ref(false)
-// 备注：默认收起，点击"+"展开多行文本框并自动聚焦
-const showRemark = ref(false)
-const remarkInput = ref(null)
-function openRemark() {
-  showRemark.value = true
-  nextTick(() => { remarkInput.value?.focus() })
-}
+// 备注：初始单行高度，聚焦后展开为多行
+const remarkFocused = ref(false)
 function pickType(t) {
   form.type = t
   form.linkWords = []
@@ -188,7 +183,6 @@ function resetForm() {
   form.examples = ['']
   form.linkWords = []
   form.linkPhrases = []
-  showRemark.value = false
   posInput.value = ''
 }
 
@@ -202,7 +196,6 @@ function clearAllFields() {
   form.examples = ['']
   form.linkWords = []
   form.linkPhrases = []
-  showRemark.value = false
 }
 
 // 例句/相关短语：最多5条
@@ -320,18 +313,18 @@ function removeLinkPhrase(i) {
             </transition>
           </div>
         </div>
-        <!-- 备注：label 常显，控件位未展开时显示"+"，点击展开多行文本框并自动聚焦 -->
+        <!-- 备注：label 常显，输入框初始单行高度，聚焦后展开为多行 -->
         <div v-if="form.type === 'word'" class="form-item">
           <label>备注</label>
-          <button v-if="!showRemark" type="button" class="ex-add" @click="openRemark"><span class="remark-plus">＋</span></button>
           <textarea
-            v-else
-            ref="remarkInput"
             v-model="form.remark"
-            rows="2"
+            class="remark-area"
+            :class="{ expanded: remarkFocused || form.remark }"
             placeholder="补充说明（选填）"
             autocomplete="off"
             maxlength="500"
+            @focus="remarkFocused = true"
+            @blur="remarkFocused = false"
             @keydown.ctrl.enter.prevent="submit"
             @keydown.meta.enter.prevent="submit"
           ></textarea>
@@ -347,15 +340,15 @@ function removeLinkPhrase(i) {
         </template>
         <div v-if="form.type !== 'word'" class="form-item">
           <label>备注</label>
-          <button v-if="!showRemark" type="button" class="ex-add" @click="openRemark"><span class="remark-plus">＋</span></button>
           <textarea
-            v-else
-            ref="remarkInput"
             v-model="form.remark"
-            rows="2"
+            class="remark-area"
+            :class="{ expanded: remarkFocused || form.remark }"
             placeholder="补充说明（选填）"
             autocomplete="off"
             maxlength="500"
+            @focus="remarkFocused = true"
+            @blur="remarkFocused = false"
             @keydown.ctrl.enter.prevent="submit"
             @keydown.meta.enter.prevent="submit"
           ></textarea>
@@ -619,6 +612,30 @@ function removeLinkPhrase(i) {
   font-size: 15px;
   line-height: 1;
   font-weight: 500;
+}
+/* 备注输入框：初始与普通 input 同高，聚焦或有内容时展开为多行 */
+.remark-area {
+  width: 100%;
+  box-sizing: border-box;
+  height: 36px;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.4;
+  outline: none;
+  background: #fff;
+  resize: none;
+  overflow-y: hidden;
+  transition: height 0.18s ease;
+}
+.remark-area.expanded {
+  height: 76px;
+  min-height: 76px;
+}
+.remark-area:focus {
+  border-color: #576b95;
 }
 .ex-help {
   position: relative;

@@ -20,13 +20,8 @@ const editingId = ref(null)
 const editLockType = ref(false) // 从答题页进入的更正：类型字段只读
 const savingEdit = ref(false)
 const editForm = reactive({ chinese: '', english: '', pos: '', type: 'word', caseSensitive: false, remark: '', phrases: [], examples: [''], linkWords: [], linkPhrases: [] })
-// 编辑态备注：有备注自动展开；无备注收起显示"+"（省空间）
-const editShowRemark = ref(false)
-const editRemarkInput = ref(null)
-function openEditRemark() {
-  editShowRemark.value = true
-  nextTick(() => { editRemarkInput.value?.focus() })
-}
+// 编辑态备注：初始单行高度，聚焦后展开为多行
+const editRemarkFocused = ref(false)
 const typeOptions = [
   { value: 'word', label: '单词' },
   { value: 'phrase', label: '短语' },
@@ -770,7 +765,6 @@ function startEdit(word, opts = {}) {
   editForm.type = ['word', 'phrase', 'sentence'].includes(word.type) ? word.type : 'word'
   editForm.caseSensitive = !!word.caseSensitive
   editForm.remark = word.remark || ''
-  editShowRemark.value = !!String(word.remark || '').trim() // 有备注才展开输入框，无备注收起显示"+"（省空间）
   // 带出关联例句（多条）；无关联时默认显示一个空框
   const linked = (word.examples && word.examples.length) ? word.examples : (word.exampleId ? [words.value.find((x) => Number(x.id) === Number(word.exampleId) && x.type === 'sentence')].filter(Boolean) : [])
   const phs = linked.filter((x) => x && x.type === 'phrase').map((x) => x.english)
@@ -1004,11 +998,10 @@ function formatTime(ts) {
             <input v-if="editForm.type !== 'sentence'" v-model="editForm.english" class="cell-input" type="text" placeholder="请输入英文" autocomplete="off" />
             <textarea v-else v-model="editForm.english" class="cell-input area" placeholder="请输入英文"></textarea>
           </div>
-          <!-- 备注：label 常显，value 列未展开时显示"+"，点击展开多行文本框并聚焦 -->
+          <!-- 备注：label 常显，输入框初始单行高度，聚焦或已有内容时展开为多行 -->
           <div v-if="editForm.type !== 'word'" class="remark-row">
             <span class="remark-label">备注</span>
-            <button v-if="!editShowRemark" type="button" class="cell-add-btn" @click="openEditRemark">＋</button>
-            <textarea v-else ref="editRemarkInput" v-model="editForm.remark" class="cell-input area" rows="2" placeholder="备注（选填）" maxlength="500"></textarea>
+            <textarea v-model="editForm.remark" class="remark-area" :class="{ expanded: editRemarkFocused || editForm.remark }" placeholder="备注（选填）" maxlength="500" @focus="editRemarkFocused = true" @blur="editRemarkFocused = false"></textarea>
           </div>
           <div class="type-row">
             <span class="type-label">类型</span>
@@ -1027,8 +1020,7 @@ function formatTime(ts) {
             <input v-model="editForm.pos" class="cell-input pos" placeholder="词性" />
             <div class="remark-row">
               <span class="remark-label">备注</span>
-              <button v-if="!editShowRemark" type="button" class="cell-add-btn" @click="openEditRemark">＋</button>
-              <textarea v-else ref="editRemarkInput" v-model="editForm.remark" class="cell-input area" rows="2" placeholder="备注（选填）" maxlength="500"></textarea>
+              <textarea v-model="editForm.remark" class="remark-area" :class="{ expanded: editRemarkFocused || editForm.remark }" placeholder="备注（选填）" maxlength="500" @focus="editRemarkFocused = true" @blur="editRemarkFocused = false"></textarea>
             </div>
             <div class="case-row">
               <span class="case-label">区分大小写</span>
@@ -1622,6 +1614,32 @@ function formatTime(ts) {
   flex: 1;
   min-width: 0;
   width: auto;
+}
+/* 备注输入框：初始与普通 input 同高，聚焦或有内容时展开为多行 */
+.remark-area {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  box-sizing: border-box;
+  height: 36px;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.4;
+  outline: none;
+  background: #fff;
+  resize: none;
+  overflow-y: hidden;
+  transition: height 0.18s ease;
+}
+.remark-area.expanded {
+  height: 76px;
+  min-height: 76px;
+}
+.remark-area:focus {
+  border-color: var(--primary);
 }
 .cell-plus {
   font-size: 14px;
