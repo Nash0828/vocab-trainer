@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { useWords, refreshAll } from '../composables/useWords'
 import { api } from '../api/index.js'
 import { defineOptions } from 'vue'
@@ -32,6 +32,13 @@ const typeOptions = [
   { value: 'sentence', label: '句子' },
 ]
 const showTypePicker = ref(false)
+// 备注：默认收起，点击"+"展开多行文本框并自动聚焦
+const showRemark = ref(false)
+const remarkInput = ref(null)
+function openRemark() {
+  showRemark.value = true
+  nextTick(() => { remarkInput.value?.focus() })
+}
 function pickType(t) {
   form.type = t
   form.linkWords = []
@@ -181,6 +188,7 @@ function resetForm() {
   form.examples = ['']
   form.linkWords = []
   form.linkPhrases = []
+  showRemark.value = false
   posInput.value = ''
 }
 
@@ -194,6 +202,7 @@ function clearAllFields() {
   form.examples = ['']
   form.linkWords = []
   form.linkPhrases = []
+  showRemark.value = false
 }
 
 // 例句/相关短语：最多5条
@@ -311,18 +320,22 @@ function removeLinkPhrase(i) {
             </transition>
           </div>
         </div>
-        <!-- 备注：单词放在词性下方、区分大小写上方；短语/句子放在英文下方 -->
+        <!-- 备注：单词放在词性下方、区分大小写上方；默认收起，点"+"展开 -->
         <div v-if="form.type === 'word'" class="form-item">
-          <label>备注</label>
-          <textarea
-            v-model="form.remark"
-            rows="2"
-            placeholder="补充说明（选填）"
-            autocomplete="off"
-            maxlength="500"
-            @keydown.ctrl.enter.prevent="submit"
-            @keydown.meta.enter.prevent="submit"
-          ></textarea>
+          <button v-if="!showRemark" type="button" class="ex-add" @click="openRemark"><span class="remark-plus">＋</span>备注</button>
+          <template v-else>
+            <label>备注</label>
+            <textarea
+              ref="remarkInput"
+              v-model="form.remark"
+              rows="2"
+              placeholder="补充说明（选填）"
+              autocomplete="off"
+              maxlength="500"
+              @keydown.ctrl.enter.prevent="submit"
+              @keydown.meta.enter.prevent="submit"
+            ></textarea>
+          </template>
         </div>
         <div class="form-item">
           <label>区分大小写</label>
@@ -334,16 +347,20 @@ function removeLinkPhrase(i) {
         </div>
         </template>
         <div v-if="form.type !== 'word'" class="form-item">
-          <label>备注</label>
-          <textarea
-            v-model="form.remark"
-            rows="2"
-            placeholder="补充说明（选填）"
-            autocomplete="off"
-            maxlength="500"
-            @keydown.ctrl.enter.prevent="submit"
-            @keydown.meta.enter.prevent="submit"
-          ></textarea>
+          <button v-if="!showRemark" type="button" class="ex-add" @click="openRemark"><span class="remark-plus">＋</span>备注</button>
+          <template v-else>
+            <label>备注</label>
+            <textarea
+              ref="remarkInput"
+              v-model="form.remark"
+              rows="2"
+              placeholder="补充说明（选填）"
+              autocomplete="off"
+              maxlength="500"
+              @keydown.ctrl.enter.prevent="submit"
+              @keydown.meta.enter.prevent="submit"
+            ></textarea>
+          </template>
         </div>
         <div v-if="form.type === 'word'" class="form-item ex-item">
           <label>
@@ -599,6 +616,11 @@ function removeLinkPhrase(i) {
   font-size: 14px;
   padding: 6px 2px;
   cursor: pointer;
+}
+.remark-plus {
+  font-size: 15px;
+  line-height: 1;
+  font-weight: 500;
 }
 .ex-help {
   position: relative;

@@ -1562,11 +1562,6 @@ next()
                 <li v-for="(tr, i) in dictModal.data.trs" :key="i">{{ tr }}</li>
               </ul>
             </div>
-            <!-- 备注：单词放在释义下方（有才显示） -->
-            <div v-if="dictModal.data.remark && dictModal.type === 'word'" class="dict-meaning">
-              <p class="dict-label">备注</p>
-              <p class="remark-text">{{ dictModal.data.remark }}</p>
-            </div>
             <div v-if="dictModal.data.wfs && dictModal.data.wfs.length" class="dict-meaning" @click="onDictTextClick">
               <p class="dict-label">词形变化</p>
               <ul>
@@ -1586,6 +1581,11 @@ next()
                   <p v-if="s.zh" class="sent-zh">{{ s.zh }}</p>
                 </li>
               </ul>
+            </div>
+            <!-- 备注：单词放在例句上方（有才显示） -->
+            <div v-if="dictModal.data.remark && dictModal.type === 'word'" class="dict-meaning">
+              <p class="dict-label">备注</p>
+              <p class="remark-text">{{ dictModal.data.remark }}</p>
             </div>
             <div v-if="dictModal.data.sentences && dictModal.data.sentences.length" class="dict-meaning" @click="onDictTextClick">
               <p class="dict-label">例句</p>

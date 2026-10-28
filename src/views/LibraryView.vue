@@ -20,6 +20,13 @@ const editingId = ref(null)
 const editLockType = ref(false) // 从答题页进入的更正：类型字段只读
 const savingEdit = ref(false)
 const editForm = reactive({ chinese: '', english: '', pos: '', type: 'word', caseSensitive: false, remark: '', phrases: [], examples: [''], linkWords: [], linkPhrases: [] })
+// 编辑态备注：有备注自动展开；无备注收起显示"+"（省空间）
+const editShowRemark = ref(false)
+const editRemarkInput = ref(null)
+function openEditRemark() {
+  editShowRemark.value = true
+  nextTick(() => { editRemarkInput.value?.focus() })
+}
 const typeOptions = [
   { value: 'word', label: '单词' },
   { value: 'phrase', label: '短语' },
@@ -763,6 +770,7 @@ function startEdit(word, opts = {}) {
   editForm.type = ['word', 'phrase', 'sentence'].includes(word.type) ? word.type : 'word'
   editForm.caseSensitive = !!word.caseSensitive
   editForm.remark = word.remark || ''
+  editShowRemark.value = !!String(word.remark || '').trim() // 有备注才展开输入框，无备注收起显示"+"（省空间）
   // 带出关联例句（多条）；无关联时默认显示一个空框
   const linked = (word.examples && word.examples.length) ? word.examples : (word.exampleId ? [words.value.find((x) => Number(x.id) === Number(word.exampleId) && x.type === 'sentence')].filter(Boolean) : [])
   const phs = linked.filter((x) => x && x.type === 'phrase').map((x) => x.english)
@@ -990,8 +998,9 @@ function formatTime(ts) {
           <textarea v-else v-model="editForm.chinese" class="cell-input area" placeholder="中文"></textarea>
           <input v-if="editForm.type !== 'sentence'" v-model="editForm.english" class="cell-input" type="text" placeholder="英文" autocomplete="off" />
           <textarea v-else v-model="editForm.english" class="cell-input area" placeholder="英文"></textarea>
-          <!-- 备注：短语/句子放在英文下方；单词在词性下方（见下方单词区块） -->
-          <textarea v-if="editForm.type !== 'word'" v-model="editForm.remark" class="cell-input area" rows="2" placeholder="备注（选填）" maxlength="500"></textarea>
+          <!-- 备注：短语/句子放在英文下方；单词在词性下方（见下方单词区块）；有备注展开，无备注收起显示"+" -->
+          <button v-if="editForm.type !== 'word' && !editShowRemark" type="button" class="cell-add-btn" @click="openEditRemark"><span class="cell-plus">＋</span>备注</button>
+          <textarea v-else-if="editForm.type !== 'word'" ref="editRemarkInput" v-model="editForm.remark" class="cell-input area" rows="2" placeholder="备注（选填）" maxlength="500"></textarea>
           <div class="type-row">
             <span class="type-label">类型</span>
             <div class="type-seg">
@@ -1007,7 +1016,8 @@ function formatTime(ts) {
           </div>
           <template v-if="editForm.type === 'word'">
             <input v-model="editForm.pos" class="cell-input pos" placeholder="词性" />
-            <textarea v-model="editForm.remark" class="cell-input area" rows="2" placeholder="备注（选填）" maxlength="500"></textarea>
+            <button v-if="!editShowRemark" type="button" class="cell-add-btn" @click="openEditRemark"><span class="cell-plus">＋</span>备注</button>
+            <textarea v-else ref="editRemarkInput" v-model="editForm.remark" class="cell-input area" rows="2" placeholder="备注（选填）" maxlength="500"></textarea>
             <div class="case-row">
               <span class="case-label">区分大小写</span>
               <div class="mini-switch" :class="{ on: editForm.caseSensitive }" @click="editForm.caseSensitive = !editForm.caseSensitive">
@@ -1208,11 +1218,6 @@ function formatTime(ts) {
                 <li v-for="(tr, i) in dictModal.data.trs" :key="i">{{ tr }}</li>
               </ul>
             </div>
-            <!-- 备注：单词放在释义下方（有才显示） -->
-            <div v-if="dictModal.data.remark && dictModal.type === 'word'" class="dict-meaning">
-              <p class="dict-label">备注</p>
-              <p class="remark-text">{{ dictModal.data.remark }}</p>
-            </div>
             <div v-if="dictModal.data.wfs && dictModal.data.wfs.length" class="dict-meaning" @click="onDictTextClick">
               <p class="dict-label">词形变化</p>
               <ul>
@@ -1232,6 +1237,11 @@ function formatTime(ts) {
                   <p v-if="s.zh" class="sent-zh">{{ s.zh }}</p>
                 </li>
               </ul>
+            </div>
+            <!-- 备注：单词放在例句上方（有才显示） -->
+            <div v-if="dictModal.data.remark && dictModal.type === 'word'" class="dict-meaning">
+              <p class="dict-label">备注</p>
+              <p class="remark-text">{{ dictModal.data.remark }}</p>
             </div>
             <div v-if="dictModal.data.sentences && dictModal.data.sentences.length" class="dict-meaning" @click="onDictTextClick">
               <p class="dict-label">例句</p>
@@ -1541,6 +1551,23 @@ function formatTime(ts) {
   outline: none;
   background: #fff;
   box-sizing: border-box;
+}
+.cell-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: none;
+  background: transparent;
+  color: #576b95;
+  font-size: 13px;
+  padding: 5px 2px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+.cell-plus {
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 500;
 }
 
 .cell-input:focus {
