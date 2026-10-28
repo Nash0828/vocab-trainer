@@ -1091,7 +1091,12 @@ function onGlobalKeydown(e) {
     return
   }
   // Ctrl+A：恢复浏览器默认的全选行为（不拦截）
-  // 显示答案请用页面上的"显示答案"按钮
+  // Ctrl+Shift+A：显示答案（与 Ctrl+A 全选区分，Answer 首字母）
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && key === 'a') {
+    e.preventDefault()
+    revealAnswer()
+    return
+  }
   // Ctrl+Q：查询当前单词详情（阻止浏览器默认行为）
   if ((e.ctrlKey || e.metaKey) && key === 'q') {
     e.preventDefault()
