@@ -1031,7 +1031,7 @@ function formatTime(ts) {
                 <div class="mini-switch-knob"></div>
               </div>
             </div>
-            <div class="edit-ex-wrap">
+            <div v-if="editForm.phrases.length" class="edit-ex-wrap">
               <div class="edit-ex-label">相关短语</div>
               <div v-for="(ph, i) in editForm.phrases" :key="'ph' + i" class="edit-ex-row">
                 <input v-model="editForm.phrases[i]" class="cell-input" type="text" :placeholder="`短语${i + 1}`" autocomplete="off" />
@@ -1039,8 +1039,8 @@ function formatTime(ts) {
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
-              <button v-if="editForm.phrases.length < 5" type="button" class="edit-ex-add" @click="editForm.phrases.push('')">+ 添加短语</button>
             </div>
+            <button v-if="editForm.phrases.length < 5" type="button" class="edit-ex-add" @click="editForm.phrases.push('')">+ 添加短语</button>
           </template>
           <template v-if="editForm.type !== 'sentence'">
             <div v-if="editForm.examples.length" class="edit-ex-wrap">
