@@ -2869,6 +2869,7 @@ next()
   line-height: 1.6;
   color: #333;
   word-break: break-all;
+  white-space: pre-wrap;
 }
 
 .trans-block {

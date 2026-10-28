@@ -314,15 +314,15 @@ function removeLinkPhrase(i) {
         <!-- 备注：单词放在词性下方、区分大小写上方；短语/句子放在英文下方 -->
         <div v-if="form.type === 'word'" class="form-item">
           <label>备注</label>
-          <input
+          <textarea
             v-model="form.remark"
-            type="text"
+            rows="2"
             placeholder="补充说明（选填）"
             autocomplete="off"
             maxlength="500"
             @keydown.ctrl.enter.prevent="submit"
             @keydown.meta.enter.prevent="submit"
-          />
+          ></textarea>
         </div>
         <div class="form-item">
           <label>区分大小写</label>
@@ -335,15 +335,15 @@ function removeLinkPhrase(i) {
         </template>
         <div v-if="form.type !== 'word'" class="form-item">
           <label>备注</label>
-          <input
+          <textarea
             v-model="form.remark"
-            type="text"
+            rows="2"
             placeholder="补充说明（选填）"
             autocomplete="off"
             maxlength="500"
             @keydown.ctrl.enter.prevent="submit"
             @keydown.meta.enter.prevent="submit"
-          />
+          ></textarea>
         </div>
         <div v-if="form.type === 'word'" class="form-item ex-item">
           <label>

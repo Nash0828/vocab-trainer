@@ -991,7 +991,7 @@ function formatTime(ts) {
           <input v-if="editForm.type !== 'sentence'" v-model="editForm.english" class="cell-input" type="text" placeholder="英文" autocomplete="off" />
           <textarea v-else v-model="editForm.english" class="cell-input area" placeholder="英文"></textarea>
           <!-- 备注：短语/句子放在英文下方；单词在词性下方（见下方单词区块） -->
-          <input v-if="editForm.type !== 'word'" v-model="editForm.remark" class="cell-input" type="text" placeholder="备注（选填）" autocomplete="off" maxlength="500" />
+          <textarea v-if="editForm.type !== 'word'" v-model="editForm.remark" class="cell-input area" rows="2" placeholder="备注（选填）" maxlength="500"></textarea>
           <div class="type-row">
             <span class="type-label">类型</span>
             <div class="type-seg">
@@ -1007,7 +1007,7 @@ function formatTime(ts) {
           </div>
           <template v-if="editForm.type === 'word'">
             <input v-model="editForm.pos" class="cell-input pos" placeholder="词性" />
-            <input v-model="editForm.remark" class="cell-input" type="text" placeholder="备注（选填）" autocomplete="off" maxlength="500" />
+            <textarea v-model="editForm.remark" class="cell-input area" rows="2" placeholder="备注（选填）" maxlength="500"></textarea>
             <div class="case-row">
               <span class="case-label">区分大小写</span>
               <div class="mini-switch" :class="{ on: editForm.caseSensitive }" @click="editForm.caseSensitive = !editForm.caseSensitive">
@@ -2063,6 +2063,7 @@ function formatTime(ts) {
   line-height: 1.6;
   color: #333;
   word-break: break-all;
+  white-space: pre-wrap;
 }
 
 .trans-block {
