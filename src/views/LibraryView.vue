@@ -127,9 +127,8 @@ onBeforeUnmount(() => {
 
 // 从答题页"更正当前词句"跳转的处理：筛选出目标词句并进入编辑态，类型锁定
 function handleEditEntry() {
-  const qWord = String(route.query.word || '').trim()
-  const qEdit = route.query.edit === '1'
-  if (!qWord || !qEdit) return
+  const qWord = String(route.query.editWord || '').trim()
+  if (!qWord) return
   // 立即清除路由参数，防止用户切走再切回时重复弹出编辑框
   router.replace({ path: '/library', query: {} }).catch(() => {})
   keyword.value = qWord

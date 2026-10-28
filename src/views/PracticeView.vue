@@ -856,13 +856,14 @@ function closeDict() {
 }
 
 // 更正当前词句：跳转词句库并自动筛选出当前词句进入编辑态
+// 注意参数名用 editWord（不用 word）：PracticeView 有 watch(route.query.word) 会误触发换题
 function goEditCurrent() {
   if (!current.value) return
   const el = answerInput.value
   if (el && document.activeElement === el) {
     try { el.blur() } catch (e) {}
   }
-  router.push({ path: '/library', query: { word: current.value.english, edit: '1' } })
+  router.push({ path: '/library', query: { editWord: current.value.english } })
 }
 
 // 弹窗打开时禁止背景滚动（iOS 全版本可靠的 body 滚动锁）
@@ -1356,14 +1357,10 @@ next()
 
       <!-- 答题区（current 为空时不渲染，避免空指针崩溃） -->
       <div v-if="current" class="quiz-card">
-        <div class="quiz-label-row">
-          <p class="quiz-label">中文</p>
-          <button class="quiz-edit-btn" title="更正当前词句" @click="goEditCurrent">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            更正
-          </button>
-        </div>
-        <p class="quiz-word" :class="quizWordClass">{{ current.chinese }}</p>
+        <button class="quiz-edit-btn" title="更正当前词句" @click="goEditCurrent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <p class="quiz-label">中文</p>
         <p v-if="current.type && current.type !== 'word'" class="quiz-type">{{ current.type === 'phrase' ? '短语' : '句子' }}</p>
         <p v-if="current.pos" class="quiz-pos">{{ current.pos }}</p>
 
@@ -2346,17 +2343,12 @@ next()
   font-size: 14px;
 }
 .quiz-card {
+  position: relative;
   background: #fff;
   margin: 0 16px;
   border-radius: 12px;
   padding: 28px 20px;
   text-align: center;
-}
-
-.quiz-label-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 }
 
 .quiz-label {
@@ -2365,22 +2357,25 @@ next()
   margin-bottom: 8px;
 }
 
-/* 更正当前词句（铅笔图标，弱视觉避免抢主操作注意力） */
+/* 更正当前词句：铅笔图标绝对定位在卡片左上角（不占文档流，不影响"中文"居中） */
 .quiz-edit-btn {
+  position: absolute;
+  top: 12px;
+  left: 12px;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  margin-bottom: 8px;
-  padding: 2px 8px;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
   border: none;
   background: transparent;
   color: var(--text-sub);
-  font-size: 12px;
-  border-radius: 6px;
+  border-radius: 50%;
   cursor: pointer;
 }
 .quiz-edit-btn:active {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.06);
 }
 
 /* 短语/句子类型小标签（与词句库列表一致，位于词性位置） */
