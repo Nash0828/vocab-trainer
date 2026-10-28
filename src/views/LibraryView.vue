@@ -1017,7 +1017,10 @@ function formatTime(ts) {
             </div>
           </div>
           <template v-if="editForm.type === 'word'">
-            <input v-model="editForm.pos" class="cell-input pos" placeholder="词性" />
+            <div class="cell-row">
+              <span class="cell-label">词性</span>
+              <input v-model="editForm.pos" class="cell-input pos" placeholder="如 n. / v. / adj." autocomplete="off" />
+            </div>
             <div class="remark-row">
               <span class="remark-label">备注</span>
               <textarea v-model="editForm.remark" class="remark-area" :class="{ expanded: editRemarkFocused || editForm.remark }" placeholder="备注（选填）" maxlength="500" @focus="editRemarkFocused = true" @blur="editRemarkFocused = false"></textarea>
