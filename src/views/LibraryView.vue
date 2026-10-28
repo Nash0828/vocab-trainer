@@ -998,9 +998,12 @@ function formatTime(ts) {
           <textarea v-else v-model="editForm.chinese" class="cell-input area" placeholder="中文"></textarea>
           <input v-if="editForm.type !== 'sentence'" v-model="editForm.english" class="cell-input" type="text" placeholder="英文" autocomplete="off" />
           <textarea v-else v-model="editForm.english" class="cell-input area" placeholder="英文"></textarea>
-          <!-- 备注：短语/句子放在英文下方；单词在词性下方（见下方单词区块）；有备注展开，无备注收起显示"+" -->
-          <button v-if="editForm.type !== 'word' && !editShowRemark" type="button" class="cell-add-btn" @click="openEditRemark"><span class="cell-plus">＋</span>备注</button>
-          <textarea v-else-if="editForm.type !== 'word'" ref="editRemarkInput" v-model="editForm.remark" class="cell-input area" rows="2" placeholder="备注（选填）" maxlength="500"></textarea>
+          <!-- 备注：label 常显，value 列未展开时显示"+"，点击展开多行文本框并聚焦 -->
+          <div v-if="editForm.type !== 'word'" class="remark-row">
+            <span class="remark-label">备注</span>
+            <button v-if="!editShowRemark" type="button" class="cell-add-btn" @click="openEditRemark">＋</button>
+            <textarea v-else ref="editRemarkInput" v-model="editForm.remark" class="cell-input area" rows="2" placeholder="备注（选填）" maxlength="500"></textarea>
+          </div>
           <div class="type-row">
             <span class="type-label">类型</span>
             <div class="type-seg">
@@ -1016,8 +1019,11 @@ function formatTime(ts) {
           </div>
           <template v-if="editForm.type === 'word'">
             <input v-model="editForm.pos" class="cell-input pos" placeholder="词性" />
-            <button v-if="!editShowRemark" type="button" class="cell-add-btn" @click="openEditRemark"><span class="cell-plus">＋</span>备注</button>
-            <textarea v-else ref="editRemarkInput" v-model="editForm.remark" class="cell-input area" rows="2" placeholder="备注（选填）" maxlength="500"></textarea>
+            <div class="remark-row">
+              <span class="remark-label">备注</span>
+              <button v-if="!editShowRemark" type="button" class="cell-add-btn" @click="openEditRemark">＋</button>
+              <textarea v-else ref="editRemarkInput" v-model="editForm.remark" class="cell-input area" rows="2" placeholder="备注（选填）" maxlength="500"></textarea>
+            </div>
             <div class="case-row">
               <span class="case-label">区分大小写</span>
               <div class="mini-switch" :class="{ on: editForm.caseSensitive }" @click="editForm.caseSensitive = !editForm.caseSensitive">
@@ -1555,14 +1561,29 @@ function formatTime(ts) {
 .cell-add-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 3px;
   border: none;
   background: transparent;
   color: #576b95;
-  font-size: 13px;
-  padding: 5px 2px;
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px 8px;
   cursor: pointer;
   align-self: flex-start;
+  flex-shrink: 0;
+}
+.remark-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+}
+.remark-label {
+  font-size: 14px;
+  color: var(--text-sub);
+  flex-shrink: 0;
+  padding-top: 8px;
 }
 .cell-plus {
   font-size: 14px;
