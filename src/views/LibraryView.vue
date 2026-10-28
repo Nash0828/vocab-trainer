@@ -994,10 +994,16 @@ function formatTime(ts) {
       <div v-for="(word, index) in pagedWords" :key="word.id" class="word-item">
         <!-- 编辑态 -->
         <div v-if="editingId === word.id" class="edit-row">
-          <input v-if="editForm.type !== 'sentence'" v-model="editForm.chinese" class="cell-input" type="text" placeholder="中文" autocomplete="off" />
-          <textarea v-else v-model="editForm.chinese" class="cell-input area" placeholder="中文"></textarea>
-          <input v-if="editForm.type !== 'sentence'" v-model="editForm.english" class="cell-input" type="text" placeholder="英文" autocomplete="off" />
-          <textarea v-else v-model="editForm.english" class="cell-input area" placeholder="英文"></textarea>
+          <div class="cell-row">
+            <span class="cell-label">中文</span>
+            <input v-if="editForm.type !== 'sentence'" v-model="editForm.chinese" class="cell-input" type="text" placeholder="请输入中文" autocomplete="off" />
+            <textarea v-else v-model="editForm.chinese" class="cell-input area" placeholder="请输入中文"></textarea>
+          </div>
+          <div class="cell-row">
+            <span class="cell-label">英文</span>
+            <input v-if="editForm.type !== 'sentence'" v-model="editForm.english" class="cell-input" type="text" placeholder="请输入英文" autocomplete="off" />
+            <textarea v-else v-model="editForm.english" class="cell-input area" placeholder="请输入英文"></textarea>
+          </div>
           <!-- 备注：label 常显，value 列未展开时显示"+"，点击展开多行文本框并聚焦 -->
           <div v-if="editForm.type !== 'word'" class="remark-row">
             <span class="remark-label">备注</span>
@@ -1572,6 +1578,18 @@ function formatTime(ts) {
   cursor: pointer;
   align-self: flex-start;
   flex-shrink: 0;
+}
+.cell-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+}
+.cell-label {
+  font-size: 14px;
+  color: var(--text-sub);
+  flex-shrink: 0;
+  padding-top: 8px;
 }
 .remark-row {
   display: flex;
