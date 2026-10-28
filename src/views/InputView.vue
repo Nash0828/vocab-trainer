@@ -183,6 +183,7 @@ function resetForm() {
   form.examples = []
   form.linkWords = []
   form.linkPhrases = []
+  remarkFocused.value = false // 保存后备注恢复初始单行
   posInput.value = ''
 }
 
@@ -313,7 +314,7 @@ function removeLinkPhrase(i) {
             </transition>
           </div>
         </div>
-        <!-- 备注：label 常显，输入框初始单行高度，聚焦后展开为多行 -->
+        <!-- 备注：label 常显，输入框初始单行高度，聚焦后展开为多行（失焦不收回，避免布局变动导致点击丢失） -->
         <div v-if="form.type === 'word'" class="form-item">
           <label>备注</label>
           <textarea
@@ -324,7 +325,6 @@ function removeLinkPhrase(i) {
             autocomplete="off"
             maxlength="500"
             @focus="remarkFocused = true"
-            @blur="remarkFocused = false"
             @keydown.ctrl.enter.prevent="submit"
             @keydown.meta.enter.prevent="submit"
           ></textarea>
@@ -348,7 +348,6 @@ function removeLinkPhrase(i) {
             autocomplete="off"
             maxlength="500"
             @focus="remarkFocused = true"
-            @blur="remarkFocused = false"
             @keydown.ctrl.enter.prevent="submit"
             @keydown.meta.enter.prevent="submit"
           ></textarea>
