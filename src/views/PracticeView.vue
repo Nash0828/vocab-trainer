@@ -392,7 +392,12 @@ function afterCheck(isCorrect) {
   if (isRedo.value) {
     // 重做模式：无论对错都不算正式作答，只显示反馈，不更新 count、不移除/加入错题本
     result.value = isCorrect ? 'correct' : 'wrong'
-    speak(current.value.english, current.value.type || 'word', null, 'main')
+    // 语音播报期间锁定操作按钮（下一题/重做/提交等），播完再解锁
+    answeredLock.value = true
+    speak(current.value.english, current.value.type || 'word', () => {
+      answeredLock.value = false
+      focusInput()
+    }, 'main')
     // 重做答对后停在当前题，等用户点"下一题"；答错也停在当前题
     clearAutoTimer()
     return
@@ -1454,8 +1459,8 @@ next()
             <button class="btn primary" :disabled="answeredLock" @mousedown.prevent @click="skip">下一题</button>
           </template>
           <template v-else>
-            <button class="btn primary" @click="redo">重做这一题</button>
-            <button class="btn ghost" @click="skip">下一题</button>
+            <button class="btn primary" :disabled="answeredLock" @click="redo">重做这一题</button>
+            <button class="btn ghost" :disabled="answeredLock" @click="skip">下一题</button>
           </template>
         </div>
       </div>
