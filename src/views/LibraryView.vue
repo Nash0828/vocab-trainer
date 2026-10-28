@@ -766,6 +766,7 @@ function startEdit(word, opts = {}) {
   editForm.type = ['word', 'phrase', 'sentence'].includes(word.type) ? word.type : 'word'
   editForm.caseSensitive = !!word.caseSensitive
   editForm.remark = word.remark || ''
+  editRemarkFocused.value = false // 每次进入编辑态恢复备注初始单行（有备注内容时由 expanded 条件自动展开）
   // 带出关联例句（多条）；无关联时默认显示一个空框
   const linked = (word.examples && word.examples.length) ? word.examples : (word.exampleId ? [words.value.find((x) => Number(x.id) === Number(word.exampleId) && x.type === 'sentence')].filter(Boolean) : [])
   const phs = linked.filter((x) => x && x.type === 'phrase').map((x) => x.english)
