@@ -719,12 +719,21 @@ function removeLinkPhrase(i) {
   background: #fff;
 }
 
-.sheet-enter-active, .sheet-leave-active { transition: transform 0.25s ease; }
-.sheet-enter-from, .sheet-leave-to { transform: translateY(100%); }
-/* 遮罩不参与面板的位移动画：进入时瞬间遮盖，关闭时淡出 */
+/* 遮罩：进入时瞬间遮盖、关闭时淡出；不参与位移动画（transition 类只加在遮罩这个根元素上） */
 .sheet-mask.sheet-enter-active { transition: none !important; transform: none !important; }
 .sheet-mask.sheet-leave-active { transition: opacity 0.25s; transform: none !important; }
 .sheet-mask.sheet-enter-from, .sheet-mask.sheet-leave-to { transform: none !important; }
+/* 面板：用自己的动画从下往上滑入 / 滑出（遮罩瞬间盖住后，面板再上滑） */
+.sheet-enter-active .sheet { animation: sheet-up 0.25s ease; }
+.sheet-leave-active .sheet { animation: sheet-down 0.25s ease; }
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes sheet-down {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
 
 
 
