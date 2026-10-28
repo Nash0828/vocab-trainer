@@ -524,7 +524,8 @@ const filteredWords = computed(() => {
     const matchKw =
       !kw ||
       w.chinese.toLowerCase().includes(kw) ||
-      w.english.toLowerCase().includes(kw)
+      w.english.toLowerCase().includes(kw) ||
+      String(w.remark || '').toLowerCase().includes(kw)
     const type = w.type || 'word'
     const matchType =
       typeFilter.value === 'all' || type === typeFilter.value
