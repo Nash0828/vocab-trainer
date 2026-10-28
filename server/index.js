@@ -34,7 +34,7 @@ function genToken() { return crypto.randomBytes(32).toString('hex') }
 const ttsCache = new Map()
 function genId(prefix = '') { return `${prefix}${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }
 function rowToWord(row) {
-  const w = { id: String(row.id), chinese: row.chinese, english: row.english, pos: row.pos || '', type: row.type || 'word', count: row.count || 0, createdAt: row.created_at, caseSensitive: !!row.case_sensitive, exampleId: row.example_id || 0 }
+  const w = { id: String(row.id), chinese: row.chinese, english: row.english, pos: row.pos || '', type: row.type || 'word', count: row.count || 0, createdAt: row.created_at, caseSensitive: !!row.case_sensitive, exampleId: row.example_id || 0, remark: row.remark || '' }
   // 关联词句（相关短语+例句+主动关联的单词/短语，多对多）：按关联表顺序返回，带类型
   w.examples = (db.prepare('SELECT s.id, s.english, s.chinese, s.type, s.updated_at FROM word_examples we JOIN words s ON s.id = we.sentence_id WHERE we.word_id = ? ORDER BY we.id ASC').all(row.id) || [])
     .map((s) => ({ id: String(s.id), english: s.english, chinese: s.chinese, type: s.type || 'sentence', updatedAt: Number(s.updated_at) || 0 }))
@@ -676,8 +676,9 @@ async function resolveLinked(userId, type, english, list) {
 }
 
 app.post('/api/words', async (req, res) => {
-  const { chinese, english, pos, type, caseSensitive, phrases, examples, example, linkWords, linkPhrases } = req.body || {}
+  const { chinese, english, pos, type, caseSensitive, phrases, examples, example, linkWords, linkPhrases, remark } = req.body || {}
   const c = (chinese||'').trim(), e = (english||'').trim(), p = (pos||'').trim()
+  const rm = String(remark || '').trim().slice(0, 500)
   const t = ['word', 'phrase', 'sentence'].includes(type) ? type : 'word'
   if (!c || !e) return res.status(400).json({ error: '中文和英文不能为空' })
   // 相关短语（仅单词，最多5条）+ 例句（仅单词/短语，最多5条，兼容旧的单条 example 字段）
@@ -700,7 +701,7 @@ app.post('/api/words', async (req, res) => {
     if (t === 'sentence') linkPhraseIds = await resolveExisting(req.userId, 'phrase', linkPhrases)
   }
   try {
-    const info = db.prepare('INSERT INTO words (user_id, chinese, english, pos, type, count, created_at, updated_at, case_sensitive, example_id) VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?)').run(req.userId, c, e, p, t, Date.now(), Date.now(), caseSensitive ? 1 : 0, sentenceIds[0] || 0)
+    const info = db.prepare('INSERT INTO words (user_id, chinese, english, pos, type, count, created_at, updated_at, case_sensitive, example_id, remark) VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)').run(req.userId, c, e, p, t, Date.now(), Date.now(), caseSensitive ? 1 : 0, sentenceIds[0] || 0, rm)
     const wordId = info.lastInsertRowid
     if (linkedIds.length) saveWordExamples(wordId, linkedIds)
     if (linkWordIds.length || linkPhraseIds.length) saveLinks(wordId, req.userId, linkWordIds, linkPhraseIds)
@@ -822,8 +823,9 @@ async function aiExampleContains(en, ex) {
 
 app.put('/api/words/:id', async (req, res) => {
   const id = Number(req.params.id)
-  const { chinese, english, pos, type, caseSensitive, phrases, examples, example, linkWords, linkPhrases } = req.body || {}
+  const { chinese, english, pos, type, caseSensitive, phrases, examples, example, linkWords, linkPhrases, remark } = req.body || {}
   const c = (chinese||'').trim(), e = (english||'').trim(), p = (pos||'').trim()
+  const rm = String(remark || '').trim().slice(0, 500)
   const t = ['word', 'phrase', 'sentence'].includes(type) ? type : 'word'
   if (!c || !e) return res.status(400).json({ error: '中文和英文不能为空' })
   // 相关短语（仅单词）+ 例句（仅单词/短语，兼容旧的单条 example 字段）
@@ -845,7 +847,7 @@ app.put('/api/words/:id', async (req, res) => {
     linkWordIds = await resolveExisting(req.userId, 'word', linkWords)
     if (t === 'sentence') linkPhraseIds = await resolveExisting(req.userId, 'phrase', linkPhrases)
   }
-  const info = db.prepare('UPDATE words SET chinese = ?, english = ?, pos = ?, type = ?, case_sensitive = ?, example_id = ?, updated_at = ? WHERE id = ? AND user_id = ?').run(c, e, p, t, caseSensitive ? 1 : 0, sentenceIds[0] || 0, Date.now(), id, req.userId)
+  const info = db.prepare('UPDATE words SET chinese = ?, english = ?, pos = ?, type = ?, case_sensitive = ?, example_id = ?, remark = ?, updated_at = ? WHERE id = ? AND user_id = ?').run(c, e, p, t, caseSensitive ? 1 : 0, sentenceIds[0] || 0, rm, Date.now(), id, req.userId)
   if (!info.changes) return res.status(404).json({ error: '单词不存在' })
   saveWordExamples(id, linkedIds)
   if (t !== 'word') {

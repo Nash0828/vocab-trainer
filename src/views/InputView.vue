@@ -19,6 +19,7 @@ const form = reactive({
   type: 'word',
   pos: '',
   caseSensitive: false,
+  remark: '',
   phrases: [],
   examples: [''],
   linkWords: [],
@@ -140,6 +141,7 @@ async function submit() {
         pos: form.pos.trim(),
         type: form.type,
         caseSensitive: form.caseSensitive,
+        remark: form.remark.trim(),
         phrases: phList,
         examples: exList,
         linkWords: linkWordList,
@@ -174,6 +176,7 @@ function resetForm() {
   form.type = 'word'
   form.pos = ''
   form.caseSensitive = false
+  form.remark = ''
   form.phrases = []
   form.examples = ['']
   form.linkWords = []
@@ -186,6 +189,7 @@ function clearAllFields() {
   form.english = ''
   form.type = 'word'
   form.pos = ''
+  form.remark = ''
   form.phrases = []
   form.examples = ['']
   form.linkWords = []
@@ -307,6 +311,19 @@ function removeLinkPhrase(i) {
             </transition>
           </div>
         </div>
+        <!-- 备注：单词放在词性下方、区分大小写上方；短语/句子放在英文下方 -->
+        <div v-if="form.type === 'word'" class="form-item">
+          <label>备注</label>
+          <input
+            v-model="form.remark"
+            type="text"
+            placeholder="补充说明（选填）"
+            autocomplete="off"
+            maxlength="500"
+            @keydown.ctrl.enter.prevent="submit"
+            @keydown.meta.enter.prevent="submit"
+          />
+        </div>
         <div class="form-item">
           <label>区分大小写</label>
           <div class="switch-row">
@@ -316,6 +333,18 @@ function removeLinkPhrase(i) {
           </div>
         </div>
         </template>
+        <div v-if="form.type !== 'word'" class="form-item">
+          <label>备注</label>
+          <input
+            v-model="form.remark"
+            type="text"
+            placeholder="补充说明（选填）"
+            autocomplete="off"
+            maxlength="500"
+            @keydown.ctrl.enter.prevent="submit"
+            @keydown.meta.enter.prevent="submit"
+          />
+        </div>
         <div v-if="form.type === 'word'" class="form-item ex-item">
           <label>
             相关短语

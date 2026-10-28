@@ -62,7 +62,7 @@ export function weightedPickIndex(counts, threshold, lastIndex = -1) {
 }
 
 export function useWords() {
-  function addWord({ chinese, english, pos, type, caseSensitive, linkWords, linkPhrases }) {
+  function addWord({ chinese, english, pos, type, caseSensitive, remark, linkWords, linkPhrases }) {
     const c = (chinese || '').trim()
     const e = (english || '').trim()
     const p = (pos || '').trim()
@@ -75,12 +75,13 @@ export function useWords() {
       pos: p,
       type: t,
       caseSensitive: !!caseSensitive,
+      remark: String(remark || '').trim(),
       count: 0,
       createdAt: Date.now(),
     }
     words.value.push(word)
     // 异步同步到后端，成功后用真实 id 替换临时 id
-    api.addWord({ chinese: c, english: e, pos: p, type: t, caseSensitive: !!caseSensitive, linkWords: Array.isArray(linkWords) ? linkWords : [], linkPhrases: Array.isArray(linkPhrases) ? linkPhrases : [] })
+    api.addWord({ chinese: c, english: e, pos: p, type: t, caseSensitive: !!caseSensitive, remark: String(remark || '').trim(), linkWords: Array.isArray(linkWords) ? linkWords : [], linkPhrases: Array.isArray(linkPhrases) ? linkPhrases : [] })
       .then((real) => {
         const idx = words.value.findIndex((w) => w.id === word.id)
         if (idx !== -1) words.value[idx] = { ...real, count: 0 }
@@ -105,7 +106,7 @@ export function useWords() {
     const exs = Array.isArray(patch.examples) ? patch.examples : []
     const lws = Array.isArray(patch.linkWords) ? patch.linkWords : []
     const lps = Array.isArray(patch.linkPhrases) ? patch.linkPhrases : []
-    return api.updateWord(id, { chinese: w.chinese, english: w.english, pos: w.pos, type: w.type || 'word', caseSensitive: !!w.caseSensitive, phrases: phs, examples: exs, linkWords: lws, linkPhrases: lps }).then((r) => {
+    return api.updateWord(id, { chinese: w.chinese, english: w.english, pos: w.pos, type: w.type || 'word', caseSensitive: !!w.caseSensitive, remark: w.remark || '', phrases: phs, examples: exs, linkWords: lws, linkPhrases: lps }).then((r) => {
       if (r && r.examples !== undefined) w.examples = r.examples
       if (r && r.exampleId !== undefined) w.exampleId = Number(r.exampleId)
       if (r && r.linkedWords !== undefined) w.linkedWords = r.linkedWords

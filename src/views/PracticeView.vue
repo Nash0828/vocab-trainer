@@ -826,6 +826,9 @@ async function lookupWord(word, type = 'word') {
     dictModal.value.data = await res.json()
     prependExampleSentences(dictModal.value.data, word)
     fillAiFlections(dictModal.value.data, word)
+    // 备注：本地词句库有则挂到弹框数据（有才显示）
+    const local = words.value.find((x) => String(x.english || '').trim().toLowerCase() === String(word).trim().toLowerCase())
+    if (local && String(local.remark || '').trim()) dictModal.value.data.remark = String(local.remark).trim()
   } catch (e) {
     dictModal.value.error = e.message || '查询失败，请稍后重试'
   } finally {
@@ -1511,6 +1514,11 @@ next()
         </div>
         <div class="dict-body">
           <AiUsageCard v-if="dictModal" :word="dictModal.word" :type="dictModal.type || 'word'" />
+          <!-- 备注：短语/句子放在 AI 日常用法下方（有才显示） -->
+          <div v-if="dictModal.data && dictModal.data.remark && dictModal.type !== 'word'" class="dict-meaning">
+            <p class="dict-label">备注</p>
+            <p class="remark-text">{{ dictModal.data.remark }}</p>
+          </div>
           <div v-if="dictModal.type === 'phrase'" class="dict-speak-row">
             <button class="dict-speak-btn" :class="{ 'is-playing': playingKey === 'dict-main' }" @click="speak(dictModal.word, dictModal.type || 'word', null, 'dict-main')" title="朗读"><span class="spk-static">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span><span class="spk-eq"><i></i><i></i><i></i></span><span class="dict-speak-text">朗读</span>
@@ -1553,6 +1561,11 @@ next()
               <ul>
                 <li v-for="(tr, i) in dictModal.data.trs" :key="i">{{ tr }}</li>
               </ul>
+            </div>
+            <!-- 备注：单词放在释义下方（有才显示） -->
+            <div v-if="dictModal.data.remark && dictModal.type === 'word'" class="dict-meaning">
+              <p class="dict-label">备注</p>
+              <p class="remark-text">{{ dictModal.data.remark }}</p>
             </div>
             <div v-if="dictModal.data.wfs && dictModal.data.wfs.length" class="dict-meaning" @click="onDictTextClick">
               <p class="dict-label">词形变化</p>
@@ -2849,6 +2862,13 @@ next()
 
 .dict-meaning {
   margin-bottom: 16px;
+}
+
+.remark-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #333;
+  word-break: break-all;
 }
 
 .trans-block {

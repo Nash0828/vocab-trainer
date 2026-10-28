@@ -19,7 +19,7 @@ const { words, updateWord, removeWord, checkDuplicate, resetCount, isMastered, s
 const editingId = ref(null)
 const editLockType = ref(false) // 从答题页进入的更正：类型字段只读
 const savingEdit = ref(false)
-const editForm = reactive({ chinese: '', english: '', pos: '', type: 'word', caseSensitive: false, phrases: [], examples: [''], linkWords: [], linkPhrases: [] })
+const editForm = reactive({ chinese: '', english: '', pos: '', type: 'word', caseSensitive: false, remark: '', phrases: [], examples: [''], linkWords: [], linkPhrases: [] })
 const typeOptions = [
   { value: 'word', label: '单词' },
   { value: 'phrase', label: '短语' },
@@ -81,6 +81,9 @@ async function lookupWord(word, type = 'word') {
     dictModal.value.data = await res.json()
     prependExampleSentences(dictModal.value.data, word)
     fillAiFlections(dictModal.value.data, word)
+    // 备注：本地词句库有则挂到弹框数据（有才显示）
+    const local = words.value.find((x) => String(x.english || '').trim().toLowerCase() === String(word).trim().toLowerCase())
+    if (local && String(local.remark || '').trim()) dictModal.value.data.remark = String(local.remark).trim()
   } catch (e) {
     dictModal.value.error = e.message || '查询失败，请稍后重试'
   } finally {
@@ -759,6 +762,7 @@ function startEdit(word, opts = {}) {
   editForm.pos = word.pos || ''
   editForm.type = ['word', 'phrase', 'sentence'].includes(word.type) ? word.type : 'word'
   editForm.caseSensitive = !!word.caseSensitive
+  editForm.remark = word.remark || ''
   // 带出关联例句（多条）；无关联时默认显示一个空框
   const linked = (word.examples && word.examples.length) ? word.examples : (word.exampleId ? [words.value.find((x) => Number(x.id) === Number(word.exampleId) && x.type === 'sentence')].filter(Boolean) : [])
   const phs = linked.filter((x) => x && x.type === 'phrase').map((x) => x.english)
@@ -805,6 +809,7 @@ async function saveEdit(word) {
       pos: editForm.type === 'word' ? editForm.pos.trim() : '',
       type: editForm.type,
       caseSensitive: editForm.type === 'word' ? editForm.caseSensitive : false,
+      remark: editForm.remark.trim(),
       phrases: editForm.type === 'word' ? editForm.phrases.map((x) => String(x || '').trim()).filter(Boolean) : [],
       examples: editForm.type === 'sentence' ? [] : editForm.examples.map((x) => String(x || '').trim()).filter(Boolean),
       linkWords: editForm.type === 'word' ? [] : editForm.linkWords.map((x) => String(x || '').trim()).filter(Boolean),
@@ -985,6 +990,8 @@ function formatTime(ts) {
           <textarea v-else v-model="editForm.chinese" class="cell-input area" placeholder="中文"></textarea>
           <input v-if="editForm.type !== 'sentence'" v-model="editForm.english" class="cell-input" type="text" placeholder="英文" autocomplete="off" />
           <textarea v-else v-model="editForm.english" class="cell-input area" placeholder="英文"></textarea>
+          <!-- 备注：短语/句子放在英文下方；单词在词性下方（见下方单词区块） -->
+          <input v-if="editForm.type !== 'word'" v-model="editForm.remark" class="cell-input" type="text" placeholder="备注（选填）" autocomplete="off" maxlength="500" />
           <div class="type-row">
             <span class="type-label">类型</span>
             <div class="type-seg">
@@ -1000,6 +1007,7 @@ function formatTime(ts) {
           </div>
           <template v-if="editForm.type === 'word'">
             <input v-model="editForm.pos" class="cell-input pos" placeholder="词性" />
+            <input v-model="editForm.remark" class="cell-input" type="text" placeholder="备注（选填）" autocomplete="off" maxlength="500" />
             <div class="case-row">
               <span class="case-label">区分大小写</span>
               <div class="mini-switch" :class="{ on: editForm.caseSensitive }" @click="editForm.caseSensitive = !editForm.caseSensitive">
@@ -1152,6 +1160,11 @@ function formatTime(ts) {
         </div>
         <div class="dict-body">
           <AiUsageCard v-if="dictModal" :word="dictModal.word" :type="dictModal.type || 'word'" />
+          <!-- 备注：短语/句子放在 AI 日常用法下方（有才显示） -->
+          <div v-if="dictModal.data && dictModal.data.remark && dictModal.type !== 'word'" class="dict-meaning">
+            <p class="dict-label">备注</p>
+            <p class="remark-text">{{ dictModal.data.remark }}</p>
+          </div>
           <div v-if="dictModal.type === 'phrase'" class="dict-speak-row">
             <button class="dict-speak-btn" :class="{ 'is-playing': playingKey === 'dict-main' }" @click="speak(dictModal.word, dictModal.type || 'word', null, 'dict-main')" title="朗读"><span class="spk-static">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span><span class="spk-eq"><i></i><i></i><i></i></span><span class="dict-speak-text">朗读</span>
@@ -1194,6 +1207,11 @@ function formatTime(ts) {
               <ul>
                 <li v-for="(tr, i) in dictModal.data.trs" :key="i">{{ tr }}</li>
               </ul>
+            </div>
+            <!-- 备注：单词放在释义下方（有才显示） -->
+            <div v-if="dictModal.data.remark && dictModal.type === 'word'" class="dict-meaning">
+              <p class="dict-label">备注</p>
+              <p class="remark-text">{{ dictModal.data.remark }}</p>
             </div>
             <div v-if="dictModal.data.wfs && dictModal.data.wfs.length" class="dict-meaning" @click="onDictTextClick">
               <p class="dict-label">词形变化</p>
@@ -2038,6 +2056,13 @@ function formatTime(ts) {
 
 .dict-meaning {
   margin-bottom: 16px;
+}
+
+.remark-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #333;
+  word-break: break-all;
 }
 
 .trans-block {
