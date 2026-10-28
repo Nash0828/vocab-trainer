@@ -131,7 +131,7 @@ tryMigrate("ALTER TABLE words ADD COLUMN case_sensitive INTEGER DEFAULT 0")
 tryMigrate("ALTER TABLE words ADD COLUMN type TEXT DEFAULT 'word'")
 tryMigrate("ALTER TABLE words ADD COLUMN example_id INTEGER DEFAULT 0")
 tryMigrate("ALTER TABLE words ADD COLUMN updated_at INTEGER DEFAULT 0")
-tryMigrate("ALTER TABLE words ADD COLUMN remark TEXT DEFAULT '') // 备注：中文不足以描述时的额外说明
+tryMigrate("ALTER TABLE words ADD COLUMN remark TEXT DEFAULT ''") // 备注：中文不足以描述时的额外说明
 tryMigrate("UPDATE words SET updated_at = created_at WHERE updated_at IS NULL OR updated_at = 0") // 老数据默认最后修改时间与创建时间一致
 // 多例句：词句 ↔ 句子 多对多关联表（一个词句最多关联5条例句）
 tryMigrate("CREATE TABLE IF NOT EXISTS word_examples (id INTEGER PRIMARY KEY AUTOINCREMENT, word_id INTEGER NOT NULL, sentence_id INTEGER NOT NULL, created_at INTEGER DEFAULT 0, UNIQUE(word_id, sentence_id))")
