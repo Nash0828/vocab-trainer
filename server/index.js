@@ -756,7 +756,7 @@ async function aiCheckSentence(answer, input) {
       body: JSON.stringify({
         model: 'deepseek-chat',
         messages: [
-          { role: 'system', content: '你是英语答题判分助手。比较参考答案与用户作答是否为同一句话，忽略不影响意思的形式差异。缩写与全写等价（don\'t=do not、can\'t=cannot、I\'m=I am、it\'s=it is、won\'t=will not、isn\'t=is not、aren\'t=are not、haven\'t=have not、hasn\'t=has not、doesn\'t=does not、didn\'t=did not、wouldn\'t=would not、couldn\'t=could not、shouldn\'t=should not、mustn\'t=must not、we\'re=we are、they\'re=they are、you\'re=you are、I\'ve=I have、I\'ll=I will、let\'s=let us 等）；忽略大小写、标点差异、多余空格及中文空格。单词拼写错误、漏词、多词、顺序不同，或单复数、时态不同，均判为错误。只输出 JSON：{"correct": true} 或 {"correct": false}，不要输出任何其他内容。' },
+          { role: 'system', content: '你是英语答题判分助手。比较参考答案与用户作答是否为同一句话，忽略不影响意思的形式差异。缩写与全写等价（don\'t=do not、can\'t=cannot、I\'m=I am、it\'s=it is、won\'t=will not、isn\'t=is not、aren\'t=are not、haven\'t=have not、hasn\'t=has not、doesn\'t=does not、didn\'t=did not、wouldn\'t=would not、couldn\'t=could not、shouldn\'t=should not、mustn\'t=must not、we\'re=we are、they\'re=they are、you\'re=you are、I\'ve=I have、I\'ll=I will、let\'s=let us 等）；忽略大小写、标点差异、多余空格及中文空格。由 that 引导的宾语从句、或 that 作宾语可省略的定语从句中，省略 that 与写出 that 视为等价（如 She said that she was tired 与 She said she was tired 都正确）；必须使用 that 的从句类型不适用此规则。单词拼写错误、漏词、多词、顺序不同，或单复数、时态不同，均判为错误。只输出 JSON：{"correct": true} 或 {"correct": false}，不要输出任何其他内容。' },
           { role: 'user', content: `参考答案：${answer}\n用户作答：${input}` },
         ],
         temperature: 0,
