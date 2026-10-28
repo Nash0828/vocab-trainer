@@ -21,7 +21,7 @@ const form = reactive({
   caseSensitive: false,
   remark: '',
   phrases: [],
-  examples: [''],
+  examples: [],
   linkWords: [],
   linkPhrases: [],
 })
@@ -180,7 +180,7 @@ function resetForm() {
   form.caseSensitive = false
   form.remark = ''
   form.phrases = []
-  form.examples = ['']
+  form.examples = []
   form.linkWords = []
   form.linkPhrases = []
   posInput.value = ''
@@ -193,7 +193,7 @@ function clearAllFields() {
   form.pos = ''
   form.remark = ''
   form.phrases = []
-  form.examples = ['']
+  form.examples = []
   form.linkWords = []
   form.linkPhrases = []
 }
