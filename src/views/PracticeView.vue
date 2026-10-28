@@ -855,6 +855,16 @@ function closeDict() {
   })
 }
 
+// 更正当前词句：跳转词句库并自动筛选出当前词句进入编辑态
+function goEditCurrent() {
+  if (!current.value) return
+  const el = answerInput.value
+  if (el && document.activeElement === el) {
+    try { el.blur() } catch (e) {}
+  }
+  router.push({ path: '/library', query: { word: current.value.english, edit: '1' } })
+}
+
 // 弹窗打开时禁止背景滚动（iOS 全版本可靠的 body 滚动锁）
 let dictScrollY = 0
 watch(dictModal, (val) => {
@@ -1135,6 +1145,17 @@ onActivated(() => {
   // KeepAlive 切回：静默刷新分组与今日统计（不打断当前题目，保留答题现场）
   loadGroups()
   refreshToday()
+  // 从词句库更正返回：若当前词句已被修改，同步最新内容并清空作答重新答
+  if (current.value) {
+    const fresh = words.value.find((w) => Number(w.id) === Number(current.value.id))
+    if (fresh && (fresh.english !== current.value.english || fresh.chinese !== current.value.chinese || fresh.type !== current.value.type || fresh.pos !== current.value.pos)) {
+      current.value = fresh
+      answer.value = ''
+      result.value = null
+      revealed.value = false
+      isRedo.value = false
+    }
+  }
   // 当前无题且出题池有词时自动出题（覆盖：空词库进入背诵页→去录入→切回的场景）
   if (!current.value && available.value.length) next()
 })
@@ -1335,7 +1356,13 @@ next()
 
       <!-- 答题区（current 为空时不渲染，避免空指针崩溃） -->
       <div v-if="current" class="quiz-card">
-        <p class="quiz-label">中文</p>
+        <div class="quiz-label-row">
+          <p class="quiz-label">中文</p>
+          <button class="quiz-edit-btn" title="更正当前词句" @click="goEditCurrent">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            更正
+          </button>
+        </div>
         <p class="quiz-word" :class="quizWordClass">{{ current.chinese }}</p>
         <p v-if="current.type && current.type !== 'word'" class="quiz-type">{{ current.type === 'phrase' ? '短语' : '句子' }}</p>
         <p v-if="current.pos" class="quiz-pos">{{ current.pos }}</p>
@@ -2326,10 +2353,34 @@ next()
   text-align: center;
 }
 
+.quiz-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .quiz-label {
   font-size: 13px;
   color: var(--text-sub);
   margin-bottom: 8px;
+}
+
+/* 更正当前词句（铅笔图标，弱视觉避免抢主操作注意力） */
+.quiz-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 8px;
+  padding: 2px 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.quiz-edit-btn:active {
+  background: rgba(0, 0, 0, 0.05);
 }
 
 /* 短语/句子类型小标签（与词句库列表一致，位于词性位置） */

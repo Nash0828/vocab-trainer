@@ -1,11 +1,12 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted, onActivated, onBeforeUnmount, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useWords, refreshAll } from '../composables/useWords'
 import { api } from '../api/index.js'
 import AiUsageCard from '../components/AiUsageCard.vue'
 
 const router = useRouter()
+const route = useRoute()
 
 // 跳转背诵页并直接背诵该词
 function goPractice(word) {
@@ -16,6 +17,7 @@ const { words, updateWord, removeWord, checkDuplicate, resetCount, isMastered, s
   useWords()
 
 const editingId = ref(null)
+const editLockType = ref(false) // 从答题页进入的更正：类型字段只读
 const savingEdit = ref(false)
 const editForm = reactive({ chinese: '', english: '', pos: '', type: 'word', caseSensitive: false, phrases: [], examples: [''], linkWords: [], linkPhrases: [] })
 const typeOptions = [
@@ -107,6 +109,8 @@ onMounted(() => {
 onActivated(() => {
   // KeepAlive 切回：恢复离开时的滚动位置（筛选/分页等状态随组件实例保留）
   window.scrollTo(0, savedScrollTop)
+  // 从答题页"更正"跳来：自动筛选当前词句并直接进入编辑态（处理一次后清参，避免重复触发）
+  handleEditEntry()
 })
 
 // 记录词句库页面滚动位置（KeepAlive 场景切回时恢复现场）
@@ -120,6 +124,21 @@ onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKeydown)
   window.removeEventListener('scroll', onScroll)
 })
+
+// 从答题页"更正当前词句"跳转的处理：筛选出目标词句并进入编辑态，类型锁定
+function handleEditEntry() {
+  const qWord = String(route.query.word || '').trim()
+  const qEdit = route.query.edit === '1'
+  if (!qWord || !qEdit) return
+  // 立即清除路由参数，防止用户切走再切回时重复弹出编辑框
+  router.replace({ path: '/library', query: {} }).catch(() => {})
+  keyword.value = qWord
+  // 清掉类型/背熟程度筛选，确保目标词句一定出现在列表中（编辑框渲染在列表项内）
+  typeFilter.value = 'all'
+  statusFilter.value = 'all'
+  const w = words.value.find((x) => String(x.english || '').trim().toLowerCase() === qWord.toLowerCase())
+  if (w) startEdit(w, { lockType: true })
+}
 
 // 播放发音：有道优先，失败回退百度 TTS，再失败回退系统 TTS
 let currentAudio = null
@@ -731,7 +750,8 @@ function pct(word) {
 }
 
 // 例句是否包含当前录入的单词/短语（单词按词边界匹配，短语忽略大小写包含）
-function startEdit(word) {
+function startEdit(word, opts = {}) {
+  editLockType.value = !!opts.lockType // 从答题页进入的更正：类型锁定，防止分组内类型被改乱
   editingId.value = word.id
   confirmDeleteId.value = null
   confirmResetId.value = null
@@ -973,7 +993,8 @@ function formatTime(ts) {
                 v-for="opt in typeOptions"
                 :key="opt.value"
                 class="type-seg-btn"
-                :class="{ active: editForm.type === opt.value }"
+                :class="{ active: editForm.type === opt.value, locked: editLockType }"
+                :disabled="editLockType"
                 @click="editForm.type = opt.value"
               >{{ opt.label }}</button>
             </div>
@@ -1398,6 +1419,10 @@ function formatTime(ts) {
   color: var(--primary);
   font-weight: 500;
   box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+.type-seg-btn.locked {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .word-count {
