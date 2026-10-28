@@ -719,13 +719,17 @@ function removeLinkPhrase(i) {
   background: #fff;
 }
 
-/* 遮罩：进入时瞬间遮盖、关闭时淡出；不参与位移动画（transition 类只加在遮罩这个根元素上） */
-.sheet-mask.sheet-enter-active { transition: none !important; transform: none !important; }
-.sheet-mask.sheet-leave-active { transition: opacity 0.25s; transform: none !important; }
-.sheet-mask.sheet-enter-from, .sheet-mask.sheet-leave-to { transform: none !important; }
-/* 面板：用自己的动画从下往上滑入 / 滑出（遮罩瞬间盖住后，面板再上滑） */
-.sheet-enter-active .sheet { animation: sheet-up 0.25s ease; }
-.sheet-leave-active .sheet { animation: sheet-down 0.25s ease; }
+/* 遮罩：进入时视觉上瞬间遮盖（opacity 恒 1，无淡入），
+   但保留 0.25s 的 transition 时长声明——Vue 靠根元素的 transition 时长决定何时移除过渡类，
+   遮罩必须有足够时长，面板的上滑动画才有时间播完 */
+.sheet-mask.sheet-enter-active { transition: opacity 0.25s; }
+.sheet-mask.sheet-enter-from { opacity: 1; }
+/* 关闭：遮罩淡出 */
+.sheet-mask.sheet-leave-active { transition: opacity 0.25s; }
+.sheet-mask.sheet-leave-to { opacity: 0; }
+/* 面板：独立上滑/下滑；forwards 保持终态，避免动画结束后回弹原位闪现 */
+.sheet-enter-active .sheet { animation: sheet-up 0.25s ease forwards; }
+.sheet-leave-active .sheet { animation: sheet-down 0.25s ease forwards; }
 @keyframes sheet-up {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
