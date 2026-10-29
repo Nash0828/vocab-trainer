@@ -1386,7 +1386,7 @@ next()
       <!-- 筛选底部面板：出题来源 + 类型 -->
       <transition name="sheet">
         <div v-if="showFilterSheet" class="sheet-mask" @click.self="closeFilterSheet" @touchmove.prevent>
-          <div class="sheet" @touchmove.stop>
+          <div class="sheet">
             <div class="sheet-title">筛选</div>
             <div class="sheet-body">
               <div class="sheet-group">
@@ -1539,7 +1539,7 @@ next()
 
     <!-- 今日记录弹窗 -->
     <div v-if="showRecordsModal" class="modal-mask" @click.self="closeRecords" @touchmove.prevent>
-      <div class="modal" @touchmove.stop>
+      <div class="modal">
         <div class="modal-head">
           <h3>今日背诵记录</h3>
           <button class="modal-close" @click="closeRecords">✕</button>
@@ -1555,7 +1555,7 @@ next()
             错误 ({{ todayStats.wrong }})
           </button>
         </div>
-        <div class="modal-body" @touchmove.stop>
+        <div class="modal-body">
           <p v-if="!modalRecords.length" class="empty-tip">
             今天还没有{{ modalTab === 'all' ? '背诵记录' : (modalTab === 'correct' ? '答对' : '答错') + '的单词记录' }}
           </p>
@@ -1582,7 +1582,7 @@ next()
 
     <!-- 词典查询弹窗 -->
     <div v-if="dictModal" class="dict-mask" @click.self="closeDict" @touchmove.prevent>
-      <div class="dict-modal" @touchmove.stop>
+      <div class="dict-modal">
         <div class="dict-head">
           <h3>{{ dictModal.word }}</h3>
           <button class="dict-close" @click="closeDict">✕</button>
@@ -1707,7 +1707,7 @@ next()
 
     <!-- 选择分组（微信风格底部弹层） -->
     <div v-if="showGroupPicker" class="picker-mask" @click.self="showGroupPicker = false" @touchmove.prevent>
-      <div class="picker-sheet" @touchmove.stop>
+      <div class="picker-sheet">
         <div class="picker-head">选择分组</div>
         <div class="picker-list">
           <button v-for="g in groupStats" :key="g.id" class="picker-item" @click="pickGroup(g)">
@@ -1722,7 +1722,7 @@ next()
 
     <!-- 分组设置弹框 -->
     <div v-if="showGroupModal" class="modal-mask" @click.self="closeGroupModal" @touchmove.prevent>
-      <div class="modal group-modal" @touchmove.stop>
+      <div class="modal group-modal">
         <div class="modal-head">
           <h3>分组设置</h3>
           <button class="modal-close" @click="closeGroupModal">✕</button>
@@ -1731,7 +1731,7 @@ next()
           <span :class="{ over: draftAssigned !== groupTotal }">已分配 {{ draftAssigned }} / 总词数 {{ groupTotal }}</span>
           <span v-if="draftAssigned !== groupTotal" class="group-tip-diff">还需 {{ groupTotal - draftAssigned }} 词才能保存</span>
         </div>
-        <div class="modal-body group-modal-body" @touchmove.stop>
+        <div class="modal-body group-modal-body">
           <div v-if="!draftGroups.length" class="empty-tip">还没有分组，点击下方「添加一组」开始</div>
           <div v-for="(g, i) in draftGroups" :key="i" class="group-card">
             <div class="g-inputs">
@@ -1977,6 +1977,7 @@ next()
   border-radius: 12px 12px 0 0;
   overflow: hidden;
   padding-bottom: env(safe-area-inset-bottom);
+  overscroll-behavior: contain;
   animation: pickerUp 0.2s ease-out;
 }
 
@@ -2263,6 +2264,7 @@ next()
   background: #f7f7f7;
   border-radius: 12px 12px 0 0;
   padding-bottom: env(safe-area-inset-bottom);
+  overscroll-behavior: contain;
   touch-action: pan-y;
 }
 .sheet-title {
