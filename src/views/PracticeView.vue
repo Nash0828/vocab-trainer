@@ -158,6 +158,31 @@ function clearTypeFilter() {
   next()
 }
 
+// ---- 弹层滚动：内部可滚动容器允许滚动，滚到边缘/非滚动区才阻止（防穿透且不锁内部滚动） ----
+let layerTouchY = null
+function onLayerTouchStart(e) {
+  layerTouchY = e.touches && e.touches[0] ? e.touches[0].clientY : null
+}
+function onLayerMaskTouchmove(e) {
+  const t = e.touches && e.touches[0]
+  if (!t) return
+  const y = t.clientY
+  const delta = layerTouchY === null ? 0 : y - layerTouchY
+  layerTouchY = y
+  const el = e.target
+  const scroller = el && el.closest ? el.closest('.dict-body, .modal-body, .sheet-body') : null
+  if (scroller) {
+    const st = scroller.scrollTop
+    const sh = scroller.scrollHeight
+    const ch = scroller.clientHeight
+    const atTop = st <= 0
+    const atBottom = st + ch >= sh - 1
+    // 内部还有滚动余量 → 放行（不 preventDefault，保持内部滚动）
+    if ((delta > 0 && !atTop) || (delta < 0 && !atBottom)) return
+  }
+  e.preventDefault()
+}
+
 const current = ref(null)
 // 中文为短语/句子时自适应缩小字号
 const quizWordClass = computed(() => {
@@ -1398,7 +1423,7 @@ next()
     <template v-else>
       <!-- 筛选底部面板：出题来源 + 类型 -->
       <transition name="sheet">
-        <div v-if="showFilterSheet" class="sheet-mask" @click.self="closeFilterSheet" @touchmove.prevent>
+        <div v-if="showFilterSheet" class="sheet-mask" @click.self="closeFilterSheet" @touchstart="onLayerTouchStart" @touchmove="onLayerMaskTouchmove">
           <div class="sheet">
             <div class="sheet-title">筛选</div>
             <div class="sheet-body">
@@ -1551,7 +1576,7 @@ next()
   </div>
 
     <!-- 今日记录弹窗 -->
-    <div v-if="showRecordsModal" class="modal-mask" @click.self="closeRecords" @touchmove.prevent>
+    <div v-if="showRecordsModal" class="modal-mask" @click.self="closeRecords" @touchstart="onLayerTouchStart" @touchmove="onLayerMaskTouchmove">
       <div class="modal">
         <div class="modal-head">
           <h3>今日背诵记录</h3>
@@ -1594,7 +1619,7 @@ next()
     </div>
 
     <!-- 词典查询弹窗 -->
-    <div v-if="dictModal" class="dict-mask" @click.self="closeDict" @touchmove.prevent>
+    <div v-if="dictModal" class="dict-mask" @click.self="closeDict" @touchstart="onLayerTouchStart" @touchmove="onLayerMaskTouchmove">
       <div class="dict-modal">
         <div class="dict-head">
           <h3>{{ dictModal.word }}</h3>
@@ -1719,7 +1744,7 @@ next()
         </div>
 
     <!-- 选择分组（微信风格底部弹层） -->
-    <div v-if="showGroupPicker" class="picker-mask" @click.self="showGroupPicker = false" @touchmove.prevent>
+    <div v-if="showGroupPicker" class="picker-mask" @click.self="showGroupPicker = false" @touchstart="onLayerTouchStart" @touchmove="onLayerMaskTouchmove">
       <div class="picker-sheet">
         <div class="picker-head">选择分组</div>
         <div class="picker-list">
@@ -1734,7 +1759,7 @@ next()
     </div>
 
     <!-- 分组设置弹框 -->
-    <div v-if="showGroupModal" class="modal-mask" @click.self="closeGroupModal" @touchmove.prevent>
+    <div v-if="showGroupModal" class="modal-mask" @click.self="closeGroupModal" @touchstart="onLayerTouchStart" @touchmove="onLayerMaskTouchmove">
       <div class="modal group-modal">
         <div class="modal-head">
           <h3>分组设置</h3>

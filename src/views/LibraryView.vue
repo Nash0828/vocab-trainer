@@ -385,6 +385,31 @@ function onDictTextClick(e) {
   if (w) openWordBubble(w, el)
 }
 
+// ---- 弹层滚动：内部可滚动容器允许滚动，滚到边缘/非滚动区才阻止（防穿透且不锁内部滚动） ----
+let layerTouchY = null
+function onLayerTouchStart(e) {
+  layerTouchY = e.touches && e.touches[0] ? e.touches[0].clientY : null
+}
+function onLayerMaskTouchmove(e) {
+  const t = e.touches && e.touches[0]
+  if (!t) return
+  const y = t.clientY
+  const delta = layerTouchY === null ? 0 : y - layerTouchY
+  layerTouchY = y
+  const el = e.target
+  const scroller = el && el.closest ? el.closest('.dict-body, .modal-body, .sheet-body') : null
+  if (scroller) {
+    const st = scroller.scrollTop
+    const sh = scroller.scrollHeight
+    const ch = scroller.clientHeight
+    const atTop = st <= 0
+    const atBottom = st + ch >= sh - 1
+    // 内部还有滚动余量 → 放行（不 preventDefault，保持内部滚动）
+    if ((delta > 0 && !atTop) || (delta < 0 && !atBottom)) return
+  }
+  e.preventDefault()
+}
+
 // 单词气泡查询（微信风格小卡片，定位在单词上方 10px，带指向箭头）
 const wordBubble = ref(null)
 const wbEl = ref(null)
@@ -941,7 +966,7 @@ function formatTime(ts) {
 
     <!-- 筛选底部面板 -->
     <transition name="sheet">
-      <div v-if="showFilterSheet" class="sheet-mask" @click.self="closeFilterSheet" @touchmove.prevent>
+      <div v-if="showFilterSheet" class="sheet-mask" @click.self="closeFilterSheet" @touchstart="onLayerTouchStart" @touchmove="onLayerMaskTouchmove">
         <div class="sheet">
           <div class="sheet-title">筛选</div>
           <div class="sheet-body">
@@ -1184,7 +1209,7 @@ function formatTime(ts) {
     </div>
 
     <!-- 词典查询弹窗 -->
-    <div v-if="dictModal" class="dict-mask" @click.self="closeDict" @touchmove.prevent>
+    <div v-if="dictModal" class="dict-mask" @click.self="closeDict" @touchstart="onLayerTouchStart" @touchmove="onLayerMaskTouchmove">
       <div class="dict-modal">
         <div class="dict-head">
           <h3>{{ dictModal.word }}</h3>
