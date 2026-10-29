@@ -942,7 +942,7 @@ function formatTime(ts) {
     <!-- 筛选底部面板 -->
     <transition name="sheet">
       <div v-if="showFilterSheet" class="sheet-mask" @click.self="closeFilterSheet" @touchmove.prevent>
-        <div class="sheet" @touchmove.stop>
+        <div class="sheet">
           <div class="sheet-title">筛选</div>
           <div class="sheet-body">
             <div class="sheet-group">
@@ -1185,7 +1185,7 @@ function formatTime(ts) {
 
     <!-- 词典查询弹窗 -->
     <div v-if="dictModal" class="dict-mask" @click.self="closeDict" @touchmove.prevent>
-      <div class="dict-modal" @touchmove.stop>
+      <div class="dict-modal">
         <div class="dict-head">
           <h3>{{ dictModal.word }}</h3>
           <button class="dict-close" @click="closeDict">✕</button>
@@ -1767,6 +1767,7 @@ function formatTime(ts) {
   border-radius: 12px 12px 0 0;
   padding-bottom: env(safe-area-inset-bottom);
   touch-action: pan-y;
+  overscroll-behavior: contain;
 }
 .sheet-title {
   text-align: center;
@@ -1782,6 +1783,7 @@ function formatTime(ts) {
   max-height: 60vh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   overscroll-behavior: contain;
 }
 .sheet-group {
