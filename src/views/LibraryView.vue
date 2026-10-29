@@ -11,11 +11,13 @@ const route = useRoute()
 // 跳转背诵页并直接背诵该词
 function goPractice(word) {
   if (!word) return
-  // 记录来源词句：从详情弹框跳转背诵，返回词句库时自动重新打开该词句详情
+  // 记录来源词句+滚动位置：从详情弹框跳转背诵，返回词句库时自动恢复该词句详情与列表滚动位置
   try {
-    const src = dictModal.value ? { word: dictModal.value.word } : null
+    const src = dictModal.value ? { word: dictModal.value.word, scrollY: window.scrollY || 0 } : null
     if (src) sessionStorage.setItem('vt_back_detail', JSON.stringify(src))
   } catch (e) { /* ignore */ }
+  // 跳转前关闭详情弹框并解除 body 滚动锁：否则答题页会继承"锁定滚动"状态无法滚动
+  if (dictModal.value) closeDict()
   router.push({ path: '/practice', query: { word } })
 }
 const { words, updateWord, removeWord, checkDuplicate, resetCount, isMastered, settings } =
@@ -127,7 +129,11 @@ onActivated(() => {
     if (raw) {
       sessionStorage.removeItem('vt_back_detail')
       const src = JSON.parse(raw)
-      if (src && src.word && (!dictModal.value || dictModal.value.word !== src.word)) lookupWord(src.word)
+      if (src && src.word && (!dictModal.value || dictModal.value.word !== src.word)) {
+        // 先恢复跳转前的列表滚动位置（刷新场景 scrollY 已归零，用记录值补回），再打开详情
+        if (typeof src.scrollY === 'number' && src.scrollY > 0) window.scrollTo(0, src.scrollY)
+        lookupWord(src.word)
+      }
     }
   } catch (e) { /* ignore */ }
 })
