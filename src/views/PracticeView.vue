@@ -351,31 +351,25 @@ function next() {
     result.value = null
     revealed.value = false
     isRedo.value = false
-    // iOS WebKit：KeepAlive 恢复组件后立即聚焦会弹键盘 → 布局崩溃灰白。
-    // 延迟到渲染稳定后再聚焦，避免键盘弹出打乱刚恢复的布局
-    setTimeout(() => focusInput(true), 350)
+    // 跳转背诵不自动弹键盘：用户先看题，点击输入框或直接打字再聚焦（避免键盘弹出遮挡题目/打断布局）
     // 指定词跳转场景：出题后滚动到顶部看到题目（避免保留词句库/答题页旧滚动位置造成"空白"假象）
     requestAnimationFrame(() => {
       try { window.scrollTo(0, 0) } catch (e) {}
     })
-    // 渲染层兜底（iOS 灰白）：出题后若答题卡片不可见/高度异常，先强制重绘；
-    // 仍不可见则自动重载恢复（WebKit 渲染 bug 的最终保险）
+    // 渲染层兜底（iOS WebKit 偶发灰白）：出题后若答题卡片不可见/高度异常，先强制重绘；
+    // 仍不可见则自动重载恢复
     const ensureRenderVisible = () => {
       try {
         const qc = document.querySelector('.quiz-card')
         if (qc) {
           const r = qc.getBoundingClientRect()
-          diag('render-check', 'qc=1|top=' + Math.round(r.top) + '|h=' + Math.round(r.height) + '|vh=' + window.innerHeight + '|scrollY=' + Math.round(window.scrollY))
           if (r.height <= 0 || r.top >= window.innerHeight || r.bottom <= 0) {
-            diag('render-fallback', 'reflow+reload')
             qc.style.transform = 'translateZ(0)'
             void qc.offsetHeight
             qc.style.transform = ''
             window.dispatchEvent(new Event('resize'))
             setTimeout(() => { location.reload() }, 400)
           }
-        } else {
-          diag('render-check', 'qc=0')
         }
       } catch (e) { /* ignore */ }
     }
@@ -1197,17 +1191,6 @@ function goPractice(word) {
 }
 
 // 从路由 query 解析指定背诵词
-// 临时诊断埋点（定位线上 iOS 灰白用，确认后移除）
-function diag(tag, extra) {
-  try {
-    const payload = JSON.stringify({ msg: tag + '|' + (extra || '') + '|w=' + words.value.length + '|c=' + (!!current.value), url: location.href.slice(0, 200), ua: navigator.userAgent.slice(0, 200) })
-    const x = new XMLHttpRequest()
-    x.open('POST', '/api/log-client-error', true)
-    x.setRequestHeader('Content-Type', 'application/json')
-    x.send(payload)
-  } catch (e) { /* ignore */ }
-}
-
 function setPendingFromQuery() {
   const q = route.query.word
   if (!q) return
@@ -1217,7 +1200,6 @@ function setPendingFromQuery() {
   keywordFilter.value = ''
   const w = words.value.find((x) => x.english.trim().toLowerCase() === String(q).trim().toLowerCase())
   if (w) pendingWord.value = w
-  diag('setPending', q + '|found=' + (!!w) + '|pw=' + (!!pendingWord.value))
 }
 
 // 全局键盘：Ctrl+P 朗读 / Ctrl+N 下一题 / Ctrl+A 显示答案 / Ctrl+Q 查词详情；答错/重做答对后回车进入下一题
@@ -1286,14 +1268,12 @@ todayInterval = setInterval(() => {
 
 onMounted(() => {
   document.addEventListener('keydown', onGlobalKeydown)
-  diag('onMounted', 'pw=' + (!!pendingWord.value))
   setPendingFromQuery()
   if (pendingWord.value) next()
   loadGroups()
 })
 
 onActivated(() => {
-  diag('onActivated', 'q=' + (route.query.word || '') + '|pw=' + (!!pendingWord.value) + '|cur=' + (!!current.value))
   // KeepAlive 切回：静默刷新分组与今日统计（不打断当前题目，保留答题现场）
   loadGroups()
   refreshToday()
@@ -1323,7 +1303,6 @@ onActivated(() => {
 watch(
   () => route.query.word,
   () => {
-    diag('watch-word', 'q=' + (route.query.word || '') + '|pw=' + (!!pendingWord.value))
     setPendingFromQuery()
     next()
   }

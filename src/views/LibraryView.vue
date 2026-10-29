@@ -11,6 +11,11 @@ const route = useRoute()
 // 跳转背诵页并直接背诵该词
 function goPractice(word) {
   if (!word) return
+  // 记录来源词句：从详情弹框跳转背诵，返回词句库时自动重新打开该词句详情
+  try {
+    const src = dictModal.value ? { word: dictModal.value.word } : null
+    if (src) sessionStorage.setItem('vt_back_detail', JSON.stringify(src))
+  } catch (e) { /* ignore */ }
   router.push({ path: '/practice', query: { word } })
 }
 const { words, updateWord, removeWord, checkDuplicate, resetCount, isMastered, settings } =
@@ -116,6 +121,15 @@ onActivated(() => {
   window.scrollTo(0, savedScrollTop)
   // 从答题页"更正"跳来：自动筛选当前词句并直接进入编辑态（处理一次后清参，避免重复触发）
   handleEditEntry()
+  // 从背诵页返回：自动重新打开刚才背诵的词句详情（覆盖页面刷新丢失弹框状态的场景；详情还开着则不重复打开）
+  try {
+    const raw = sessionStorage.getItem('vt_back_detail')
+    if (raw) {
+      sessionStorage.removeItem('vt_back_detail')
+      const src = JSON.parse(raw)
+      if (src && src.word && (!dictModal.value || dictModal.value.word !== src.word)) lookupWord(src.word)
+    }
+  } catch (e) { /* ignore */ }
 })
 
 // 记录词句库页面滚动位置（KeepAlive 场景切回时恢复现场）
