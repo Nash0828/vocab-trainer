@@ -1400,6 +1400,21 @@ app.get('/api/admin/feedbacks', (req, res) => {
   res.json({ feedbacks: list })
 })
 
+// ============ 客户端错误上报（线上排障用，写入日志文件） ============
+app.post('/api/log-client-error', (req, res) => {
+  try {
+    const b = req.body || {}
+    const line = JSON.stringify({
+      t: new Date().toISOString(),
+      msg: String(b.msg || '').slice(0, 500),
+      url: String(b.url || '').slice(0, 300),
+      ua: String(b.ua || '').slice(0, 200),
+    })
+    fs.appendFileSync(join(__dirname, '..', 'client-errors.log'), line + '\n')
+  } catch (e) { /* 日志写入失败不影响主流程 */ }
+  res.json({ ok: true })
+})
+
 // ============ 静态文件 ============
 if (fs.existsSync(DIST_DIR)) {
   // index.html 不缓存，确保每次部署后用户刷新即拿到最新版本

@@ -8,6 +8,20 @@ import { loadState, useWords } from './composables/useWords.js'
 import { initRecords } from './composables/useHistory.js'
 import { initWrongbook } from './composables/useWrongBook.js'
 
+/** 客户端错误上报：iPhone/微信等 WebKit 环境无法本地看 console 时，把运行时错误发到服务器日志 */
+function reportClientError(err) {
+  try {
+    const msg = String((err && err.message) || err).slice(0, 500)
+    const payload = JSON.stringify({ msg, url: location.href.slice(0, 300), ua: navigator.userAgent.slice(0, 200), at: Date.now() })
+    const x = new XMLHttpRequest()
+    x.open('POST', '/api/log-client-error', true)
+    x.setRequestHeader('Content-Type', 'application/json')
+    x.send(payload)
+  } catch (e) { /* 上报失败忽略 */ }
+}
+window.addEventListener('error', (e) => reportClientError(e.error || e.message))
+window.addEventListener('unhandledrejection', (e) => reportClientError(e.reason))
+
 /** 全量加载：词库 / 背诵记录 / 错题本 */
 async function loadAll() {
   const state = await api.getState()
@@ -30,6 +44,7 @@ async function bootstrap() {
     }
   }
   const app = createApp(App)
+  app.config.errorHandler = (err) => reportClientError(err)
 
   // 移动端禁用 Vue DevTools 集成，减少不必要开销
   const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
