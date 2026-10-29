@@ -52,7 +52,7 @@ function prependExampleSentences(data, wordText) {
     if (!Array.isArray(data.phrases)) data.phrases = []
     for (let i = phrases.length - 1; i >= 0; i--) {
       if (!data.phrases.some((p) => p.en === phrases[i].english)) {
-        data.phrases.unshift({ en: phrases[i].english, zh: phrases[i].chinese })
+        data.phrases.unshift({ en: phrases[i].english, zh: phrases[i].chinese, manual: true })
       }
     }
   }
@@ -66,7 +66,7 @@ function prependExampleSentences(data, wordText) {
     if (!Array.isArray(data.sentences)) data.sentences = []
     for (let i = sentences.length - 1; i >= 0; i--) {
       if (!data.sentences.some((s) => s.en === sentences[i].english)) {
-        data.sentences.unshift({ en: sentences[i].english, zh: sentences[i].chinese })
+        data.sentences.unshift({ en: sentences[i].english, zh: sentences[i].chinese, manual: true })
       }
     }
   }
@@ -1284,6 +1284,7 @@ function formatTime(ts) {
                 <li v-for="(s, i) in dictModal.data.phrases" :key="'ph' + i" class="sent-item">
                   <div class="sent-line">
                     <p class="sent-en" v-html="wordify(s.en, dictModal.word, s.aiHl)"></p>
+                    <button class="sent-study" :class="{ 'is-playing': playingKey === 'ph' + i }" @click="goPractice(s.en)" title="背诵"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></button>
                     <button class="sent-speak" :class="{ 'is-playing': playingKey === 'ph' + i }" @click="speakSentence(s.en, 'ph' + i)" title="朗读短语"><span class="spk-static">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span><span class="spk-eq"><i></i><i></i><i></i></span>
                     </button>
@@ -1303,6 +1304,7 @@ function formatTime(ts) {
                 <li v-for="(s, i) in dictModal.data.sentences" :key="i" class="sent-item">
                   <div class="sent-line">
                     <p class="sent-en" v-html="wordify(s.en, dictModal.word, s.aiHl)"></p>
+                    <button v-if="s.manual" class="sent-study" @click="goPractice(s.en)" title="背诵"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></button>
                     <button class="sent-speak" :class="{ 'is-playing': playingKey === 's' + i }" @click="speakSentence(s.en, 's' + i)" title="朗读例句"><span class="spk-static">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span><span class="spk-eq"><i></i><i></i><i></i></span>
                     </button>
@@ -1311,12 +1313,6 @@ function formatTime(ts) {
                 </li>
               </ul>
             </div>
-            <!-- 有手动录入的相关短语或例句时：跳转答题页背诵当前词句 -->
-            <button
-              v-if="(dictModal.data.phrases && dictModal.data.phrases.length) || (dictModal.data.sentences && dictModal.data.sentences.length)"
-              class="dict-practice-btn"
-              @click="goPractice(dictModal.word)"
-            >去背诵</button>
           </div>
         </div>
 
@@ -2234,22 +2230,6 @@ function formatTime(ts) {
   word-break: break-all;
   white-space: pre-wrap;
 }
-/* 详情弹框：去背诵按钮（微信风格绿色主按钮，与其他页面主按钮一致） */
-.dict-practice-btn {
-  display: block;
-  width: 100%;
-  border: none;
-  background: var(--primary);
-  color: #fff;
-  border-radius: 8px;
-  padding: 11px 0;
-  font-size: 15px;
-  margin-top: 14px;
-  cursor: pointer;
-}
-.dict-practice-btn:active {
-  opacity: 0.85;
-}
 
 .trans-block {
   background: #f7f7f7;
@@ -2425,6 +2405,21 @@ function formatTime(ts) {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+}
+/* 详情弹框：例句/短语行内背诵按钮（微信风格绿色圆环图标，与列表页背诵按钮一致） */
+.sent-study {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  padding: 2px;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.sent-study:active {
+  opacity: 0.7;
 }
 
 .dict-exam {
