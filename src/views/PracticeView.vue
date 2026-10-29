@@ -586,19 +586,29 @@ function resumeIfPaused() {
 
 // 词句发音：先完整下载音频（fetch→blob）再本地播放，避免流式播放中途断、以及资源未就绪导致的误兜底二次请求；失败最多重试一次
 // type：word/phrase/sentence，后端据此决定兜底（单词/短语→有道，句子→百度）
+// 连点保护：playSeq 为"播放代次"，新点击立即中止上一轮下载并递增代次；
+// 旧请求的下载完成后发现代次已过期则直接丢弃（不创建 Audio、不播放），保证同一时刻只有一次发音
+let playSeq = 0
+let playAbort = null
 function playTts(text, onEnded, onFail, type = 'word') {
   // _ 时间戳防缓存：历史上句子响应曾被浏览器缓存（max-age=86400），URL 加随机参数强制绕过浏览器/任何缓存层，保证每次实时生成
   const url = `/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(settings.value.sentenceVoice)}&type=${encodeURIComponent(type)}&_=${Date.now()}`
+  const seq = ++playSeq
+  if (playAbort) playAbort.abort()
+  const ac = new AbortController()
+  playAbort = ac
   stopAudio()
   let tries = 0
   const attempt = () => {
+    if (seq !== playSeq) return // 已被更新的点击取代，直接放弃
     tries++
-    fetch(url)
+    fetch(url, { signal: ac.signal })
       .then((r) => {
         if (!r.ok) throw new Error('http ' + r.status)
         return r.blob()
       })
       .then((blob) => {
+        if (seq !== playSeq) return // 过期请求：不播放
         if (!blob || blob.size < 500) throw new Error('empty')
         const au = new Audio(URL.createObjectURL(blob))
         currentAudio = au
@@ -607,7 +617,8 @@ function playTts(text, onEnded, onFail, type = 'word') {
         return au.play()
       })
       .catch((e) => {
-        if (e && e.name === 'AbortError') return // 用户/系统主动停止，不重试
+        if (e && e.name === 'AbortError') return // 用户/系统主动停止（含被新点击取代），不重试
+        if (seq !== playSeq) return // 过期请求的失败，不兜底
         if (tries < 2) setTimeout(attempt, 600)
         else onFail && onFail()
       })
