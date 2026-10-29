@@ -338,7 +338,8 @@ function focusInput(force = false) {
 }
 
 function next() {
-  if (answeredLock.value) return // 等发音播报完成，禁止手动换题
+  // 普通换题受语音锁限制；指定词跳转（pendingWord）优先放行——用户明确要从详情弹框背诵该词，必须出题
+  if (answeredLock.value && !pendingWord.value) return
   clearAutoTimer()
   answeredLock.value = false
   // 优先背诵指定词（从词句库/今日记录跳转）
@@ -1258,6 +1259,14 @@ onActivated(() => {
   // KeepAlive 切回：静默刷新分组与今日统计（不打断当前题目，保留答题现场）
   loadGroups()
   refreshToday()
+  // 指定词跳转场景（词句库/详情弹框点背诵）：强制重设并出指定词，覆盖缓存残留/筛选状态/旧题占用等一切情况
+  if (route.query.word) {
+    setPendingFromQuery()
+    if (pendingWord.value) {
+      next()
+      return
+    }
+  }
   // 从词句库更正返回：若当前词句已被修改，同步最新内容并清空作答重新答
   if (current.value) {
     const fresh = words.value.find((w) => Number(w.id) === Number(current.value.id))
@@ -1281,16 +1290,17 @@ watch(
   }
 )
 
-// 词库异步加载完成兜底：首次进入背诵页时若词库尚未加载完、指定词未匹配成功，
-// 加载完成后自动补出题（避免答题区空白）
+// 词库异步加载完成兜底：词库加载完成后若路由带指定词（跳转背诵场景），
+// 无论当前是否有题都强制重设并出指定词；否则仅当前无题时补出题（避免答题区空白）
 watch(words, () => {
-  if (current.value) return
-  setPendingFromQuery()
-  if (pendingWord.value) {
-    next()
-    return
+  if (route.query.word) {
+    setPendingFromQuery()
+    if (pendingWord.value) {
+      next()
+      return
+    }
   }
-  if (available.value.length) next()
+  if (!current.value && available.value.length) next()
 })
 
 onBeforeUnmount(() => {
