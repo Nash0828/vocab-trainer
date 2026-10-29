@@ -921,24 +921,24 @@ function formatTime(ts) {
       <p v-if="tip" class="tip" :class="tip.kind">{{ tip.text }}</p>
     </transition>
 
-    <!-- 词库统计：全部 / 单词 / 短语 / 句子 -->
+    <!-- 词库统计：全部 / 单词 / 短语 / 句子（点击快捷按类型筛选，与筛选弹框联动） -->
     <div v-if="totalCount" class="lib-stats">
-      <div class="stat-item">
+      <button type="button" class="stat-item" :class="{ active: typeFilter === 'all' }" @click="typeFilter = 'all'">
         <span class="stat-num">{{ typeStats.all }}</span>
         <span class="stat-label">全部</span>
-      </div>
-      <div class="stat-item">
+      </button>
+      <button type="button" class="stat-item" :class="{ active: typeFilter === 'word' }" @click="typeFilter = 'word'">
         <span class="stat-num">{{ typeStats.word }}</span>
         <span class="stat-label">单词</span>
-      </div>
-      <div class="stat-item">
+      </button>
+      <button type="button" class="stat-item" :class="{ active: typeFilter === 'phrase' }" @click="typeFilter = 'phrase'">
         <span class="stat-num">{{ typeStats.phrase }}</span>
         <span class="stat-label">短语</span>
-      </div>
-      <div class="stat-item">
+      </button>
+      <button type="button" class="stat-item" :class="{ active: typeFilter === 'sentence' }" @click="typeFilter = 'sentence'">
         <span class="stat-num">{{ typeStats.sentence }}</span>
         <span class="stat-label">句子</span>
-      </div>
+      </button>
     </div>
 
     <!-- 筛选工具栏 -->
@@ -1721,6 +1721,17 @@ function formatTime(ts) {
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+.stat-item.active .stat-num {
+  color: var(--primary);
+  font-weight: 600;
+}
+.stat-item.active .stat-label {
+  color: var(--primary);
 }
 
 .stat-item + .stat-item {
