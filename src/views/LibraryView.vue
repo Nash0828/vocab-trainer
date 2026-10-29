@@ -684,6 +684,13 @@ function resetFilters() {
   typeFilter.value = 'all'
 }
 
+// 顶部类型数字快捷筛选：重置所有筛选条件（搜索/状态/类型），仅保留点击的类型
+function quickFilterByType(t) {
+  keyword.value = ''
+  statusFilter.value = 'all'
+  typeFilter.value = t
+}
+
 // 清空搜索关键词：保持输入框焦点，避免收起键盘
 function clearSearch() {
   keyword.value = ''
@@ -921,21 +928,21 @@ function formatTime(ts) {
       <p v-if="tip" class="tip" :class="tip.kind">{{ tip.text }}</p>
     </transition>
 
-    <!-- 词库统计：全部 / 单词 / 短语 / 句子（点击快捷按类型筛选，与筛选弹框联动） -->
+    <!-- 词库统计：全部 / 单词 / 短语 / 句子（点击快捷按类型筛选：重置其他筛选，仅保留当前类型；与筛选弹框联动） -->
     <div v-if="totalCount" class="lib-stats">
-      <button type="button" class="stat-item" :class="{ active: typeFilter === 'all' }" @click="typeFilter = 'all'">
+      <button type="button" class="stat-item" @click="quickFilterByType('all')">
         <span class="stat-num">{{ typeStats.all }}</span>
         <span class="stat-label">全部</span>
       </button>
-      <button type="button" class="stat-item" :class="{ active: typeFilter === 'word' }" @click="typeFilter = 'word'">
+      <button type="button" class="stat-item" @click="quickFilterByType('word')">
         <span class="stat-num">{{ typeStats.word }}</span>
         <span class="stat-label">单词</span>
       </button>
-      <button type="button" class="stat-item" :class="{ active: typeFilter === 'phrase' }" @click="typeFilter = 'phrase'">
+      <button type="button" class="stat-item" @click="quickFilterByType('phrase')">
         <span class="stat-num">{{ typeStats.phrase }}</span>
         <span class="stat-label">短语</span>
       </button>
-      <button type="button" class="stat-item" :class="{ active: typeFilter === 'sentence' }" @click="typeFilter = 'sentence'">
+      <button type="button" class="stat-item" @click="quickFilterByType('sentence')">
         <span class="stat-num">{{ typeStats.sentence }}</span>
         <span class="stat-label">句子</span>
       </button>
@@ -1725,13 +1732,6 @@ function formatTime(ts) {
   background: none;
   padding: 0;
   cursor: pointer;
-}
-.stat-item.active .stat-num {
-  color: var(--primary);
-  font-weight: 600;
-}
-.stat-item.active .stat-label {
-  color: var(--primary);
 }
 
 .stat-item + .stat-item {
