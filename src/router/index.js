@@ -91,4 +91,21 @@ router.afterEach((to) => {
   document.title = to.meta?.title ? `${to.meta.title} - ${base}` : base
 })
 
+// 分包懒加载失败自动恢复：部署/重启等瞬态窗口导致 JS 分包加载失败时，自动重载页面恢复
+//（避免停留在灰色空白页；网络恢复后重载即正常）
+let _retryingChunk = false
+router.onError((err) => {
+  const msg = (err && err.message) || ''
+  const isChunkLoad =
+    /Loading chunk|dynamically imported module|Importing a module script failed|Failed to fetch/.test(msg)
+  if (isChunkLoad && !_retryingChunk) {
+    _retryingChunk = true
+    setTimeout(() => {
+      window.location.reload()
+    }, 300)
+    return
+  }
+  console.error('[router]', err)
+})
+
 export default router
