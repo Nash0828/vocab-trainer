@@ -957,10 +957,14 @@ const selectedGroup = computed(() => groups.value.find((g) => g.id === selectedG
 // 类型过滤后的组统计：组选择器与选择弹层的"已背熟 x/xxx"随当前筛选条件实时变化
 const groupStats = computed(() => {
   const matchType = (w) => typeFilter.value === 'all' || (w.type || 'word') === typeFilter.value
+  // 仅错题本来源：只统计组内错题本中的词句
+  const wrongIds =
+    sourceMode.value === 'wrong' ? new Set(wrongValid.value.map((w) => String(w.id))) : null
   return groups.value.map((g) => {
-    const list = words.value.filter(
+    let list = words.value.filter(
       (w) => String(w.groupId || '') === String(g.id) && matchType(w)
     )
+    if (wrongIds) list = list.filter((w) => wrongIds.has(String(w.id)))
     return { ...g, size: list.length, mastered: list.filter((w) => isMastered(w)).length }
   })
 })
