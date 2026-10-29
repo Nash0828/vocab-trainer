@@ -356,6 +356,12 @@ function next() {
     requestAnimationFrame(() => {
       try { window.scrollTo(0, 0) } catch (e) {}
     })
+    // 诊断：渲染下一帧后检查 quiz-card 是否真的出现在 DOM 且可见
+    requestAnimationFrame(() => {
+      const qc = document.querySelector('.quiz-card')
+      const r = qc ? qc.getBoundingClientRect() : null
+      diag('next-pending', 'cur=' + (!!current.value) + '|qc=' + (!!qc) + '|top=' + (r ? Math.round(r.top) : 'x') + '|h=' + (r ? Math.round(r.height) : 'x') + '|winH=' + window.innerHeight)
+    })
     return
   }
   if (!available.value.length) {
@@ -1173,6 +1179,17 @@ function goPractice(word) {
 }
 
 // 从路由 query 解析指定背诵词
+// 临时诊断埋点（定位线上 iOS 灰白用，确认后移除）
+function diag(tag, extra) {
+  try {
+    const payload = JSON.stringify({ tag, url: location.href.slice(0, 200), words: words.value.length, hasCurrent: !!current.value, curEn: current.value ? String(current.value.english).slice(0, 30) : '', extra: extra || '', at: Date.now() })
+    const x = new XMLHttpRequest()
+    x.open('POST', '/api/log-client-error', true)
+    x.setRequestHeader('Content-Type', 'application/json')
+    x.send(payload)
+  } catch (e) { /* ignore */ }
+}
+
 function setPendingFromQuery() {
   const q = route.query.word
   if (!q) return
@@ -1182,6 +1199,7 @@ function setPendingFromQuery() {
   keywordFilter.value = ''
   const w = words.value.find((x) => x.english.trim().toLowerCase() === String(q).trim().toLowerCase())
   if (w) pendingWord.value = w
+  diag('setPending', q + '|found=' + (!!w) + '|pw=' + (!!pendingWord.value))
 }
 
 // 全局键盘：Ctrl+P 朗读 / Ctrl+N 下一题 / Ctrl+A 显示答案 / Ctrl+Q 查词详情；答错/重做答对后回车进入下一题
@@ -1250,12 +1268,14 @@ todayInterval = setInterval(() => {
 
 onMounted(() => {
   document.addEventListener('keydown', onGlobalKeydown)
+  diag('onMounted', 'pw=' + (!!pendingWord.value))
   setPendingFromQuery()
   if (pendingWord.value) next()
   loadGroups()
 })
 
 onActivated(() => {
+  diag('onActivated', 'q=' + (route.query.word || '') + '|pw=' + (!!pendingWord.value) + '|cur=' + (!!current.value))
   // KeepAlive 切回：静默刷新分组与今日统计（不打断当前题目，保留答题现场）
   loadGroups()
   refreshToday()
@@ -1285,6 +1305,7 @@ onActivated(() => {
 watch(
   () => route.query.word,
   () => {
+    diag('watch-word', 'q=' + (route.query.word || '') + '|pw=' + (!!pendingWord.value))
     setPendingFromQuery()
     next()
   }
