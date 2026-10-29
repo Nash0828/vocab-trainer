@@ -132,6 +132,25 @@ function applyFilterSheet() {
   clearAutoTimer()
   next()
 }
+// 当前筛选条件下词句总数（含已背熟）：chips 行右侧"共 N 条"展示
+const filteredTotal = computed(() => {
+  if (practiceMode.value === 'group') {
+    if (!selectedGroupId.value) return 0
+    return groupStats.value.find((g) => g.id === selectedGroupId.value)?.size || 0
+  }
+  const matchType = (w) => typeFilter.value === 'all' || (w.type || 'word') === typeFilter.value
+  const matchKeyword = (w) =>
+    !keywordFilter.value ||
+    [w.english, w.chinese, w.remark || ''].some((f) =>
+      String(f || '').toLowerCase().includes(keywordFilter.value.toLowerCase())
+    )
+  let list = words.value.filter((w) => matchType(w) && matchKeyword(w))
+  if (sourceMode.value === 'wrong') {
+    const ids = new Set(wrongValid.value.map((w) => String(w.id)))
+    list = list.filter((w) => ids.has(String(w.id)))
+  }
+  return list.length
+})
 function clearTypeFilter() {
   typeFilter.value = 'all'
   lastIndex.value = -1
@@ -1285,6 +1304,7 @@ next()
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </span>
+      <span class="filter-total">共 {{ filteredTotal }} 条</span>
     </div>
 
     <!-- 分组模式：组下拉选框 + 分组设置 -->
@@ -1856,6 +1876,14 @@ next()
   flex-wrap: wrap;
   gap: 8px;
   margin: -4px 16px 10px;
+}
+
+.filter-total {
+  margin-left: auto;
+  align-self: center;
+  font-size: 12px;
+  color: #b2b2b2;
+  white-space: nowrap;
 }
 
 .filter-chip {
