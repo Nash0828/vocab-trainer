@@ -351,6 +351,10 @@ function next() {
     revealed.value = false
     isRedo.value = false
     focusInput(true) // 指定背诵场景强制聚焦
+    // 指定词跳转场景：出题后滚动到顶部看到题目（避免保留词句库/答题页旧滚动位置造成"空白"假象）
+    requestAnimationFrame(() => {
+      try { window.scrollTo(0, 0) } catch (e) {}
+    })
     return
   }
   if (!available.value.length) {
@@ -1276,6 +1280,18 @@ watch(
     next()
   }
 )
+
+// 词库异步加载完成兜底：首次进入背诵页时若词库尚未加载完、指定词未匹配成功，
+// 加载完成后自动补出题（避免答题区空白）
+watch(words, () => {
+  if (current.value) return
+  setPendingFromQuery()
+  if (pendingWord.value) {
+    next()
+    return
+  }
+  if (available.value.length) next()
+})
 
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onGlobalKeydown)
