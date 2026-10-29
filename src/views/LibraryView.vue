@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, watch, onMounted, onActivated, onBeforeUnmount, nextTick } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onActivated, onDeactivated, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useWords, refreshAll } from '../composables/useWords'
 import { api } from '../api/index.js'
@@ -11,9 +11,10 @@ const route = useRoute()
 // 跳转背诵页并直接背诵该词
 function goPractice(word) {
   if (!word) return
-  // 记录来源词句+滚动位置：从详情弹框跳转背诵，返回词句库时自动恢复该词句详情与列表滚动位置
+  // 记录来源词句+滚动位置：用 dictScrollY（打开弹框瞬间、body 锁定前的真实滚动位置，
+  // body 锁定后 window.scrollY 在 iOS 上不可靠）；返回词句库时恢复该词句详情与列表滚动位置
   try {
-    const src = dictModal.value ? { word: dictModal.value.word, scrollY: window.scrollY || 0 } : null
+    const src = dictModal.value ? { word: dictModal.value.word, scrollY: dictScrollY || 0 } : null
     if (src) sessionStorage.setItem('vt_back_detail', JSON.stringify(src))
   } catch (e) { /* ignore */ }
   // 跳转前关闭详情弹框并解除 body 滚动锁：否则答题页会继承"锁定滚动"状态无法滚动
@@ -119,6 +120,7 @@ onMounted(() => {
 })
 
 onActivated(() => {
+  libActive = true
   // KeepAlive 切回：恢复离开时的滚动位置（筛选/分页等状态随组件实例保留）
   window.scrollTo(0, savedScrollTop)
   // 从答题页"更正"跳来：自动筛选当前词句并直接进入编辑态（处理一次后清参，避免重复触发）
@@ -138,9 +140,16 @@ onActivated(() => {
   } catch (e) { /* ignore */ }
 })
 
-// 记录词句库页面滚动位置（KeepAlive 场景切回时恢复现场）
+onDeactivated(() => {
+  // KeepAlive 切走：停止记录滚动位置（避免其他页面滚动/出题 scrollTo 污染离开时的位置）
+  libActive = false
+})
+
+// 记录词句库页面滚动位置（KeepAlive 场景切回时恢复现场；仅在词句库自身激活时记录）
 let savedScrollTop = 0
+let libActive = true
 function onScroll() {
+  if (!libActive) return
   savedScrollTop = window.scrollY || document.documentElement.scrollTop || 0
 }
 
