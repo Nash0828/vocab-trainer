@@ -311,13 +311,14 @@ function isFlection(word, base) {
 }
 function highlightWord(word, sentence) {
   const esc = escapeHtml(sentence)
-  const w = String(word || '').trim().toLowerCase()
-  if (!w) return esc
+  // 短语拆词：dress up → [dress, up]，例句中任一词的变形都高亮
+  const bases = String(word || '').trim().toLowerCase().split(/[^a-z0-9']+/).filter(Boolean)
+  if (!bases.length) return esc
   try {
     // 不用 lookbehind（部分移动端浏览器不支持），前缀用捕获组保留
     const re = /([^a-zA-Z]|^)([A-Za-z]+(?:['’-][A-Za-z]+)*)(?![a-zA-Z])/gi
     return esc.replace(re, (m, prefix, wordPart) => {
-      const isHl = isFlection(wordPart.toLowerCase(), w)
+      const isHl = bases.some((b) => isFlection(wordPart.toLowerCase(), b))
       return `${prefix}${isHl ? `<span class="sent-hl">${wordPart}</span>` : wordPart}`
     })
   } catch (e) {
@@ -325,40 +326,52 @@ function highlightWord(word, sentence) {
   }
 }
 
-// 把英文单词拆成可点击的词链接；hlWord 匹配的词额外高亮
+// 把英文单词拆成可点击的词链接；hlWord 匹配的词额外高亮（短语按词根逐词匹配）
 function wordify(text, hlWord, extraHl) {
   const esc = escapeHtml(text)
-  const w = String(hlWord || '').trim().toLowerCase()
-  const extra = new Set((Array.isArray(extraHl) ? extraHl : []).map((x) => String(x).toLowerCase()))
+  const bases = String(hlWord || '').trim().toLowerCase().split(/[^a-z0-9']+/).filter(Boolean)
+  // extraHl 可能是 AI 返回的变形词（含整体短语），统一拆成 token 集合
+  const extra = new Set()
+  ;(Array.isArray(extraHl) ? extraHl : []).forEach((x) => {
+    String(x).toLowerCase().split(/[^a-z0-9']+/).forEach((t) => { if (t) extra.add(t) })
+  })
   try {
     return esc.replace(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g, (m) => {
       const low = m.toLowerCase()
-      const isHl = w && (isFlection(low, w) || extra.has(low))
+      const isHl = bases.some((b) => isFlection(low, b)) || extra.has(low)
       const cls = isHl ? 'word-link sent-hl' : 'word-link'
       return `<span class="${cls}" data-word="${m}">${m}</span>`
     })
   } catch (e) { return esc }
 }
 
-// AI 词形补全：本地规则未命中且例句含目标词根时才调 AI 判断变形词（内存缓存，失败静默不高亮）
+// AI 词形补全：本地规则未命中且例句含目标词根时才调 AI 判断变形词（内存缓存，失败静默不高亮）；短语按词根逐个判断
 const flectionCache = new Map()
 function fillAiFlections(data, word) {
   if (!data || !Array.isArray(data.sentences) || !data.sentences.length || !word) return
-  const w = String(word).trim().toLowerCase()
+  const bases = String(word).trim().toLowerCase().split(/[^a-z0-9']+/).filter(Boolean)
+  if (!bases.length) return
   for (const s of data.sentences) {
     if (s.aiHlDone || s.aiHl) continue
     s.aiHlDone = true
     const toks = String(s.en || '').match(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g) || []
-    // 本地规则已命中 → 不需要 AI
-    if (toks.some((m) => isFlection(m.toLowerCase(), w))) continue
-    const key = w + '|' + s.en
+    // 本地规则已命中（任一词根） → 不需要 AI
+    if (toks.some((m) => bases.some((b) => isFlection(m.toLowerCase(), b)))) continue
+    const key = String(word).trim().toLowerCase() + '|' + s.en
     const cached = flectionCache.get(key)
     if (cached) { s.aiHl = cached; continue }
-    api.matchFlection(w, s.en)
+    api.matchFlection(String(word).trim(), s.en)
       .then((j) => {
         const matched = Array.isArray(j && j.matched) ? j.matched : []
-        flectionCache.set(key, matched)
-        s.aiHl = matched
+        // 拆词存入（兼容 AI 返回 "dresses up" 等整体短语）
+        const flat = []
+        matched.forEach((x) => {
+          String(x).toLowerCase().split(/[^a-z0-9']+/).forEach((t) => {
+            if (t && !flat.includes(t)) flat.push(t)
+          })
+        })
+        flectionCache.set(key, flat)
+        s.aiHl = flat
       })
       .catch(() => {})
   }
