@@ -1273,7 +1273,7 @@ next()
         </div>
       </div>
       <button class="stats-card pending-card" @click="router.push('/library')">
-        <div class="stats-title">待练</div>
+        <div class="stats-title">总待练</div>
         <div class="pending-num">{{ pendingWords }}</div>
         <div class="pending-desc">未背熟词句</div>
       </button>
