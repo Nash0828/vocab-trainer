@@ -135,8 +135,8 @@ function applyFilterSheet() {
 // 当前筛选条件下词句总数（含已背熟）：chips 行右侧"共 N 条"展示
 const filteredTotal = computed(() => {
   if (practiceMode.value === 'group') {
-    if (!selectedGroupId.value) return 0
-    return groupStats.value.find((g) => g.id === selectedGroupId.value)?.size || 0
+    // 分组模式：所有组在当前筛选下的词句总数之和
+    return groupStats.value.reduce((sum, g) => sum + (g.size || 0), 0)
   }
   const matchType = (w) => typeFilter.value === 'all' || (w.type || 'word') === typeFilter.value
   const matchKeyword = (w) =>
