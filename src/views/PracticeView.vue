@@ -65,7 +65,7 @@ const draftTypeFilter = ref('all')
 const keywordFilter = ref('') // 关键字：在中文/英文/备注中过滤
 const draftKeywordFilter = ref('')
 const sourceOptions = [
-  { value: 'all', label: '全部未背熟' },
+  { value: 'all', label: '全部' },
   { value: 'wrong', label: '仅错题本' },
 ]
 // 筛选按钮摘要：如 "全部未背熟" / "仅错题本 · 短语"
