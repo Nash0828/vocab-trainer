@@ -954,6 +954,19 @@ function setMode(m) {
 // 分组下拉切换（微信风格底部选择面板）
 const showGroupPicker = ref(false)
 const selectedGroup = computed(() => groups.value.find((g) => g.id === selectedGroupId.value) || null)
+// 类型过滤后的组统计：组选择器与选择弹层的"已背熟 x/xxx"随当前筛选条件实时变化
+const groupStats = computed(() => {
+  const matchType = (w) => typeFilter.value === 'all' || (w.type || 'word') === typeFilter.value
+  return groups.value.map((g) => {
+    const list = words.value.filter(
+      (w) => String(w.groupId || '') === String(g.id) && matchType(w)
+    )
+    return { ...g, size: list.length, mastered: list.filter((w) => isMastered(w)).length }
+  })
+})
+const selectedGroupStats = computed(
+  () => groupStats.value.find((g) => g.id === selectedGroupId.value) || null
+)
 function pickGroup(g) {
   showGroupPicker.value = false
   if (!g || g.id === selectedGroupId.value) return
@@ -1253,7 +1266,7 @@ next()
     <div v-if="practiceMode === 'group'" class="group-row">
       <button v-if="groups.length" class="group-select" @click="showGroupPicker = true">
         <span class="group-select-name">{{ selectedGroup?.name }}</span>
-        <span class="group-select-progress">已背熟 {{ selectedGroup?.mastered }}/{{ selectedGroup?.size }}</span>
+        <span class="group-select-progress">已背熟 {{ selectedGroupStats?.mastered }}/{{ selectedGroupStats?.size }}</span>
         <svg class="group-select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
       <span v-else class="group-empty-hint">尚未设置分组</span>
@@ -1641,7 +1654,7 @@ next()
       <div class="picker-sheet" @touchmove.stop>
         <div class="picker-head">选择分组</div>
         <div class="picker-list">
-          <button v-for="g in groups" :key="g.id" class="picker-item" @click="pickGroup(g)">
+          <button v-for="g in groupStats" :key="g.id" class="picker-item" @click="pickGroup(g)">
             <span class="picker-name">{{ g.name }}</span>
             <span class="picker-progress">已背熟 {{ g.mastered }}/{{ g.size }}</span>
             <svg v-if="g.id === selectedGroupId" class="picker-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
