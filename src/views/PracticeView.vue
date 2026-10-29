@@ -1171,6 +1171,10 @@ function goPractice(word) {
 function setPendingFromQuery() {
   const q = route.query.word
   if (!q) return
+  // 跳转背诵指定词：清空筛选条件（类型/来源/关键字），分组模式与所选组保留
+  typeFilter.value = 'all'
+  sourceMode.value = 'all'
+  keywordFilter.value = ''
   const w = words.value.find((x) => x.english.trim().toLowerCase() === String(q).trim().toLowerCase())
   if (w) pendingWord.value = w
 }
@@ -1714,6 +1718,12 @@ next()
                 </li>
               </ul>
             </div>
+            <!-- 有手动录入的相关短语或例句时：跳转答题页背诵当前词句 -->
+            <button
+              v-if="(dictModal.data.phrases && dictModal.data.phrases.length) || (dictModal.data.sentences && dictModal.data.sentences.length)"
+              class="dict-practice-btn"
+              @click="goPractice(dictModal.word)"
+            >去背诵</button>
           </div>
         </div>
 
@@ -3013,6 +3023,22 @@ next()
   color: #333;
   word-break: break-all;
   white-space: pre-wrap;
+}
+/* 详情弹框：去背诵按钮（微信风格绿色主按钮，与其他页面主按钮一致） */
+.dict-practice-btn {
+  display: block;
+  width: 100%;
+  border: none;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 8px;
+  padding: 11px 0;
+  font-size: 15px;
+  margin-top: 14px;
+  cursor: pointer;
+}
+.dict-practice-btn:active {
+  opacity: 0.85;
 }
 
 .trans-block {

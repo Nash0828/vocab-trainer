@@ -1311,6 +1311,12 @@ function formatTime(ts) {
                 </li>
               </ul>
             </div>
+            <!-- 有手动录入的相关短语或例句时：跳转答题页背诵当前词句 -->
+            <button
+              v-if="(dictModal.data.phrases && dictModal.data.phrases.length) || (dictModal.data.sentences && dictModal.data.sentences.length)"
+              class="dict-practice-btn"
+              @click="goPractice(dictModal.word)"
+            >去背诵</button>
           </div>
         </div>
 
@@ -2227,6 +2233,22 @@ function formatTime(ts) {
   color: #333;
   word-break: break-all;
   white-space: pre-wrap;
+}
+/* 详情弹框：去背诵按钮（微信风格绿色主按钮，与其他页面主按钮一致） */
+.dict-practice-btn {
+  display: block;
+  width: 100%;
+  border: none;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 8px;
+  padding: 11px 0;
+  font-size: 15px;
+  margin-top: 14px;
+  cursor: pointer;
+}
+.dict-practice-btn:active {
+  opacity: 0.85;
 }
 
 .trans-block {
