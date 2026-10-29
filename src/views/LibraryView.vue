@@ -1003,7 +1003,7 @@ function formatTime(ts) {
           <!-- 备注：label 常显，输入框初始单行高度，聚焦或已有内容时展开为多行（失焦不收回，避免点击丢失） -->
           <div v-if="editForm.type !== 'word'" class="remark-row">
             <span class="remark-label">备注</span>
-            <textarea v-model="editForm.remark" class="remark-area" :class="{ expanded: editRemarkFocused || editForm.remark }" placeholder="备注" maxlength="500" @focus="editRemarkFocused = true"></textarea>
+            <textarea v-model="editForm.remark" class="remark-area" :class="{ expanded: editRemarkFocused || editForm.remark }" placeholder="补充说明" maxlength="500" @focus="editRemarkFocused = true"></textarea>
           </div>
           <div class="type-row">
             <span class="type-label">类型</span>
@@ -1025,7 +1025,7 @@ function formatTime(ts) {
             </div>
             <div class="remark-row">
               <span class="remark-label">备注</span>
-              <textarea v-model="editForm.remark" class="remark-area" :class="{ expanded: editRemarkFocused || editForm.remark }" placeholder="备注" maxlength="500" @focus="editRemarkFocused = true"></textarea>
+              <textarea v-model="editForm.remark" class="remark-area" :class="{ expanded: editRemarkFocused || editForm.remark }" placeholder="补充说明" maxlength="500" @focus="editRemarkFocused = true"></textarea>
             </div>
             <div class="case-row">
               <span class="case-label">区分大小写</span>
