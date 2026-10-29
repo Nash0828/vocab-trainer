@@ -351,17 +351,35 @@ function next() {
     result.value = null
     revealed.value = false
     isRedo.value = false
-    focusInput(true) // 指定背诵场景强制聚焦
+    // iOS WebKit：KeepAlive 恢复组件后立即聚焦会弹键盘 → 布局崩溃灰白。
+    // 延迟到渲染稳定后再聚焦，避免键盘弹出打乱刚恢复的布局
+    setTimeout(() => focusInput(true), 350)
     // 指定词跳转场景：出题后滚动到顶部看到题目（避免保留词句库/答题页旧滚动位置造成"空白"假象）
     requestAnimationFrame(() => {
       try { window.scrollTo(0, 0) } catch (e) {}
     })
-    // 诊断：渲染下一帧后检查 quiz-card 是否真的出现在 DOM 且可见
-    requestAnimationFrame(() => {
-      const qc = document.querySelector('.quiz-card')
-      const r = qc ? qc.getBoundingClientRect() : null
-      diag('next-pending', 'cur=' + (!!current.value) + '|qc=' + (!!qc) + '|top=' + (r ? Math.round(r.top) : 'x') + '|h=' + (r ? Math.round(r.height) : 'x') + '|winH=' + window.innerHeight)
-    })
+    // 渲染层兜底（iOS 灰白）：出题后若答题卡片不可见/高度异常，先强制重绘；
+    // 仍不可见则自动重载恢复（WebKit 渲染 bug 的最终保险）
+    const ensureRenderVisible = () => {
+      try {
+        const qc = document.querySelector('.quiz-card')
+        if (qc) {
+          const r = qc.getBoundingClientRect()
+          diag('render-check', 'qc=1|top=' + Math.round(r.top) + '|h=' + Math.round(r.height) + '|vh=' + window.innerHeight + '|scrollY=' + Math.round(window.scrollY))
+          if (r.height <= 0 || r.top >= window.innerHeight || r.bottom <= 0) {
+            diag('render-fallback', 'reflow+reload')
+            qc.style.transform = 'translateZ(0)'
+            void qc.offsetHeight
+            qc.style.transform = ''
+            window.dispatchEvent(new Event('resize'))
+            setTimeout(() => { location.reload() }, 400)
+          }
+        } else {
+          diag('render-check', 'qc=0')
+        }
+      } catch (e) { /* ignore */ }
+    }
+    requestAnimationFrame(() => requestAnimationFrame(ensureRenderVisible))
     return
   }
   if (!available.value.length) {
@@ -1182,7 +1200,7 @@ function goPractice(word) {
 // 临时诊断埋点（定位线上 iOS 灰白用，确认后移除）
 function diag(tag, extra) {
   try {
-    const payload = JSON.stringify({ tag, url: location.href.slice(0, 200), words: words.value.length, hasCurrent: !!current.value, curEn: current.value ? String(current.value.english).slice(0, 30) : '', extra: extra || '', at: Date.now() })
+    const payload = JSON.stringify({ msg: tag + '|' + (extra || '') + '|w=' + words.value.length + '|c=' + (!!current.value), url: location.href.slice(0, 200), ua: navigator.userAgent.slice(0, 200) })
     const x = new XMLHttpRequest()
     x.open('POST', '/api/log-client-error', true)
     x.setRequestHeader('Content-Type', 'application/json')
