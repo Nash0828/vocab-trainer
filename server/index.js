@@ -1417,7 +1417,12 @@ if (fs.existsSync(DIST_DIR)) {
       },
     })
   )
-  app.get(/^\/(?!api\/).*/, (req, res) => res.sendFile(join(DIST_DIR, 'index.html')))
+  app.get(/^\/(?!api\/).*/, (req, res) => {
+    // SPA 路由（/practice 等）返回的 index.html 必须不缓存：
+    // 否则部署更新后，移动端浏览器可能用启发式缓存拿到旧 HTML，引用已删除的旧 JS → 404 → 灰白页
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+    res.sendFile(join(DIST_DIR, 'index.html'))
+  })
 }
 
 const PORT = process.env.PORT || 3000
