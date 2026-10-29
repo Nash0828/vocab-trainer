@@ -58,10 +58,12 @@ const typeFilterOptions = [
   { value: 'sentence', label: '句子' },
 ]
 
-// ---- 筛选底部面板（出题来源 + 类型） ----
+// ---- 筛选底部面板（出题来源 + 类型 + 关键字） ----
 const showFilterSheet = ref(false)
 const draftSourceMode = ref('all')
 const draftTypeFilter = ref('all')
+const keywordFilter = ref('') // 关键字：在中文/英文/备注中过滤
+const draftKeywordFilter = ref('')
 const sourceOptions = [
   { value: 'all', label: '全部未背熟' },
   { value: 'wrong', label: '仅错题本' },
@@ -73,11 +75,14 @@ const filterSummary = computed(() => {
     typeFilter.value !== 'all'
       ? (typeFilterOptions.find((o) => o.value === typeFilter.value)?.label || '')
       : ''
-  return t ? `${s} · ${t}` : s
+  const k = keywordFilter.value ? `"${keywordFilter.value}"` : ''
+  return [s, t, k].filter(Boolean).join(' · ')
 })
 // 是否启用了非默认筛选（用于按钮绿色高亮）
-const hasFilter = computed(() => sourceMode.value !== 'all' || typeFilter.value !== 'all')
-// 当前生效的筛选条件标签（chips）：仅错题本 / 类型
+const hasFilter = computed(
+  () => sourceMode.value !== 'all' || typeFilter.value !== 'all' || keywordFilter.value !== ''
+)
+// 当前生效的筛选条件标签（chips）：仅错题本 / 类型 / 关键字
 const activeFilterChips = computed(() => {
   const chips = []
   if (sourceMode.value === 'wrong') chips.push({ key: 'source', label: '仅错题本' })
@@ -85,12 +90,14 @@ const activeFilterChips = computed(() => {
     const t = typeFilterOptions.find((o) => o.value === typeFilter.value)?.label
     if (t) chips.push({ key: 'type', label: t })
   }
+  if (keywordFilter.value) chips.push({ key: 'keyword', label: `关键字：${keywordFilter.value}` })
   return chips
 })
 // 删除单个筛选条件（微信风格：点标签上的 × 移除）
 function removeFilterChip(key) {
   if (key === 'source') sourceMode.value = 'all'
   else if (key === 'type') typeFilter.value = 'all'
+  else if (key === 'keyword') keywordFilter.value = ''
   lastIndex.value = -1
   clearAutoTimer()
   next()
@@ -98,6 +105,7 @@ function removeFilterChip(key) {
 function openFilterSheet() {
   draftSourceMode.value = sourceMode.value
   draftTypeFilter.value = typeFilter.value
+  draftKeywordFilter.value = keywordFilter.value
   showFilterSheet.value = true
 }
 function closeFilterSheet() {
@@ -106,8 +114,10 @@ function closeFilterSheet() {
 function resetFilterSheet() {
   draftSourceMode.value = 'all'
   draftTypeFilter.value = 'all'
+  draftKeywordFilter.value = ''
   sourceMode.value = 'all'
   typeFilter.value = 'all'
+  keywordFilter.value = ''
   showFilterSheet.value = false
   lastIndex.value = -1
   clearAutoTimer()
@@ -116,6 +126,7 @@ function resetFilterSheet() {
 function applyFilterSheet() {
   sourceMode.value = draftSourceMode.value
   typeFilter.value = draftTypeFilter.value
+  keywordFilter.value = draftKeywordFilter.value.trim()
   showFilterSheet.value = false
   lastIndex.value = -1
   clearAutoTimer()
@@ -171,9 +182,14 @@ function resolveWord(item) {
     words.value.find((x) => x.english.trim().toLowerCase() === item.english.trim().toLowerCase()) || null
   )
 }
-// 出题池：随机模式 = 未背熟单词 ∩ 类型筛选；分组模式 = 所选组内未背熟 ∩ 类型筛选；错题本模式 = 错题本中且未背熟 ∩ 类型筛选（组内错题）
+// 出题池：随机模式 = 未背熟单词 ∩ 类型/关键字筛选；分组模式 = 所选组内未背熟 ∩ 类型/关键字筛选；错题本模式 = 错题本中且未背熟 ∩ 类型/关键字筛选（组内错题）
 const available = computed(() => {
   const matchType = (w) => typeFilter.value === 'all' || (w.type || 'word') === typeFilter.value
+  const matchKeyword = (w) =>
+    !keywordFilter.value ||
+    [w.english, w.chinese, w.remark || ''].some((f) =>
+      String(f || '').toLowerCase().includes(keywordFilter.value.toLowerCase())
+    )
   let base
   if (practiceMode.value === 'group') {
     if (!selectedGroupId.value) return []
@@ -186,16 +202,16 @@ const available = computed(() => {
     const ids = new Set(base.map((w) => String(w.id)))
     return wrongValid.value
       .map((item) => resolveWord(item))
-      .filter((w) => w && !isMastered(w) && matchType(w) && ids.has(String(w.id)))
+      .filter((w) => w && !isMastered(w) && matchType(w) && matchKeyword(w) && ids.has(String(w.id)))
   }
-  return base.filter((w) => !isMastered(w) && matchType(w))
+  return base.filter((w) => !isMastered(w) && matchType(w) && matchKeyword(w))
 })
 const allMastered = computed(() => hasWords.value && available.value.length === 0)
 // 分组模式：尚未设置任何分组
 const groupEmpty = computed(() => practiceMode.value === 'group' && !groups.value.length)
-// 类型筛选下无可用词句：类型筛选生效且出题池为空
+// 筛选条件下无可用词句：筛选生效且出题池为空
 const filterEmpty = computed(
-  () => typeFilter.value !== 'all' && available.value.length === 0
+  () => (typeFilter.value !== 'all' || keywordFilter.value !== '') && available.value.length === 0
 )
 // 错题本模式空状态：'empty'=错题本为空；'all-mastered'=错题本单词已全部背熟；null=正常
 const wrongState = computed(() => {
@@ -954,15 +970,20 @@ function setMode(m) {
 // 分组下拉切换（微信风格底部选择面板）
 const showGroupPicker = ref(false)
 const selectedGroup = computed(() => groups.value.find((g) => g.id === selectedGroupId.value) || null)
-// 类型过滤后的组统计：组选择器与选择弹层的"已背熟 x/xxx"随当前筛选条件实时变化
+// 类型/关键字过滤后的组统计：组选择器与选择弹层的"已背熟 x/xxx"随当前筛选条件实时变化
 const groupStats = computed(() => {
   const matchType = (w) => typeFilter.value === 'all' || (w.type || 'word') === typeFilter.value
+  const matchKeyword = (w) =>
+    !keywordFilter.value ||
+    [w.english, w.chinese, w.remark || ''].some((f) =>
+      String(f || '').toLowerCase().includes(keywordFilter.value.toLowerCase())
+    )
   // 仅错题本来源：只统计组内错题本中的词句
   const wrongIds =
     sourceMode.value === 'wrong' ? new Set(wrongValid.value.map((w) => String(w.id))) : null
   return groups.value.map((g) => {
     let list = words.value.filter(
-      (w) => String(w.groupId || '') === String(g.id) && matchType(w)
+      (w) => String(w.groupId || '') === String(g.id) && matchType(w) && matchKeyword(w)
     )
     if (wrongIds) list = list.filter((w) => wrongIds.has(String(w.id)))
     return { ...g, size: list.length, mastered: list.filter((w) => isMastered(w)).length }
@@ -1371,6 +1392,17 @@ next()
                     @click="draftTypeFilter = opt.value"
                   >{{ opt.label }}</button>
                 </div>
+              </div>
+              <div class="sheet-group">
+                <div class="sheet-group-title">关键字</div>
+                <input
+                  v-model="draftKeywordFilter"
+                  class="sheet-keyword-input"
+                  type="text"
+                  placeholder="按备注 / 中文 / 英文过滤"
+                  maxlength="50"
+                  @keydown.enter="applyFilterSheet"
+                />
               </div>
             </div>
             <div class="sheet-foot">
@@ -2241,13 +2273,30 @@ next()
   padding: 7px 16px;
   font-size: 14px;
   color: var(--text-main);
-  cursor: pointer;
-  transition: all 0.2s;
+  cursor: pointer;  transition: all 0.2s;
 }
 .sheet-opt.active {
   background: rgba(7, 193, 96, 0.1);
   color: var(--primary);
   font-weight: 500;
+}
+.sheet-keyword-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: var(--text-main);
+  background: #fff;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.sheet-keyword-input:focus {
+  border-color: var(--primary);
+}
+.sheet-keyword-input::placeholder {
+  color: #b2b2b2;
 }
 .sheet-foot {
   display: flex;
