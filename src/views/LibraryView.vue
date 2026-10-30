@@ -347,8 +347,21 @@ function highlightWord(word, sentence) {
     // 不用 lookbehind（部分移动端浏览器不支持），前缀用捕获组保留
     const re = /([^a-zA-Z]|^)([A-Za-z]+(?:['’-][A-Za-z]+)*)(?![a-zA-Z])/gi
     return esc.replace(re, (m, prefix, wordPart) => {
-      const isHl = bases.some((b) => isFlection(wordPart.toLowerCase(), b))
-      return `${prefix}${isHl ? `<span class="sent-hl">${wordPart}</span>` : wordPart}`
+      const low = wordPart.toLowerCase()
+      if (bases.some((b) => isFlection(low, b))) {
+        return `${prefix}<span class="sent-hl">${wordPart}</span>`
+      }
+      // 复合词（English-Nigerian、mother-in-law 等）：整个词未命中时拆成子词逐段判断，命中段单独高亮
+      let rebuilt = ''
+      for (const p of wordPart.split(/(['’-])/)) {
+        if (/^[A-Za-z]+$/.test(p)) {
+          const isHl = bases.some((b) => isFlection(p.toLowerCase(), b))
+          rebuilt += isHl ? `<span class="sent-hl">${p}</span>` : p
+        } else {
+          rebuilt += p
+        }
+      }
+      return prefix + rebuilt
     })
   } catch (e) {
     return esc
