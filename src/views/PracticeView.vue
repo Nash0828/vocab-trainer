@@ -778,9 +778,24 @@ function wordify(text, hlWord, extraHl) {
   try {
     return esc.replace(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g, (m) => {
       const low = m.toLowerCase()
-      const isHl = bases.some((b) => isFlection(low, b)) || extra.has(low)
-      const cls = isHl ? 'word-link sent-hl' : 'word-link'
-      return `<span class="${cls}" data-word="${m}">${m}</span>`
+      const hitBase = (t) => bases.some((b) => isFlection(t, b)) || extra.has(t)
+      if (hitBase(low)) {
+        return `<span class="word-link sent-hl" data-word="${m}">${m}</span>`
+      }
+      // 复合词（English-Nigerian 等）：整体未命中时拆子词，命中段单独高亮（整词仍可点击查词）
+      const pieces = m.split(/(['’-])/)
+      if (!pieces.some((p) => /^[A-Za-z]+$/.test(p) && hitBase(p.toLowerCase()))) {
+        return `<span class="word-link" data-word="${m}">${m}</span>`
+      }
+      let rebuilt = ''
+      for (const p of pieces) {
+        if (/^[A-Za-z]+$/.test(p)) {
+          rebuilt += hitBase(p.toLowerCase()) ? `<span class="sent-hl">${p}</span>` : p
+        } else {
+          rebuilt += p
+        }
+      }
+      return `<span class="word-link" data-word="${m}">${rebuilt}</span>`
     })
   } catch (e) { return esc }
 }
