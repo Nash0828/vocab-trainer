@@ -8,7 +8,7 @@ const props = defineProps({
 
 const status = ref('loading') // loading | done | error
 const usage = ref('')
-const expanded = ref(false)
+const expanded = ref(true)
 
 const hasMore = computed(() => usage.value.length > 80)
 
@@ -29,13 +29,13 @@ onMounted(load)
 </script>
 
 <template>
-  <!-- AI 日常用法卡片（微信风格白卡） -->
+  <!-- AI 释义卡片（微信风格白卡） -->
   <div v-if="status === 'loading'" class="ai-card">
-    <p class="ai-label">AI 日常用法</p>
+    <p class="ai-label">AI 释义</p>
     <p class="ai-loading">释义生成中…</p>
   </div>
   <div v-else-if="status === 'done'" class="ai-card">
-    <p class="ai-label">AI 日常用法</p>
+    <p class="ai-label">AI 释义</p>
     <p class="ai-text" :class="{ clamped: !expanded && hasMore }">{{ usage }}</p>
     <button v-if="hasMore" class="ai-toggle" @click="expanded = !expanded">
       {{ expanded ? '收起' : '展开释义' }}
