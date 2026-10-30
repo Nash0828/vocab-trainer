@@ -322,7 +322,9 @@ function isFlection(word, base) {
   if (!base || base.length < 2 || word.length <= base.length) return false
   const suf = word.slice(base.length)
   // 必须同时以词根开头才算变形（避免 sheets 对 bring 截出 s 误判）
-  if (word.startsWith(base) && ['s', 'es', 'ed', 'ing', 'd', "'s"].includes(suf)) return true
+  // 'd'（过去式）不进通用后缀：仅词根以 e 结尾时才合法（like→liked），避免 an→and 这类误判
+  if (word.startsWith(base) && ['s', 'es', 'ed', 'ing', "'s"].includes(suf)) return true
+  if (base.endsWith('e') && word === base + 'd') return true
   // 词尾辅音双写 + ed/ing（permit→permitted）
   const last = base.slice(-1)
   if (/[bcdfghjklmnpqrstvwxyz]/.test(last) && word.startsWith(base + last)) {
