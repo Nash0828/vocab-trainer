@@ -2023,7 +2023,7 @@ function formatTime(ts) {
   transition: all 0.18s ease;
 }
 
-.page-btn:hover:not(:disabled) {
+.page-btn:not(.active):hover:not(:disabled) {
   border-color: var(--primary);
   color: var(--primary);
   background: var(--primary-light);
@@ -2031,14 +2031,16 @@ function formatTime(ts) {
 
 /* 移动端/触屏无 hover：去掉粘滞高亮，避免出现"第二个高亮"页码 */
 @media (hover: none) {
-  .page-btn:hover:not(:disabled) {
+  .page-btn:not(.active):hover:not(:disabled) {
     border-color: var(--border);
     color: var(--text-sub);
     background: #ffffff;
   }
 }
 
-.page-btn.active {
+/* 当前页：任何状态（含触屏 hover 粘滞）都保持绿底白字加粗，样式恒定 */
+.page-btn.active,
+.page-btn.active:hover:not(:disabled) {
   border-color: var(--primary);
   background: var(--primary);
   color: #ffffff;
