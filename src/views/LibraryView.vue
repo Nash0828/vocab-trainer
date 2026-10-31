@@ -155,6 +155,7 @@ function onScroll() {
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', closeWordBubble)
+  document.removeEventListener('click', onDocClick)
   document.removeEventListener('keydown', onKeydown)
   window.removeEventListener('scroll', onScroll)
 })
@@ -646,10 +647,21 @@ const noMatch = computed(() => totalCount.value > 0 && filteredWords.value.lengt
 // ---- 分页 ----
 const pageSize = ref(20)
 const sizeOpen = ref(false)
+const pageSizeWrap = ref(null)
 function pickSize(n) {
   changePageSize(n)
   sizeOpen.value = false
 }
+// 点击下拉外部任意空白处关闭菜单（iOS 上按钮 blur 不触发，需 document 级监听）
+function onDocClick(e) {
+  if (sizeOpen.value && pageSizeWrap.value && !pageSizeWrap.value.contains(e.target)) {
+    sizeOpen.value = false
+  }
+}
+watch(sizeOpen, (open) => {
+  if (open) document.addEventListener('click', onDocClick)
+  else document.removeEventListener('click', onDocClick)
+})
 const currentPage = ref(1)
 
 const pageCount = computed(() =>
@@ -1280,7 +1292,7 @@ function formatTime(ts) {
           <button class="page-btn" :disabled="currentPage >= pageCount" @click="goPage(currentPage + 1)">›</button>
           <button class="page-btn" :disabled="currentPage >= pageCount" @click="goPage(pageCount)">»</button>
         </div>
-        <div class="page-size-wrap">
+        <div class="page-size-wrap" ref="pageSizeWrap">
           <button class="page-size-select" :class="{ 'size-open': sizeOpen }" @click="sizeOpen = !sizeOpen" @blur="sizeOpen = false">
             {{ pageSize }}条/页 <span class="size-arrow">▾</span>
           </button>
