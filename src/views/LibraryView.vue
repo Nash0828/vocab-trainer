@@ -645,6 +645,11 @@ const noMatch = computed(() => totalCount.value > 0 && filteredWords.value.lengt
 
 // ---- 分页 ----
 const pageSize = ref(20)
+const sizeOpen = ref(false)
+function pickSize(n) {
+  changePageSize(n)
+  sizeOpen.value = false
+}
 const currentPage = ref(1)
 
 const pageCount = computed(() =>
@@ -1275,14 +1280,19 @@ function formatTime(ts) {
           <button class="page-btn" :disabled="currentPage >= pageCount" @click="goPage(currentPage + 1)">›</button>
           <button class="page-btn" :disabled="currentPage >= pageCount" @click="goPage(pageCount)">»</button>
         </div>
-        <div class="page-size-seg">
-          <button
-            v-for="n in [20, 50, 100]"
-            :key="n"
-            class="page-size-btn"
-            :class="{ active: pageSize === n }"
-            @click="changePageSize(n)"
-          >{{ n }}条/页</button>
+        <div class="page-size-wrap">
+          <button class="page-size-select" :class="{ 'size-open': sizeOpen }" @click="sizeOpen = !sizeOpen" @blur="sizeOpen = false">
+            {{ pageSize }}条/页 <span class="size-arrow">▾</span>
+          </button>
+          <div v-if="sizeOpen" class="size-menu">
+            <div
+              v-for="n in [20, 50, 100]"
+              :key="n"
+              class="size-opt"
+              :class="{ active: pageSize === n }"
+              @mousedown.prevent="pickSize(n)"
+            >{{ n }}条/页</div>
+          </div>
         </div>
       </div>
     </div>
@@ -2062,16 +2072,17 @@ function formatTime(ts) {
   font-size: 13px;
 }
 
-/* 每页条数：分段按钮组（替代原生 select，跨设备样式统一） */
-.page-size-seg {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+/* 每页条数：自绘下拉（替代原生 select，跨设备样式统一） */
+.page-size-wrap {
+  position: relative;
 }
 
-.page-size-btn {
+.page-size-select {
   height: 30px;
-  padding: 0 8px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: 1px solid var(--border);
   border-radius: 7px;
   background: #ffffff;
@@ -2081,11 +2092,46 @@ function formatTime(ts) {
   transition: all 0.18s ease;
 }
 
-.page-size-btn.active {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: #ffffff;
+.size-arrow {
+  font-size: 10px;
+  color: var(--text-faint);
+  transition: transform 0.18s ease;
+}
+
+.page-size-select.size-open .size-arrow {
+  transform: rotate(180deg);
+}
+
+.size-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  min-width: 100%;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.09);
+  overflow: hidden;
+}
+
+.size-opt {
+  padding: 9px 14px;
+  font-size: 13px;
+  color: var(--text-sub);
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.size-opt:active {
+  background: var(--primary-light);
+}
+
+.size-opt.active {
+  color: var(--primary);
   font-weight: 600;
+  background: var(--primary-light);
 }
 
 .confirm-hint {
