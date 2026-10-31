@@ -453,6 +453,9 @@ function onLayerTouchStart(e) {
 function onLayerMaskTouchmove(e) {
   const t = e.touches && e.touches[0]
   if (!t) return
+  // 正在拖动选择文本（长按复制选择范围）→ 放行，避免阻止选择手柄拖动
+  const sel = window.getSelection && window.getSelection()
+  if (sel && !sel.isCollapsed) return
   const y = t.clientY
   const delta = layerTouchY === null ? 0 : y - layerTouchY
   layerTouchY = y
