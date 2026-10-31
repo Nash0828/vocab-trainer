@@ -674,6 +674,14 @@ const pageNumbers = computed(() => {
   return out
 })
 
+// 统一翻页：切页并回到列表顶部（避免翻页后停留在旧滚动位置）
+function goPage(p) {
+  const n = Number(p)
+  if (!n || n < 1 || n > pageCount.value) return
+  currentPage.value = n
+  window.scrollTo({ top: 0 })
+}
+
 // 筛选/排序条件变化时回到第 1 页
 watch([keyword, statusFilter, typeFilter, sortField, sortDir], () => {
   currentPage.value = 1
@@ -682,6 +690,7 @@ watch([keyword, statusFilter, typeFilter, sortField, sortDir], () => {
 function changePageSize(v) {
   pageSize.value = Number(v)
   currentPage.value = 1
+  window.scrollTo({ top: 0 })
 }
 
 const filterOptions = [
@@ -1257,14 +1266,14 @@ function formatTime(ts) {
       <div v-if="filteredWords.length" class="pagination">
         <span class="page-info">共 {{ filteredWords.length }} 条 · {{ currentPage }}/{{ pageCount }} 页</span>
         <div class="page-btns">
-          <button class="page-btn" :disabled="currentPage <= 1" @click="currentPage = 1">«</button>
-          <button class="page-btn" :disabled="currentPage <= 1" @click="currentPage > 1 && currentPage--">‹</button>
+          <button class="page-btn" :disabled="currentPage <= 1" @click="goPage(1)">«</button>
+          <button class="page-btn" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">‹</button>
           <template v-for="(p, i) in pageNumbers" :key="i">
             <span v-if="p === '…'" class="page-ellipsis">…</span>
-            <button v-else class="page-btn" :class="{ active: p === currentPage }" @click="currentPage = p">{{ p }}</button>
+            <button v-else class="page-btn" :class="{ active: p === currentPage }" @click="goPage(p)">{{ p }}</button>
           </template>
-          <button class="page-btn" :disabled="currentPage >= pageCount" @click="currentPage < pageCount && currentPage++">›</button>
-          <button class="page-btn" :disabled="currentPage >= pageCount" @click="currentPage = pageCount">»</button>
+          <button class="page-btn" :disabled="currentPage >= pageCount" @click="goPage(currentPage + 1)">›</button>
+          <button class="page-btn" :disabled="currentPage >= pageCount" @click="goPage(pageCount)">»</button>
         </div>
         <select class="page-size" :value="pageSize" @change="changePageSize($event.target.value)">
           <option :value="20">20 条/页</option>
@@ -2020,6 +2029,15 @@ function formatTime(ts) {
   background: var(--primary-light);
 }
 
+/* 移动端/触屏无 hover：去掉粘滞高亮，避免出现"第二个高亮"页码 */
+@media (hover: none) {
+  .page-btn:hover:not(:disabled) {
+    border-color: var(--border);
+    color: var(--text-sub);
+    background: #ffffff;
+  }
+}
+
 .page-btn.active {
   border-color: var(--primary);
   background: var(--primary);
@@ -2039,9 +2057,11 @@ function formatTime(ts) {
 }
 
 .page-size {
-  padding: 6px 8px;
+  height: 30px;
+  box-sizing: border-box;
+  padding: 0 8px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 7px;
   font-size: 13px;
   color: var(--text-sub);
   background: #ffffff;
