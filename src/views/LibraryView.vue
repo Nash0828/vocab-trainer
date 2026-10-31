@@ -1275,11 +1275,15 @@ function formatTime(ts) {
           <button class="page-btn" :disabled="currentPage >= pageCount" @click="goPage(currentPage + 1)">›</button>
           <button class="page-btn" :disabled="currentPage >= pageCount" @click="goPage(pageCount)">»</button>
         </div>
-        <select class="page-size" :value="pageSize" @change="changePageSize($event.target.value)">
-          <option :value="20">20 条/页</option>
-          <option :value="50">50 条/页</option>
-          <option :value="100">100 条/页</option>
-        </select>
+        <div class="page-size-seg">
+          <button
+            v-for="n in [20, 50, 100]"
+            :key="n"
+            class="page-size-btn"
+            :class="{ active: pageSize === n }"
+            @click="changePageSize(n)"
+          >{{ n }}条/页</button>
+        </div>
       </div>
     </div>
 
@@ -2058,16 +2062,30 @@ function formatTime(ts) {
   font-size: 13px;
 }
 
-.page-size {
+/* 每页条数：分段按钮组（替代原生 select，跨设备样式统一） */
+.page-size-seg {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.page-size-btn {
   height: 30px;
-  box-sizing: border-box;
   padding: 0 8px;
   border: 1px solid var(--border);
   border-radius: 7px;
+  background: #ffffff;
   font-size: 13px;
   color: var(--text-sub);
-  background: #ffffff;
   cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.page-size-btn.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+  font-weight: 600;
 }
 
 .confirm-hint {
