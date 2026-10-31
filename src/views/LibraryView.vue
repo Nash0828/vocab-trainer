@@ -2105,8 +2105,8 @@ function formatTime(ts) {
 .size-menu {
   position: absolute;
   right: 0;
-  top: calc(100% + 4px);
-  z-index: 20;
+  bottom: calc(100% + 4px);
+  z-index: 100;
   min-width: 100%;
   background: #ffffff;
   border: 1px solid var(--border);
