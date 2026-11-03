@@ -2993,8 +2993,8 @@ next()
 .dict-close {
   position: absolute;
   right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 14px;
+  transform: none;
   border: none;
   background: #f0f0f0;
   width: 28px;
