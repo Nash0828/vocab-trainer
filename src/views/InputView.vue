@@ -89,6 +89,12 @@ function togglePos(opt) {
   posInput.value = form.pos
 }
 
+function clearPos() {
+  form.pos = ''
+  posInput.value = ''
+  selectedPos.value = []
+}
+
 function closePosPicker() {
   showPosPicker.value = false
   showExampleTip.value = false
@@ -335,7 +341,7 @@ function removeLinkPhrase(i) {
               @blur="focusPos = false"
               @input="posInput = form.pos"
             />
-            <button v-if="form.pos && focusPos" class="clear-btn" type="button" @mousedown.prevent @click="form.pos = ''" title="清空内容" aria-label="清空词性">
+            <button v-if="form.pos && focusPos" class="clear-btn" type="button" @mousedown.prevent @click="clearPos" title="清空内容" aria-label="清空词性">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
             <transition name="fade">
@@ -818,6 +824,8 @@ function removeLinkPhrase(i) {
 .pos-row {
   display: flex;
   align-items: center;
+  flex: 1;
+  min-width: 0;
 }
 .pos-row input {
   width: 100%;
