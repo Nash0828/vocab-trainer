@@ -1175,7 +1175,7 @@ function formatTime(ts) {
                 </button>
               </div>
             </div>
-            <button v-if="editForm.phrases.length < 5" type="button" class="edit-ex-add" @click="editForm.phrases.push('')">+ 添加短语</button>
+            <button v-if="editForm.phrases.length < 15" type="button" class="edit-ex-add" @click="editForm.phrases.push('')">+ 添加短语</button>
           </template>
           <template v-if="editForm.type !== 'sentence'">
             <div v-if="editForm.examples.length" class="edit-ex-wrap">
@@ -1187,7 +1187,7 @@ function formatTime(ts) {
                 </button>
               </div>
             </div>
-            <button v-if="editForm.examples.length < 5" type="button" class="edit-ex-add" @click="editForm.examples.push('')">+ 添加例句</button>
+            <button v-if="editForm.examples.length < 15" type="button" class="edit-ex-add" @click="editForm.examples.push('')">+ 添加例句</button>
           </template>
           <template v-if="editForm.type !== 'word'">
             <div v-if="editForm.linkWords.length" class="edit-ex-wrap">
@@ -1199,7 +1199,7 @@ function formatTime(ts) {
                 </button>
               </div>
             </div>
-            <button v-if="editForm.linkWords.length < 5" type="button" class="edit-ex-add" @click="editForm.linkWords.push('')">+ 添加关联单词</button>
+            <button v-if="editForm.linkWords.length < 15" type="button" class="edit-ex-add" @click="editForm.linkWords.push('')">+ 添加关联单词</button>
           </template>
           <template v-if="editForm.type === 'sentence'">
             <div v-if="editForm.linkPhrases.length" class="edit-ex-wrap">
@@ -1211,7 +1211,7 @@ function formatTime(ts) {
                 </button>
               </div>
             </div>
-            <button v-if="editForm.linkPhrases.length < 5" type="button" class="edit-ex-add" @click="editForm.linkPhrases.push('')">+ 添加关联短语</button>
+            <button v-if="editForm.linkPhrases.length < 15" type="button" class="edit-ex-add" @click="editForm.linkPhrases.push('')">+ 添加关联短语</button>
           </template>
           <div class="edit-btns">
             <button class="btn primary mini" :disabled="savingEdit" @click="saveEdit(word)">

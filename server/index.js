@@ -56,7 +56,7 @@ function saveWordExamples(wordId, sentenceIds) {
 }
 // 解析用户主动输入的关联词：只匹配词库中已存在（同类型、英文忽略大小写）的，不存在则静默忽略（不翻译、不创建、不提示）
 async function resolveExisting(userId, type, list) {
-  const items = (Array.isArray(list) ? list : []).map((x) => String(x || '').trim()).filter(Boolean).slice(0, 5)
+  const items = (Array.isArray(list) ? list : []).map((x) => String(x || '').trim()).filter(Boolean).slice(0, 15)
   if (!items.length) return []
   const ids = []
   for (const item of items) {
@@ -82,7 +82,7 @@ function saveLinks(wordId, userId, linkWordIds, linkPhraseIds) {
     db.prepare("SELECT COUNT(*) AS c FROM word_examples we JOIN words s ON s.id = we.sentence_id WHERE we.word_id = ? AND s.type = 'sentence'").get(sid)?.c || 0
   const st = db.prepare('INSERT OR IGNORE INTO word_examples (word_id, sentence_id, link_type, created_at) VALUES (?, ?, ?, ?)')
   for (const sid of rawNewIds) {
-    if (!oldIds.includes(sid) && sentenceCount(sid) >= 5) continue // 新增关联且被关联词已满 5 条句子：静默跳过
+    if (!oldIds.includes(sid) && sentenceCount(sid) >= 15) continue // 新增关联且被关联词已满 15 条句子：静默跳过
     st.run(wordId, sid, 'link', Date.now())
     st.run(sid, wordId, 'link', Date.now())
   }
@@ -657,7 +657,7 @@ function assignWordToSmallestGroup(uid, wordId) {
 // 解析关联词句列表（相关短语 phrase / 例句 sentence）：AI 校验包含当前英文 → 查重复用 → 翻译新增
 // 返回关联 id 数组；校验失败抛带 code 的错误（EXAMPLE_NOT_CONTAIN / TRANSLATE_FAIL）
 async function resolveLinked(userId, type, english, list) {
-  const items = (Array.isArray(list) ? list : []).map((x) => String(x || '').trim()).filter(Boolean).slice(0, 5)
+  const items = (Array.isArray(list) ? list : []).map((x) => String(x || '').trim()).filter(Boolean).slice(0, 15)
   if (!items.length) return []
   const ids = []
   for (const item of items) {

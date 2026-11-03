@@ -199,31 +199,31 @@ function clearAllFields() {
   form.linkPhrases = []
 }
 
-// 例句/相关短语：最多5条
+// 例句/相关短语：最多15条
 function addExample() {
-  if (form.examples.length >= 5) return
+  if (form.examples.length >= 15) return
   form.examples.push('')
 }
 function removeExample(i) {
   form.examples.splice(i, 1)
 }
 function addPhrase() {
-  if (form.phrases.length >= 5) return
+  if (form.phrases.length >= 15) return
   form.phrases.push('')
 }
 function removePhrase(i) {
   form.phrases.splice(i, 1)
 }
-// 主动关联（短语/句子的关联单词、句子的关联短语）：默认不显示输入框，点按钮添加，最多5条
+// 主动关联（短语/句子的关联单词、句子的关联短语）：默认不显示输入框，点按钮添加，最多15条
 function addLinkWord() {
-  if (form.linkWords.length >= 5) return
+  if (form.linkWords.length >= 15) return
   form.linkWords.push('')
 }
 function removeLinkWord(i) {
   form.linkWords.splice(i, 1)
 }
 function addLinkPhrase() {
-  if (form.linkPhrases.length >= 5) return
+  if (form.linkPhrases.length >= 15) return
   form.linkPhrases.push('')
 }
 function removeLinkPhrase(i) {
@@ -373,7 +373,7 @@ function removeLinkPhrase(i) {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
-          <button v-if="form.phrases.length < 5" type="button" class="ex-add" @click="addPhrase">+ 添加短语</button>
+          <button v-if="form.phrases.length < 15" type="button" class="ex-add" @click="addPhrase">+ 添加短语</button>
         </div>
         <div v-if="form.type !== 'sentence'" class="form-item ex-item">
           <label>
@@ -396,7 +396,7 @@ function removeLinkPhrase(i) {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
-          <button v-if="form.examples.length < 5" type="button" class="ex-add" @click="addExample">+ 添加例句</button>
+          <button v-if="form.examples.length < 15" type="button" class="ex-add" @click="addExample">+ 添加例句</button>
         </div>
         <div v-if="form.type !== 'word'" class="form-item ex-item">
           <label>
@@ -419,7 +419,7 @@ function removeLinkPhrase(i) {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
-          <button v-if="form.linkWords.length < 5" type="button" class="ex-add" @click="addLinkWord">+ 添加关联单词</button>
+          <button v-if="form.linkWords.length < 15" type="button" class="ex-add" @click="addLinkWord">+ 添加关联单词</button>
         </div>
         <div v-if="form.type === 'sentence'" class="form-item ex-item">
           <label>
@@ -442,7 +442,7 @@ function removeLinkPhrase(i) {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
-          <button v-if="form.linkPhrases.length < 5" type="button" class="ex-add" @click="addLinkPhrase">+ 添加关联短语</button>
+          <button v-if="form.linkPhrases.length < 15" type="button" class="ex-add" @click="addLinkPhrase">+ 添加关联短语</button>
         </div>
       </div>
 
