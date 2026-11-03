@@ -51,6 +51,34 @@ function onRemarkFocus() {
 function onRemarkBlur() {
   remarkFocus.value = false
 }
+// 备注粘贴：读取剪贴板插入到光标处（无光标信息则追加末尾），微信风格按钮
+async function pasteRemark() {
+  let text = ''
+  try {
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      text = (await navigator.clipboard.readText()) || ''
+    }
+  } catch (e) { /* 权限被拒或浏览器不支持 */ }
+  if (!text.trim()) {
+    showTip('无法读取剪贴板，请长按输入框粘贴', 'err')
+    return
+  }
+  const el = document.activeElement
+  const useSel = !!(el && el.tagName === 'TEXTAREA' && typeof el.selectionStart === 'number')
+  const cur = form.remark || ''
+  const start = useSel ? Math.max(0, Math.min(el.selectionStart, cur.length)) : cur.length
+  const end = useSel ? Math.max(start, Math.min(el.selectionEnd, cur.length)) : start
+  const insert = text.slice(0, Math.max(0, 500 - cur.length + (end - start)))
+  form.remark = cur.slice(0, start) + insert + cur.slice(end)
+  showTip('已粘贴', 'ok')
+  if (useSel) {
+    try {
+      el.focus()
+      const pos = Math.min(start + insert.length, form.remark.length)
+      el.setSelectionRange(pos, pos)
+    } catch (e) { /* 忽略焦点恢复失败 */ }
+  }
+}
 function pickType(t) {
   form.type = t
   form.linkWords = []
@@ -376,6 +404,9 @@ function removeLinkPhrase(i) {
               @keydown.ctrl.enter.prevent="submit"
               @keydown.meta.enter.prevent="submit"
             ></textarea>
+            <button v-if="remarkFocus" class="clear-btn remark-clear paste-btn" type="button" @mousedown.prevent @click="pasteRemark" title="粘贴" aria-label="粘贴到备注">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="9" width="11" height="9" rx="1.5"/><path d="M9.5 9V6.5A2.5 2.5 0 0 1 12 4h0a2.5 2.5 0 0 1 2.5 2.5V9"/><path d="M9.5 13.5h5M9.5 16.5h3.5"/></svg>
+            </button>
             <button v-if="form.remark && remarkFocus" class="clear-btn remark-clear" type="button" @mousedown.prevent @click="form.remark = ''" title="清空内容" aria-label="清空备注">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
@@ -405,6 +436,9 @@ function removeLinkPhrase(i) {
               @keydown.ctrl.enter.prevent="submit"
               @keydown.meta.enter.prevent="submit"
             ></textarea>
+            <button v-if="remarkFocus" class="clear-btn remark-clear paste-btn" type="button" @mousedown.prevent @click="pasteRemark" title="粘贴" aria-label="粘贴到备注">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="9" width="11" height="9" rx="1.5"/><path d="M9.5 9V6.5A2.5 2.5 0 0 1 12 4h0a2.5 2.5 0 0 1 2.5 2.5V9"/><path d="M9.5 13.5h5M9.5 16.5h3.5"/></svg>
+            </button>
             <button v-if="form.remark && remarkFocus" class="clear-btn remark-clear" type="button" @mousedown.prevent @click="form.remark = ''" title="清空内容" aria-label="清空备注">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
@@ -675,9 +709,14 @@ function removeLinkPhrase(i) {
 }
 /* 多行文本类（备注/例句）清除按钮：贴右上角，避免盖住文字 */
 .remark-wrap .remark-clear,
+.remark-wrap .paste-btn,
 .ex-input-wrap .area-clear {
   top: 8px;
   transform: none;
+}
+/* 备注粘贴按钮：位于清空按钮左侧（灰底圆形图标同规格，微信风格） */
+.remark-wrap .paste-btn {
+  right: 32px;
 }
 /* 句子类型的中文/英文是多行 textarea：清除按钮同样贴右上角（不再垂直居中） */
 .input-wrap textarea ~ .clear-btn {
@@ -770,7 +809,7 @@ function removeLinkPhrase(i) {
 .form-item .remark-area {
   height: 36px;
   min-height: 36px;
-  padding: 8px 30px 8px 0;
+  padding: 8px 54px 8px 0;
   border: none;
   border-radius: 0;
   font-size: 15px;
