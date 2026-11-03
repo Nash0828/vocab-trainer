@@ -34,6 +34,23 @@ const typeOptions = [
 const showTypePicker = ref(false)
 // 备注：初始单行高度，聚焦后展开为多行
 const remarkFocused = ref(false)
+// 清除按钮仅在字段聚焦且有内容时显示（微信风格）
+// remarkFocus 与 remarkFocused 分离：remarkFocused 只管展开（失焦不收回，避免布局变动），remarkFocus 管清除按钮显隐
+const remarkFocus = ref(false)
+const focusChinese = ref(false)
+const focusEnglish = ref(false)
+const focusPos = ref(false)
+const phFocusIdx = ref(-1)
+const exFocusIdx = ref(-1)
+const lwFocusIdx = ref(-1)
+const lpFocusIdx = ref(-1)
+function onRemarkFocus() {
+  remarkFocused.value = true
+  remarkFocus.value = true
+}
+function onRemarkBlur() {
+  remarkFocus.value = false
+}
 function pickType(t) {
   form.type = t
   form.linkWords = []
@@ -58,6 +75,7 @@ function onPosFocus() {
   posInput.value = form.pos
   syncSelectedFromInput()
   showPosPicker.value = true
+  focusPos.value = true
 }
 
 function togglePos(opt) {
@@ -253,6 +271,8 @@ function removeLinkPhrase(i) {
               type="text"
               placeholder="请输入中文"
               autocomplete="off"
+              @focus="focusChinese = true"
+              @blur="focusChinese = false"
               @keydown.ctrl.enter.prevent="submit"
               @keydown.meta.enter.prevent="submit"
             />
@@ -262,10 +282,12 @@ function removeLinkPhrase(i) {
               rows="2"
               placeholder="请输入中文"
               autocomplete="off"
+              @focus="focusChinese = true"
+              @blur="focusChinese = false"
               @keydown.ctrl.enter.prevent="submit"
               @keydown.meta.enter.prevent="submit"
             ></textarea>
-            <button v-if="form.chinese" class="clear-btn" type="button" @mousedown.prevent @click="form.chinese = ''" title="清空内容" aria-label="清空中文">
+            <button v-if="form.chinese && focusChinese" class="clear-btn" type="button" @mousedown.prevent @click="form.chinese = ''" title="清空内容" aria-label="清空中文">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
@@ -279,6 +301,8 @@ function removeLinkPhrase(i) {
               type="text"
               placeholder="请输入英文"
               autocomplete="off"
+              @focus="focusEnglish = true"
+              @blur="focusEnglish = false"
               @keydown.ctrl.enter.prevent="submit"
               @keydown.meta.enter.prevent="submit"
             />
@@ -288,10 +312,12 @@ function removeLinkPhrase(i) {
               rows="2"
               placeholder="请输入英文"
               autocomplete="off"
+              @focus="focusEnglish = true"
+              @blur="focusEnglish = false"
               @keydown.ctrl.enter.prevent="submit"
               @keydown.meta.enter.prevent="submit"
             ></textarea>
-            <button v-if="form.english" class="clear-btn" type="button" @mousedown.prevent @click="form.english = ''" title="清空内容" aria-label="清空英文">
+            <button v-if="form.english && focusEnglish" class="clear-btn" type="button" @mousedown.prevent @click="form.english = ''" title="清空内容" aria-label="清空英文">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
@@ -306,9 +332,10 @@ function removeLinkPhrase(i) {
               placeholder="如 n. / v. / adj."
               autocomplete="off"
               @focus="onPosFocus"
+              @blur="focusPos = false"
               @input="posInput = form.pos"
             />
-            <button v-if="form.pos" class="clear-btn" type="button" @mousedown.prevent @click="form.pos = ''" title="清空内容" aria-label="清空词性">
+            <button v-if="form.pos && focusPos" class="clear-btn" type="button" @mousedown.prevent @click="form.pos = ''" title="清空内容" aria-label="清空词性">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
             <transition name="fade">
@@ -338,11 +365,12 @@ function removeLinkPhrase(i) {
               placeholder="补充说明"
               autocomplete="off"
               maxlength="500"
-              @focus="remarkFocused = true"
+              @focus="onRemarkFocus"
+              @blur="onRemarkBlur"
               @keydown.ctrl.enter.prevent="submit"
               @keydown.meta.enter.prevent="submit"
             ></textarea>
-            <button v-if="form.remark" class="clear-btn remark-clear" type="button" @mousedown.prevent @click="form.remark = ''" title="清空内容" aria-label="清空备注">
+            <button v-if="form.remark && remarkFocus" class="clear-btn remark-clear" type="button" @mousedown.prevent @click="form.remark = ''" title="清空内容" aria-label="清空备注">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
@@ -366,11 +394,12 @@ function removeLinkPhrase(i) {
               placeholder="补充说明"
               autocomplete="off"
               maxlength="500"
-              @focus="remarkFocused = true"
+              @focus="onRemarkFocus"
+              @blur="onRemarkBlur"
               @keydown.ctrl.enter.prevent="submit"
               @keydown.meta.enter.prevent="submit"
             ></textarea>
-            <button v-if="form.remark" class="clear-btn remark-clear" type="button" @mousedown.prevent @click="form.remark = ''" title="清空内容" aria-label="清空备注">
+            <button v-if="form.remark && remarkFocus" class="clear-btn remark-clear" type="button" @mousedown.prevent @click="form.remark = ''" title="清空内容" aria-label="清空备注">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
@@ -392,8 +421,10 @@ function removeLinkPhrase(i) {
                 type="text"
                 :placeholder="`短语${i + 1}`"
                 autocomplete="off"
+                @focus="phFocusIdx = i"
+                @blur="phFocusIdx = -1"
               />
-              <button v-if="form.phrases[i]" class="clear-btn ex-clear" type="button" @mousedown.prevent @click="form.phrases[i] = ''" title="清空内容" aria-label="清空该短语">
+              <button v-if="form.phrases[i] && phFocusIdx === i" class="clear-btn ex-clear" type="button" @mousedown.prevent @click="form.phrases[i] = ''" title="清空内容" aria-label="清空该短语">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
@@ -420,8 +451,10 @@ function removeLinkPhrase(i) {
                 rows="2"
                 :placeholder="`例句${i + 1}`"
                 autocomplete="off"
+                @focus="exFocusIdx = i"
+                @blur="exFocusIdx = -1"
               ></textarea>
-              <button v-if="form.examples[i]" class="clear-btn ex-clear area-clear" type="button" @mousedown.prevent @click="form.examples[i] = ''" title="清空内容" aria-label="清空该例句">
+              <button v-if="form.examples[i] && exFocusIdx === i" class="clear-btn ex-clear area-clear" type="button" @mousedown.prevent @click="form.examples[i] = ''" title="清空内容" aria-label="清空该例句">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
@@ -448,8 +481,10 @@ function removeLinkPhrase(i) {
                 type="text"
                 :placeholder="`关联单词${i + 1}`"
                 autocomplete="off"
+                @focus="lwFocusIdx = i"
+                @blur="lwFocusIdx = -1"
               />
-              <button v-if="form.linkWords[i]" class="clear-btn ex-clear" type="button" @mousedown.prevent @click="form.linkWords[i] = ''" title="清空内容" aria-label="清空该关联单词">
+              <button v-if="form.linkWords[i] && lwFocusIdx === i" class="clear-btn ex-clear" type="button" @mousedown.prevent @click="form.linkWords[i] = ''" title="清空内容" aria-label="清空该关联单词">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
@@ -476,8 +511,10 @@ function removeLinkPhrase(i) {
                 type="text"
                 :placeholder="`关联短语${i + 1}`"
                 autocomplete="off"
+                @focus="lpFocusIdx = i"
+                @blur="lpFocusIdx = -1"
               />
-              <button v-if="form.linkPhrases[i]" class="clear-btn ex-clear" type="button" @mousedown.prevent @click="form.linkPhrases[i] = ''" title="清空内容" aria-label="清空该关联短语">
+              <button v-if="form.linkPhrases[i] && lpFocusIdx === i" class="clear-btn ex-clear" type="button" @mousedown.prevent @click="form.linkPhrases[i] = ''" title="清空内容" aria-label="清空该关联短语">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
@@ -633,6 +670,11 @@ function removeLinkPhrase(i) {
 /* 多行文本类（备注/例句）清除按钮：贴右上角，避免盖住文字 */
 .remark-wrap .remark-clear,
 .ex-input-wrap .area-clear {
+  top: 8px;
+  transform: none;
+}
+/* 句子类型的中文/英文是多行 textarea：清除按钮同样贴右上角（不再垂直居中） */
+.input-wrap textarea ~ .clear-btn {
   top: 8px;
   transform: none;
 }

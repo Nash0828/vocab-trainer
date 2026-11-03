@@ -30,6 +30,23 @@ const savingEdit = ref(false)
 const editForm = reactive({ chinese: '', english: '', pos: '', type: 'word', caseSensitive: false, remark: '', phrases: [], examples: [''], linkWords: [], linkPhrases: [] })
 // 编辑态备注：初始单行高度，聚焦后展开为多行
 const editRemarkFocused = ref(false)
+// 清除按钮仅在字段聚焦且有内容时显示（微信风格）
+// editRemarkFocus 与 editRemarkFocused 分离：前者管清除按钮显隐，后者只管展开（失焦不收回）
+const editRemarkFocus = ref(false)
+const editFocusChinese = ref(false)
+const editFocusEnglish = ref(false)
+const editFocusPos = ref(false)
+const editPhFocusIdx = ref(-1)
+const editExFocusIdx = ref(-1)
+const editLwFocusIdx = ref(-1)
+const editLpFocusIdx = ref(-1)
+function onEditRemarkFocus() {
+  editRemarkFocused.value = true
+  editRemarkFocus.value = true
+}
+function onEditRemarkBlur() {
+  editRemarkFocus.value = false
+}
 const typeOptions = [
   { value: 'word', label: '单词' },
   { value: 'phrase', label: '短语' },
@@ -1126,9 +1143,9 @@ function formatTime(ts) {
           <div class="cell-row">
             <span class="cell-label">中文</span>
             <div class="input-wrap">
-              <input v-if="editForm.type !== 'sentence'" v-model="editForm.chinese" class="cell-input" type="text" placeholder="请输入中文" autocomplete="off" />
-              <textarea v-else v-model="editForm.chinese" class="cell-input area" placeholder="请输入中文"></textarea>
-              <button v-if="editForm.chinese" class="clear-btn" type="button" @mousedown.prevent @click="editForm.chinese = ''" title="清空内容" aria-label="清空中文">
+              <input v-if="editForm.type !== 'sentence'" v-model="editForm.chinese" class="cell-input" type="text" placeholder="请输入中文" autocomplete="off" @focus="editFocusChinese = true" @blur="editFocusChinese = false" />
+              <textarea v-else v-model="editForm.chinese" class="cell-input area" placeholder="请输入中文" @focus="editFocusChinese = true" @blur="editFocusChinese = false"></textarea>
+              <button v-if="editForm.chinese && editFocusChinese" class="clear-btn" type="button" @mousedown.prevent @click="editForm.chinese = ''" title="清空内容" aria-label="清空中文">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
@@ -1136,9 +1153,9 @@ function formatTime(ts) {
           <div class="cell-row">
             <span class="cell-label">英文</span>
             <div class="input-wrap">
-              <input v-if="editForm.type !== 'sentence'" v-model="editForm.english" class="cell-input" type="text" placeholder="请输入英文" autocomplete="off" />
-              <textarea v-else v-model="editForm.english" class="cell-input area" placeholder="请输入英文"></textarea>
-              <button v-if="editForm.english" class="clear-btn" type="button" @mousedown.prevent @click="editForm.english = ''" title="清空内容" aria-label="清空英文">
+              <input v-if="editForm.type !== 'sentence'" v-model="editForm.english" class="cell-input" type="text" placeholder="请输入英文" autocomplete="off" @focus="editFocusEnglish = true" @blur="editFocusEnglish = false" />
+              <textarea v-else v-model="editForm.english" class="cell-input area" placeholder="请输入英文" @focus="editFocusEnglish = true" @blur="editFocusEnglish = false"></textarea>
+              <button v-if="editForm.english && editFocusEnglish" class="clear-btn" type="button" @mousedown.prevent @click="editForm.english = ''" title="清空内容" aria-label="清空英文">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
@@ -1147,8 +1164,8 @@ function formatTime(ts) {
           <div v-if="editForm.type !== 'word'" class="remark-row">
             <span class="remark-label">备注</span>
             <div class="input-wrap">
-              <textarea v-model="editForm.remark" class="remark-area" :class="{ expanded: editRemarkFocused || editForm.remark }" placeholder="补充说明" maxlength="500" @focus="editRemarkFocused = true"></textarea>
-              <button v-if="editForm.remark" class="clear-btn area-clear" type="button" @mousedown.prevent @click="editForm.remark = ''" title="清空内容" aria-label="清空备注">
+              <textarea v-model="editForm.remark" class="remark-area" :class="{ expanded: editRemarkFocused || editForm.remark }" placeholder="补充说明" maxlength="500" @focus="onEditRemarkFocus" @blur="onEditRemarkBlur"></textarea>
+              <button v-if="editForm.remark && editRemarkFocus" class="clear-btn area-clear" type="button" @mousedown.prevent @click="editForm.remark = ''" title="清空内容" aria-label="清空备注">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
@@ -1170,8 +1187,8 @@ function formatTime(ts) {
             <div class="cell-row">
               <span class="cell-label">词性</span>
               <div class="input-wrap">
-                <input v-model="editForm.pos" class="cell-input pos" placeholder="如 n. / v. / adj." autocomplete="off" />
-                <button v-if="editForm.pos" class="clear-btn" type="button" @mousedown.prevent @click="editForm.pos = ''" title="清空内容" aria-label="清空词性">
+                <input v-model="editForm.pos" class="cell-input pos" placeholder="如 n. / v. / adj." autocomplete="off" @focus="editFocusPos = true" @blur="editFocusPos = false" />
+                <button v-if="editForm.pos && editFocusPos" class="clear-btn" type="button" @mousedown.prevent @click="editForm.pos = ''" title="清空内容" aria-label="清空词性">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
@@ -1179,8 +1196,8 @@ function formatTime(ts) {
             <div class="remark-row">
               <span class="remark-label">备注</span>
               <div class="input-wrap">
-                <textarea v-model="editForm.remark" class="remark-area" :class="{ expanded: editRemarkFocused || editForm.remark }" placeholder="补充说明" maxlength="500" @focus="editRemarkFocused = true"></textarea>
-                <button v-if="editForm.remark" class="clear-btn area-clear" type="button" @mousedown.prevent @click="editForm.remark = ''" title="清空内容" aria-label="清空备注">
+                <textarea v-model="editForm.remark" class="remark-area" :class="{ expanded: editRemarkFocused || editForm.remark }" placeholder="补充说明" maxlength="500" @focus="onEditRemarkFocus" @blur="onEditRemarkBlur"></textarea>
+                <button v-if="editForm.remark && editRemarkFocus" class="clear-btn area-clear" type="button" @mousedown.prevent @click="editForm.remark = ''" title="清空内容" aria-label="清空备注">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
@@ -1195,8 +1212,8 @@ function formatTime(ts) {
               <div class="edit-ex-label">相关短语</div>
               <div v-for="(ph, i) in editForm.phrases" :key="'ph' + i" class="edit-ex-row">
                 <div class="ex-input-wrap">
-                  <input v-model="editForm.phrases[i]" class="cell-input" type="text" :placeholder="`短语${i + 1}`" autocomplete="off" />
-                  <button v-if="editForm.phrases[i]" class="clear-btn ex-clear" type="button" @mousedown.prevent @click="editForm.phrases[i] = ''" title="清空内容" aria-label="清空该短语">
+                  <input v-model="editForm.phrases[i]" class="cell-input" type="text" :placeholder="`短语${i + 1}`" autocomplete="off" @focus="editPhFocusIdx = i" @blur="editPhFocusIdx = -1" />
+                  <button v-if="editForm.phrases[i] && editPhFocusIdx === i" class="clear-btn ex-clear" type="button" @mousedown.prevent @click="editForm.phrases[i] = ''" title="清空内容" aria-label="清空该短语">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   </button>
                 </div>
@@ -1212,8 +1229,8 @@ function formatTime(ts) {
               <div class="edit-ex-label">例句</div>
               <div v-for="(ex, i) in editForm.examples" :key="i" class="edit-ex-row">
                 <div class="ex-input-wrap">
-                  <textarea v-model="editForm.examples[i]" class="cell-input area" :placeholder="`例句${i + 1}`"></textarea>
-                  <button v-if="editForm.examples[i]" class="clear-btn ex-clear area-clear" type="button" @mousedown.prevent @click="editForm.examples[i] = ''" title="清空内容" aria-label="清空该例句">
+                  <textarea v-model="editForm.examples[i]" class="cell-input area" :placeholder="`例句${i + 1}`" @focus="editExFocusIdx = i" @blur="editExFocusIdx = -1"></textarea>
+                  <button v-if="editForm.examples[i] && editExFocusIdx === i" class="clear-btn ex-clear area-clear" type="button" @mousedown.prevent @click="editForm.examples[i] = ''" title="清空内容" aria-label="清空该例句">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   </button>
                 </div>
@@ -1229,8 +1246,8 @@ function formatTime(ts) {
               <div class="edit-ex-label">关联单词</div>
               <div v-for="(lw, i) in editForm.linkWords" :key="'lw' + i" class="edit-ex-row">
                 <div class="ex-input-wrap">
-                  <input v-model="editForm.linkWords[i]" class="cell-input" type="text" :placeholder="`关联单词${i + 1}`" autocomplete="off" />
-                  <button v-if="editForm.linkWords[i]" class="clear-btn ex-clear" type="button" @mousedown.prevent @click="editForm.linkWords[i] = ''" title="清空内容" aria-label="清空该关联单词">
+                  <input v-model="editForm.linkWords[i]" class="cell-input" type="text" :placeholder="`关联单词${i + 1}`" autocomplete="off" @focus="editLwFocusIdx = i" @blur="editLwFocusIdx = -1" />
+                  <button v-if="editForm.linkWords[i] && editLwFocusIdx === i" class="clear-btn ex-clear" type="button" @mousedown.prevent @click="editForm.linkWords[i] = ''" title="清空内容" aria-label="清空该关联单词">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   </button>
                 </div>
@@ -1246,8 +1263,8 @@ function formatTime(ts) {
               <div class="edit-ex-label">关联短语</div>
               <div v-for="(lp, i) in editForm.linkPhrases" :key="'lp' + i" class="edit-ex-row">
                 <div class="ex-input-wrap">
-                  <input v-model="editForm.linkPhrases[i]" class="cell-input" type="text" :placeholder="`关联短语${i + 1}`" autocomplete="off" />
-                  <button v-if="editForm.linkPhrases[i]" class="clear-btn ex-clear" type="button" @mousedown.prevent @click="editForm.linkPhrases[i] = ''" title="清空内容" aria-label="清空该关联短语">
+                  <input v-model="editForm.linkPhrases[i]" class="cell-input" type="text" :placeholder="`关联短语${i + 1}`" autocomplete="off" @focus="editLpFocusIdx = i" @blur="editLpFocusIdx = -1" />
+                  <button v-if="editForm.linkPhrases[i] && editLpFocusIdx === i" class="clear-btn ex-clear" type="button" @mousedown.prevent @click="editForm.linkPhrases[i] = ''" title="清空内容" aria-label="清空该关联短语">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   </button>
                 </div>
@@ -1882,6 +1899,11 @@ function formatTime(ts) {
 /* 多行文本（备注/例句）清除按钮：贴右上角 */
 .remark-row .area-clear,
 .ex-input-wrap .area-clear {
+  top: 6px;
+  transform: none;
+}
+/* 句子类型的中文/英文是多行 textarea：清除按钮同样贴右上角（不再垂直居中） */
+.input-wrap textarea ~ .clear-btn {
   top: 6px;
   transform: none;
 }
