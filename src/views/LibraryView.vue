@@ -1125,18 +1125,33 @@ function formatTime(ts) {
         <div v-if="editingId === word.id" class="edit-row">
           <div class="cell-row">
             <span class="cell-label">中文</span>
-            <input v-if="editForm.type !== 'sentence'" v-model="editForm.chinese" class="cell-input" type="text" placeholder="请输入中文" autocomplete="off" />
-            <textarea v-else v-model="editForm.chinese" class="cell-input area" placeholder="请输入中文"></textarea>
+            <div class="input-wrap">
+              <input v-if="editForm.type !== 'sentence'" v-model="editForm.chinese" class="cell-input" type="text" placeholder="请输入中文" autocomplete="off" />
+              <textarea v-else v-model="editForm.chinese" class="cell-input area" placeholder="请输入中文"></textarea>
+              <button v-if="editForm.chinese" class="clear-btn" type="button" @mousedown.prevent @click="editForm.chinese = ''" title="清空内容" aria-label="清空中文">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
           </div>
           <div class="cell-row">
             <span class="cell-label">英文</span>
-            <input v-if="editForm.type !== 'sentence'" v-model="editForm.english" class="cell-input" type="text" placeholder="请输入英文" autocomplete="off" />
-            <textarea v-else v-model="editForm.english" class="cell-input area" placeholder="请输入英文"></textarea>
+            <div class="input-wrap">
+              <input v-if="editForm.type !== 'sentence'" v-model="editForm.english" class="cell-input" type="text" placeholder="请输入英文" autocomplete="off" />
+              <textarea v-else v-model="editForm.english" class="cell-input area" placeholder="请输入英文"></textarea>
+              <button v-if="editForm.english" class="clear-btn" type="button" @mousedown.prevent @click="editForm.english = ''" title="清空内容" aria-label="清空英文">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
           </div>
           <!-- 备注：label 常显，输入框初始单行高度，聚焦或已有内容时展开为多行（失焦不收回，避免点击丢失） -->
           <div v-if="editForm.type !== 'word'" class="remark-row">
             <span class="remark-label">备注</span>
-            <textarea v-model="editForm.remark" class="remark-area" :class="{ expanded: editRemarkFocused || editForm.remark }" placeholder="补充说明" maxlength="500" @focus="editRemarkFocused = true"></textarea>
+            <div class="input-wrap">
+              <textarea v-model="editForm.remark" class="remark-area" :class="{ expanded: editRemarkFocused || editForm.remark }" placeholder="补充说明" maxlength="500" @focus="editRemarkFocused = true"></textarea>
+              <button v-if="editForm.remark" class="clear-btn area-clear" type="button" @mousedown.prevent @click="editForm.remark = ''" title="清空内容" aria-label="清空备注">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
           </div>
           <div class="type-row">
             <span class="type-label">类型</span>
@@ -1154,11 +1169,21 @@ function formatTime(ts) {
           <template v-if="editForm.type === 'word'">
             <div class="cell-row">
               <span class="cell-label">词性</span>
-              <input v-model="editForm.pos" class="cell-input pos" placeholder="如 n. / v. / adj." autocomplete="off" />
+              <div class="input-wrap">
+                <input v-model="editForm.pos" class="cell-input pos" placeholder="如 n. / v. / adj." autocomplete="off" />
+                <button v-if="editForm.pos" class="clear-btn" type="button" @mousedown.prevent @click="editForm.pos = ''" title="清空内容" aria-label="清空词性">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
             </div>
             <div class="remark-row">
               <span class="remark-label">备注</span>
-              <textarea v-model="editForm.remark" class="remark-area" :class="{ expanded: editRemarkFocused || editForm.remark }" placeholder="补充说明" maxlength="500" @focus="editRemarkFocused = true"></textarea>
+              <div class="input-wrap">
+                <textarea v-model="editForm.remark" class="remark-area" :class="{ expanded: editRemarkFocused || editForm.remark }" placeholder="补充说明" maxlength="500" @focus="editRemarkFocused = true"></textarea>
+                <button v-if="editForm.remark" class="clear-btn area-clear" type="button" @mousedown.prevent @click="editForm.remark = ''" title="清空内容" aria-label="清空备注">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
             </div>
             <div class="case-row">
               <span class="case-label">区分大小写</span>
@@ -1169,9 +1194,14 @@ function formatTime(ts) {
             <div v-if="editForm.phrases.length" class="edit-ex-wrap">
               <div class="edit-ex-label">相关短语</div>
               <div v-for="(ph, i) in editForm.phrases" :key="'ph' + i" class="edit-ex-row">
-                <input v-model="editForm.phrases[i]" class="cell-input" type="text" :placeholder="`短语${i + 1}`" autocomplete="off" />
-                <button type="button" class="edit-ex-del" @click="editForm.phrases.splice(i, 1)" title="删除该短语">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <div class="ex-input-wrap">
+                  <input v-model="editForm.phrases[i]" class="cell-input" type="text" :placeholder="`短语${i + 1}`" autocomplete="off" />
+                  <button v-if="editForm.phrases[i]" class="clear-btn ex-clear" type="button" @mousedown.prevent @click="editForm.phrases[i] = ''" title="清空内容" aria-label="清空该短语">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+                <button type="button" class="edit-ex-del" @click="editForm.phrases.splice(i, 1)" title="删除该短语" aria-label="删除该短语">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                 </button>
               </div>
             </div>
@@ -1181,9 +1211,14 @@ function formatTime(ts) {
             <div v-if="editForm.examples.length" class="edit-ex-wrap">
               <div class="edit-ex-label">例句</div>
               <div v-for="(ex, i) in editForm.examples" :key="i" class="edit-ex-row">
-                <textarea v-model="editForm.examples[i]" class="cell-input area" :placeholder="`例句${i + 1}`"></textarea>
-                <button type="button" class="edit-ex-del" @click="editForm.examples.splice(i, 1)" title="删除该例句">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <div class="ex-input-wrap">
+                  <textarea v-model="editForm.examples[i]" class="cell-input area" :placeholder="`例句${i + 1}`"></textarea>
+                  <button v-if="editForm.examples[i]" class="clear-btn ex-clear area-clear" type="button" @mousedown.prevent @click="editForm.examples[i] = ''" title="清空内容" aria-label="清空该例句">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+                <button type="button" class="edit-ex-del" @click="editForm.examples.splice(i, 1)" title="删除该例句" aria-label="删除该例句">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                 </button>
               </div>
             </div>
@@ -1193,9 +1228,14 @@ function formatTime(ts) {
             <div v-if="editForm.linkWords.length" class="edit-ex-wrap">
               <div class="edit-ex-label">关联单词</div>
               <div v-for="(lw, i) in editForm.linkWords" :key="'lw' + i" class="edit-ex-row">
-                <input v-model="editForm.linkWords[i]" class="cell-input" type="text" :placeholder="`关联单词${i + 1}`" autocomplete="off" />
-                <button type="button" class="edit-ex-del" @click="editForm.linkWords.splice(i, 1)" title="删除该关联">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <div class="ex-input-wrap">
+                  <input v-model="editForm.linkWords[i]" class="cell-input" type="text" :placeholder="`关联单词${i + 1}`" autocomplete="off" />
+                  <button v-if="editForm.linkWords[i]" class="clear-btn ex-clear" type="button" @mousedown.prevent @click="editForm.linkWords[i] = ''" title="清空内容" aria-label="清空该关联单词">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+                <button type="button" class="edit-ex-del" @click="editForm.linkWords.splice(i, 1)" title="删除该关联" aria-label="删除该关联">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                 </button>
               </div>
             </div>
@@ -1205,9 +1245,14 @@ function formatTime(ts) {
             <div v-if="editForm.linkPhrases.length" class="edit-ex-wrap">
               <div class="edit-ex-label">关联短语</div>
               <div v-for="(lp, i) in editForm.linkPhrases" :key="'lp' + i" class="edit-ex-row">
-                <input v-model="editForm.linkPhrases[i]" class="cell-input" type="text" :placeholder="`关联短语${i + 1}`" autocomplete="off" />
-                <button type="button" class="edit-ex-del" @click="editForm.linkPhrases.splice(i, 1)" title="删除该关联">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <div class="ex-input-wrap">
+                  <input v-model="editForm.linkPhrases[i]" class="cell-input" type="text" :placeholder="`关联短语${i + 1}`" autocomplete="off" />
+                  <button v-if="editForm.linkPhrases[i]" class="clear-btn ex-clear" type="button" @mousedown.prevent @click="editForm.linkPhrases[i] = ''" title="清空内容" aria-label="清空该关联短语">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+                <button type="button" class="edit-ex-del" @click="editForm.linkPhrases.splice(i, 1)" title="删除该关联" aria-label="删除该关联">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                 </button>
               </div>
             </div>
@@ -1800,6 +1845,47 @@ function formatTime(ts) {
   border-color: var(--primary);
 }
 
+/* 清除内容按钮：微信风格（输入框内右侧圆形灰底 ×），仅在有内容时显示 */
+.cell-row .input-wrap,
+.remark-row .input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.input-wrap .cell-input,
+.input-wrap .remark-area {
+  width: 100%;
+  padding-right: 30px;
+  box-sizing: border-box;
+}
+.clear-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #b2b2b2;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+}
+.clear-btn:active {
+  background: #8c8c8c;
+}
+/* 多行文本（备注/例句）清除按钮：贴右上角 */
+.remark-row .area-clear,
+.ex-input-wrap .area-clear {
+  top: 6px;
+  transform: none;
+}
+
 .mastered-text {
   color: var(--success);
 }
@@ -2186,6 +2272,14 @@ function formatTime(ts) {
 .edit-ex-row {
   position: relative;
   margin-bottom: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.ex-input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
 }
 .edit-ex-row textarea,
 .edit-ex-row input {
@@ -2197,9 +2291,8 @@ function formatTime(ts) {
   height: 36px;
 }
 .edit-ex-del {
-  position: absolute;
-  top: 6px;
-  right: 4px;
+  flex-shrink: 0;
+  margin-top: 4px;
   width: 22px;
   height: 22px;
   border: none;

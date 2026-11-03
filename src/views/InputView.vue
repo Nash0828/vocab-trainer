@@ -246,45 +246,55 @@ function removeLinkPhrase(i) {
         </div>
         <div class="form-item">
           <label><em class="req">*</em>中文</label>
-          <input
-            v-if="form.type !== 'sentence'"
-            v-model="form.chinese"
-            type="text"
-            placeholder="请输入中文"
-            autocomplete="off"
-            @keydown.ctrl.enter.prevent="submit"
-            @keydown.meta.enter.prevent="submit"
-          />
-          <textarea
-            v-else
-            v-model="form.chinese"
-            rows="2"
-            placeholder="请输入中文"
-            autocomplete="off"
-            @keydown.ctrl.enter.prevent="submit"
-            @keydown.meta.enter.prevent="submit"
-          ></textarea>
+          <div class="input-wrap">
+            <input
+              v-if="form.type !== 'sentence'"
+              v-model="form.chinese"
+              type="text"
+              placeholder="请输入中文"
+              autocomplete="off"
+              @keydown.ctrl.enter.prevent="submit"
+              @keydown.meta.enter.prevent="submit"
+            />
+            <textarea
+              v-else
+              v-model="form.chinese"
+              rows="2"
+              placeholder="请输入中文"
+              autocomplete="off"
+              @keydown.ctrl.enter.prevent="submit"
+              @keydown.meta.enter.prevent="submit"
+            ></textarea>
+            <button v-if="form.chinese" class="clear-btn" type="button" @mousedown.prevent @click="form.chinese = ''" title="清空内容" aria-label="清空中文">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
         </div>
         <div class="form-item">
           <label><em class="req">*</em>英文</label>
-          <input
-            v-if="form.type !== 'sentence'"
-            v-model="form.english"
-            type="text"
-            placeholder="请输入英文"
-            autocomplete="off"
-            @keydown.ctrl.enter.prevent="submit"
-            @keydown.meta.enter.prevent="submit"
-          />
-          <textarea
-            v-else
-            v-model="form.english"
-            rows="2"
-            placeholder="请输入英文"
-            autocomplete="off"
-            @keydown.ctrl.enter.prevent="submit"
-            @keydown.meta.enter.prevent="submit"
-          ></textarea>
+          <div class="input-wrap">
+            <input
+              v-if="form.type !== 'sentence'"
+              v-model="form.english"
+              type="text"
+              placeholder="请输入英文"
+              autocomplete="off"
+              @keydown.ctrl.enter.prevent="submit"
+              @keydown.meta.enter.prevent="submit"
+            />
+            <textarea
+              v-else
+              v-model="form.english"
+              rows="2"
+              placeholder="请输入英文"
+              autocomplete="off"
+              @keydown.ctrl.enter.prevent="submit"
+              @keydown.meta.enter.prevent="submit"
+            ></textarea>
+            <button v-if="form.english" class="clear-btn" type="button" @mousedown.prevent @click="form.english = ''" title="清空内容" aria-label="清空英文">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
         </div>
         <template v-if="form.type === 'word'">
         <div class="form-item">
@@ -298,6 +308,9 @@ function removeLinkPhrase(i) {
               @focus="onPosFocus"
               @input="posInput = form.pos"
             />
+            <button v-if="form.pos" class="clear-btn" type="button" @mousedown.prevent @click="form.pos = ''" title="清空内容" aria-label="清空词性">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
             <transition name="fade">
               <div v-if="showPosPicker && filteredPosOptions.length > 0" class="pos-suggest">
                 <div
@@ -317,17 +330,22 @@ function removeLinkPhrase(i) {
         <!-- 备注：label 常显，输入框初始单行高度，聚焦后展开为多行（失焦不收回，避免布局变动导致点击丢失） -->
         <div v-if="form.type === 'word'" class="form-item">
           <label>备注</label>
-          <textarea
-            v-model="form.remark"
-            class="remark-area"
-            :class="{ expanded: remarkFocused || form.remark }"
-            placeholder="补充说明"
-            autocomplete="off"
-            maxlength="500"
-            @focus="remarkFocused = true"
-            @keydown.ctrl.enter.prevent="submit"
-            @keydown.meta.enter.prevent="submit"
-          ></textarea>
+          <div class="remark-wrap">
+            <textarea
+              v-model="form.remark"
+              class="remark-area"
+              :class="{ expanded: remarkFocused || form.remark }"
+              placeholder="补充说明"
+              autocomplete="off"
+              maxlength="500"
+              @focus="remarkFocused = true"
+              @keydown.ctrl.enter.prevent="submit"
+              @keydown.meta.enter.prevent="submit"
+            ></textarea>
+            <button v-if="form.remark" class="clear-btn remark-clear" type="button" @mousedown.prevent @click="form.remark = ''" title="清空内容" aria-label="清空备注">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
         </div>
         <div class="form-item">
           <label>区分大小写</label>
@@ -340,17 +358,22 @@ function removeLinkPhrase(i) {
         </template>
         <div v-if="form.type !== 'word'" class="form-item">
           <label>备注</label>
-          <textarea
-            v-model="form.remark"
-            class="remark-area"
-            :class="{ expanded: remarkFocused || form.remark }"
-            placeholder="补充说明"
-            autocomplete="off"
-            maxlength="500"
-            @focus="remarkFocused = true"
-            @keydown.ctrl.enter.prevent="submit"
-            @keydown.meta.enter.prevent="submit"
-          ></textarea>
+          <div class="remark-wrap">
+            <textarea
+              v-model="form.remark"
+              class="remark-area"
+              :class="{ expanded: remarkFocused || form.remark }"
+              placeholder="补充说明"
+              autocomplete="off"
+              maxlength="500"
+              @focus="remarkFocused = true"
+              @keydown.ctrl.enter.prevent="submit"
+              @keydown.meta.enter.prevent="submit"
+            ></textarea>
+            <button v-if="form.remark" class="clear-btn remark-clear" type="button" @mousedown.prevent @click="form.remark = ''" title="清空内容" aria-label="清空备注">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
         </div>
         <div v-if="form.type === 'word'" class="form-item ex-item">
           <label>
@@ -363,14 +386,19 @@ function removeLinkPhrase(i) {
             </span>
           </label>
           <div v-for="(ph, i) in form.phrases" :key="'ph' + i" class="ex-row">
-            <input
-              v-model="form.phrases[i]"
-              type="text"
-              :placeholder="`短语${i + 1}`"
-              autocomplete="off"
-            />
-            <button class="ex-del" type="button" @click="removePhrase(i)" title="删除该短语">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <div class="ex-input-wrap">
+              <input
+                v-model="form.phrases[i]"
+                type="text"
+                :placeholder="`短语${i + 1}`"
+                autocomplete="off"
+              />
+              <button v-if="form.phrases[i]" class="clear-btn ex-clear" type="button" @mousedown.prevent @click="form.phrases[i] = ''" title="清空内容" aria-label="清空该短语">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <button class="ex-del" type="button" @click="removePhrase(i)" title="删除该短语" aria-label="删除该短语">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
             </button>
           </div>
           <button v-if="form.phrases.length < 15" type="button" class="ex-add" @click="addPhrase">+ 添加短语</button>
@@ -386,14 +414,19 @@ function removeLinkPhrase(i) {
             </span>
           </label>
           <div v-for="(ex, i) in form.examples" :key="i" class="ex-row">
-            <textarea
-              v-model="form.examples[i]"
-              rows="2"
-              :placeholder="`例句${i + 1}`"
-              autocomplete="off"
-            ></textarea>
-            <button class="ex-del" type="button" @click="removeExample(i)" title="删除该例句">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <div class="ex-input-wrap">
+              <textarea
+                v-model="form.examples[i]"
+                rows="2"
+                :placeholder="`例句${i + 1}`"
+                autocomplete="off"
+              ></textarea>
+              <button v-if="form.examples[i]" class="clear-btn ex-clear area-clear" type="button" @mousedown.prevent @click="form.examples[i] = ''" title="清空内容" aria-label="清空该例句">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <button class="ex-del" type="button" @click="removeExample(i)" title="删除该例句" aria-label="删除该例句">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
             </button>
           </div>
           <button v-if="form.examples.length < 15" type="button" class="ex-add" @click="addExample">+ 添加例句</button>
@@ -409,14 +442,19 @@ function removeLinkPhrase(i) {
             </span>
           </label>
           <div v-for="(lw, i) in form.linkWords" :key="'lw' + i" class="ex-row">
-            <input
-              v-model="form.linkWords[i]"
-              type="text"
-              :placeholder="`关联单词${i + 1}`"
-              autocomplete="off"
-            />
-            <button class="ex-del" type="button" @click="removeLinkWord(i)" title="删除该关联">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <div class="ex-input-wrap">
+              <input
+                v-model="form.linkWords[i]"
+                type="text"
+                :placeholder="`关联单词${i + 1}`"
+                autocomplete="off"
+              />
+              <button v-if="form.linkWords[i]" class="clear-btn ex-clear" type="button" @mousedown.prevent @click="form.linkWords[i] = ''" title="清空内容" aria-label="清空该关联单词">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <button class="ex-del" type="button" @click="removeLinkWord(i)" title="删除该关联" aria-label="删除该关联">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
             </button>
           </div>
           <button v-if="form.linkWords.length < 15" type="button" class="ex-add" @click="addLinkWord">+ 添加关联单词</button>
@@ -432,14 +470,19 @@ function removeLinkPhrase(i) {
             </span>
           </label>
           <div v-for="(lp, i) in form.linkPhrases" :key="'lp' + i" class="ex-row">
-            <input
-              v-model="form.linkPhrases[i]"
-              type="text"
-              :placeholder="`关联短语${i + 1}`"
-              autocomplete="off"
-            />
-            <button class="ex-del" type="button" @click="removeLinkPhrase(i)" title="删除该关联">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <div class="ex-input-wrap">
+              <input
+                v-model="form.linkPhrases[i]"
+                type="text"
+                :placeholder="`关联短语${i + 1}`"
+                autocomplete="off"
+              />
+              <button v-if="form.linkPhrases[i]" class="clear-btn ex-clear" type="button" @mousedown.prevent @click="form.linkPhrases[i] = ''" title="清空内容" aria-label="清空该关联短语">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <button class="ex-del" type="button" @click="removeLinkPhrase(i)" title="删除该关联" aria-label="删除该关联">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
             </button>
           </div>
           <button v-if="form.linkPhrases.length < 15" type="button" class="ex-add" @click="addLinkPhrase">+ 添加关联短语</button>
@@ -546,6 +589,61 @@ function removeLinkPhrase(i) {
   color: #b2b2b2;
 }
 
+/* 清除内容按钮：微信风格（输入框内右侧圆形灰底 ×），仅在有内容时显示 */
+.form-item .input-wrap,
+.form-item .remark-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.form-item .input-wrap input,
+.form-item .input-wrap textarea {
+  flex: 1;
+  width: 100%;
+  padding-right: 30px;
+  box-sizing: border-box;
+}
+.clear-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 8px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #b2b2b2;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+}
+.clear-btn:active {
+  background: #8c8c8c;
+}
+/* 输入框类内的清除按钮：垂直居中 */
+.pos-row .clear-btn {
+  top: 50%;
+  transform: translateY(-50%);
+  right: 10px;
+}
+/* 多行文本类（备注/例句）清除按钮：贴右上角，避免盖住文字 */
+.remark-wrap .remark-clear,
+.ex-input-wrap .area-clear {
+  top: 8px;
+  transform: none;
+}
+/* 例句行内的清除按钮：位于删除按钮左侧 */
+.ex-input-wrap .ex-clear {
+  right: 6px;
+}
+.ex-row .ex-del {
+  position: static;
+}
+
 .form-item .optional {
   color: #b2b2b2;
   font-size: 12px;
@@ -568,20 +666,27 @@ function removeLinkPhrase(i) {
 .ex-row {
   position: relative;
   margin-bottom: 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.ex-input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
 }
 .ex-row textarea,
 .ex-row input {
   width: 100%;
-  padding-right: 34px;
+  padding-right: 30px;
   box-sizing: border-box;
 }
 .ex-row input {
   height: 40px;
 }
 .ex-del {
-  position: absolute;
-  top: 8px;
-  right: 6px;
+  flex-shrink: 0;
+  margin-top: 8px;
   width: 26px;
   height: 26px;
   border: none;
@@ -617,7 +722,7 @@ function removeLinkPhrase(i) {
 .form-item .remark-area {
   height: 36px;
   min-height: 36px;
-  padding: 8px 0;
+  padding: 8px 30px 8px 0;
   border: none;
   border-radius: 0;
   font-size: 15px;
@@ -679,7 +784,7 @@ function removeLinkPhrase(i) {
   font-size: 15px;
   color: var(--text-main);
   background: transparent;
-  padding: 4px 0;
+  padding: 4px 30px 4px 0;
 }
 
 .type-row {
