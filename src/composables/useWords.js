@@ -99,7 +99,11 @@ export function useWords() {
     const idx = words.value.findIndex((w) => w.id === id)
     if (idx === -1) return Promise.reject(new Error('词句不存在'))
     const prev = { ...words.value[idx] }
-    words.value[idx] = { ...words.value[idx], ...patch }
+    // 乐观更新只铺标量字段（chinese/english/pos/type/caseSensitive/remark）；
+    // examples/phrases/linkWords/linkPhrases 是编辑表单的纯字符串数组，不直接覆盖到 w 上，
+    // 否则会临时顶掉后端的对象数组（含 type），再次打开编辑时例句回填为空、提交不完整导致旧例句被清空
+    const { examples, phrases, linkWords, linkPhrases, ...scalarPatch } = patch
+    words.value[idx] = { ...words.value[idx], ...scalarPatch }
     const w = words.value[idx]
     // 编辑表单的 phrases/examples 为纯字符串数组（含空框）；后端返回的 examples 为带 type 的混合列表
     const phs = Array.isArray(patch.phrases) ? patch.phrases : []

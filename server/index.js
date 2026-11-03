@@ -46,10 +46,13 @@ function rowToWord(row) {
   return w
 }
 // 写入词句的关联词句（例句/相关短语）：清空旧的非主动关联后写入新列表（保留 link_type='link' 的主动关联）
+// 空列表=本次未提交任何例句/短语（如只改备注/词性）：不执行删除，保留旧关联，避免误删
 function saveWordExamples(wordId, sentenceIds) {
+  const ids = (Array.isArray(sentenceIds) ? sentenceIds : []).filter(Boolean)
+  if (!ids.length) return
   db.prepare('DELETE FROM word_examples WHERE word_id = ? AND (link_type IS NULL OR link_type != ?)').run(wordId, 'link')
   const st = db.prepare('INSERT OR IGNORE INTO word_examples (word_id, sentence_id, link_type, created_at) VALUES (?, ?, ?, ?)')
-  for (const sid of sentenceIds) st.run(wordId, sid, 'example', Date.now())
+  for (const sid of ids) st.run(wordId, sid, 'example', Date.now())
 }
 // 解析用户主动输入的关联词：只匹配词库中已存在（同类型、英文忽略大小写）的，不存在则静默忽略（不翻译、不创建、不提示）
 async function resolveExisting(userId, type, list) {
@@ -847,13 +850,16 @@ app.put('/api/words/:id', async (req, res) => {
     linkWordIds = await resolveExisting(req.userId, 'word', linkWords)
     if (t === 'sentence') linkPhraseIds = await resolveExisting(req.userId, 'phrase', linkPhrases)
   }
+  const oldRow = db.prepare('SELECT * FROM words WHERE id = ? AND user_id = ?').get(id, req.userId)
   const info = db.prepare('UPDATE words SET chinese = ?, english = ?, pos = ?, type = ?, case_sensitive = ?, example_id = ?, remark = ?, updated_at = ? WHERE id = ? AND user_id = ?').run(c, e, p, t, caseSensitive ? 1 : 0, sentenceIds[0] || 0, rm, Date.now(), id, req.userId)
   if (!info.changes) return res.status(404).json({ error: '单词不存在' })
-  saveWordExamples(id, linkedIds)
+  // 仅当本次提交了例句/相关短语时才全量覆盖关联；空提交（只改备注/词性等）保留旧关联，避免误删旧例句
+  if (linkedIds.length) saveWordExamples(id, linkedIds)
   if (t !== 'word') {
     saveLinks(id, req.userId, linkWordIds, linkPhraseIds)
-  } else {
-    // 从短语/句子改回单词：清理原主动关联（正向+反向 link）
+  } else if (oldRow && oldRow.type !== 'word') {
+    // 从短语/句子改回单词：清理原主动关联（正向+反向 link）——仅类型发生变更时才清理，
+    // 避免编辑本就为 word 的词句时误删其他句子主动关联它的 link（如录入句子时关联的单词）
     const olds = db.prepare('SELECT sentence_id FROM word_examples WHERE word_id = ? AND link_type = ?').all(id, 'link').map((r) => Number(r.sentence_id))
     db.prepare('DELETE FROM word_examples WHERE word_id = ? AND link_type = ?').run(id, 'link')
     for (const oid of olds) db.prepare('DELETE FROM word_examples WHERE word_id = ? AND sentence_id = ? AND link_type = ?').run(oid, id, 'link')
