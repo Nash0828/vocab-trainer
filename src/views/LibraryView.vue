@@ -1562,7 +1562,7 @@ function formatTime(ts) {
 
 .word-main {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
 }
@@ -1587,6 +1587,7 @@ function formatTime(ts) {
   border-radius: 50%;
   cursor: pointer;
   flex-shrink: 0;
+  align-self: flex-start;
   transition: all 0.2s;
 }
 
@@ -1615,6 +1616,8 @@ function formatTime(ts) {
   color: var(--text-sub);
   font-size: 12px;
   flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 4px;
 }
 
 .type-tag {
@@ -1625,6 +1628,8 @@ function formatTime(ts) {
   color: var(--primary);
   font-size: 12px;
   flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 4px;
 }
 
 .type-row {
@@ -1671,6 +1676,7 @@ function formatTime(ts) {
   font-size: 13px;
   color: var(--text-sub);
   flex-shrink: 0;
+  margin-top: 5px;
 }
 
 .word-count.mastered {
