@@ -203,6 +203,7 @@ const aiChecking = ref(false) // 句子 AI 判定进行中，防重复提交
 const lastIndex = ref(-1)
 const answerInput = ref(null)
 const focusEnabled = ref(false)
+const answerFocus = ref(false) // 答案输入框聚焦态：有内容且聚焦时显示清空按钮
 let autoTimer = null // 作答后自动切换下一题的定时器
 
 // 今日统计与记录弹窗（computed：随 history 数据补全/变化自动重算，后台冻结恢复补数据后无需手动刷新）
@@ -1603,7 +1604,8 @@ next()
             autocorrect="off"
             placeholder="输入英文"
             :disabled="inputDisabled"
-            @focus="focusEnabled = true"
+            @focus="focusEnabled = true; answerFocus = true"
+            @blur="answerFocus = false"
             @keyup.enter="submit"
             autocomplete="off"
             autocapitalize="off"
@@ -1619,11 +1621,24 @@ next()
             autocorrect="off"
             placeholder="输入英文"
             :disabled="inputDisabled"
-            @focus="focusEnabled = true"
+            @focus="focusEnabled = true; answerFocus = true"
+            @blur="answerFocus = false"
             autocomplete="off"
             autocapitalize="off"
             spellcheck="false"
           ></textarea>
+          <!-- 微信风格清空按钮：单行垂直居中，多行贴右上角 -->
+          <button
+            v-if="answer && answerFocus && !inputDisabled"
+            class="quiz-clear"
+            type="button"
+            @mousedown.prevent
+            @click="answer = ''"
+            title="清空内容"
+            aria-label="清空答案"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
 
         <!-- 判定反馈（答对不显示任何提示块；答错仅显示错误信息，无重听按钮） -->
@@ -2706,10 +2721,14 @@ next()
   transition: width 0.3s ease;
 }
 
+.quiz-input {
+  position: relative;
+}
+
 .quiz-input input,
 .quiz-input textarea {
   width: 100%;
-  padding: 12px 16px;
+  padding: 12px 44px 12px 16px;
   font-size: 18px;
   text-align: center;
   border: 1px solid #e5e5e5;
@@ -2733,6 +2752,34 @@ next()
 .quiz-input textarea:disabled {
   background: #f5f5f5;
   color: var(--text-sub);
+}
+
+/* 微信风格清空按钮：单行输入框垂直居中 */
+.quiz-clear {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 10px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #b2b2b2;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+}
+.quiz-clear:active {
+  background: #8c8c8c;
+}
+/* 多行文本框（句子答案）：清空按钮贴右上角，避免盖住文字 */
+.quiz-input textarea ~ .quiz-clear {
+  top: 8px;
+  transform: none;
 }
 
 .feedback {
