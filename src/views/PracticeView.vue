@@ -205,13 +205,13 @@ const answerInput = ref(null)
 const focusEnabled = ref(false)
 let autoTimer = null // 作答后自动切换下一题的定时器
 
-// 今日统计与记录弹窗
-const todayStats = ref(getTodayStats())
-const todayUnique = ref(getTodayUniqueStats()) // 今日去重单词统计（重复单词只算一次）
-const todayRecords = ref([])
+// 今日统计与记录弹窗（computed：随 history 数据补全/变化自动重算，后台冻结恢复补数据后无需手动刷新）
+const todayTick = ref(0) // 用于跨零点时刷新今日统计
+const todayStats = computed(() => { void todayTick.value; return getTodayStats() })
+const todayUnique = computed(() => { void todayTick.value; return getTodayUniqueStats() }) // 今日去重单词统计（重复单词只算一次）
+const todayRecords = computed(() => { void todayTick.value; return getTodayRecords() })
 const showRecordsModal = ref(false)
 const modalTab = ref('correct') // 'all' | 'correct' | 'wrong'
-const todayTick = ref(0) // 用于跨零点时刷新今日统计
 let todayInterval = null
 
 const threshold = computed(() => settings.value.masteryThreshold)
@@ -290,9 +290,8 @@ const todayNewMastered = computed(() => {
 })
 
 function refreshToday() {
-  todayStats.value = getTodayStats()
-  todayUnique.value = getTodayUniqueStats()
-  todayRecords.value = getTodayRecords()
+  // 统计均为 computed，通过 tick 触发重算（数据源 history 变化时也会自动重算）
+  todayTick.value += 1
 }
 
 function pickIndex() {
