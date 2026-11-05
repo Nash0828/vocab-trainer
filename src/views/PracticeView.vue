@@ -1597,7 +1597,8 @@ next()
       <button
         v-if="hasWords"
         class="filter-icon-btn"
-        :class="{ active: hasFilter }"
+        :class="{ active: hasFilter && !isCondReadonly }"
+        :disabled="isCondReadonly"
         title="筛选"
         @click="openFilterSheet"
       >
@@ -1605,8 +1606,8 @@ next()
       </button>
     </div>
 
-    <!-- 当前筛选条件标签（微信风格，可单独删除；条件分组模式下只读不可删） -->
-    <div v-if="activeFilterChips.length" class="filter-chips">
+    <!-- 当前筛选条件标签（微信风格，可单独删除；条件分组模式不回显条件） -->
+    <div v-if="activeFilterChips.length && !isCondReadonly" class="filter-chips">
       <span v-for="chip in activeFilterChips" :key="chip.key" class="filter-chip">
         {{ chip.label }}
         <button v-if="!isCondReadonly" class="chip-del" title="移除该筛选" @click="removeFilterChip(chip.key)">
@@ -2390,6 +2391,15 @@ next()
 .filter-icon-btn.active {
   color: var(--primary);
   background: rgba(7, 193, 96, 0.1);
+}
+
+.filter-icon-btn:disabled {
+  color: #c8c8c8;
+  background: #f0f0f0;
+  cursor: not-allowed;
+}
+.filter-icon-btn:disabled:active {
+  background: #f0f0f0;
 }
 
 /* 筛选条件标签（微信风格：浅灰底小圆角 chip，可单独删除） */
