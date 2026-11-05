@@ -22,7 +22,7 @@ const savedMode = localStorage.getItem('vt_practice_mode')
 const practiceMode = ref(savedMode === 'group' || savedMode === 'condgroup' ? savedMode : 'random')
 const groups = ref([]) // { id, name, seq, size, mastered }
 const groupTotal = ref(0) // 当前词库总词数
-const selectedGroupId = ref(null)
+const selectedGroupId = ref(Number(localStorage.getItem('vt_group_id')) || null)
 const showGroupModal = ref(false) // 分组设置弹框
 const draftGroups = ref([]) // 弹框编辑副本
 const groupError = ref('')
@@ -1251,6 +1251,7 @@ function pickGroup(g) {
   showGroupPicker.value = false
   if (!g || g.id === selectedGroupId.value) return
   selectedGroupId.value = g.id
+  localStorage.setItem('vt_group_id', String(g.id))
   lastIndex.value = -1
   clearAutoTimer()
   current.value = null
