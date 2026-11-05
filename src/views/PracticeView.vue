@@ -1651,7 +1651,7 @@ next()
     <div v-if="practiceMode === 'condgroup'" class="group-row">
       <button v-if="condGroups.length" class="group-select" @click="showCondGroupPicker = true">
         <span class="group-select-name">{{ selectedCondGroup?.name }}</span>
-        <span class="group-select-progress">{{ selectedCondGroup ? condSummary(selectedCondGroup) : '' }}</span>
+        <span class="group-select-progress">{{ selectedCondGroup ? condGroupPoolCount(selectedCondGroup) + ' 条' : '' }}</span>
         <svg class="group-select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
       <span v-else class="group-empty-hint">尚未设置条件分组</span>
@@ -2173,7 +2173,7 @@ next()
         <div class="picker-list">
           <button v-for="g in condGroups" :key="g.id" class="picker-item" @click="pickCondGroup(g)">
             <span class="picker-name">{{ g.name }}</span>
-            <span class="picker-progress">待背 {{ condGroupPoolCount(g) }} 条</span>
+            <span class="picker-progress">{{ condGroupPoolCount(g) }} 条</span>
             <svg v-if="g.id === selectedCondGroupId" class="picker-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </button>
         </div>
