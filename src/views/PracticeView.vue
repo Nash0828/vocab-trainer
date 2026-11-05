@@ -18,7 +18,8 @@ const { addWrong, removeWrong, getValidWrongWords } = useWrongBook()
 // 出题来源：'all' = 全部未背熟词库；'wrong' = 仅错题本
 const sourceMode = ref('all')
 // 背诵模式：'random' = 随机背诵（整词库）；'group' = 简易分组背诵（按静态分配组出题）；'condgroup' = 条件分组背诵（按保存的筛选条件实时出题）
-const practiceMode = ref(localStorage.getItem('vt_practice_mode') === 'group' ? 'group' : 'random')
+const savedMode = localStorage.getItem('vt_practice_mode')
+const practiceMode = ref(savedMode === 'group' || savedMode === 'condgroup' ? savedMode : 'random')
 const groups = ref([]) // { id, name, seq, size, mastered }
 const groupTotal = ref(0) // 当前词库总词数
 const selectedGroupId = ref(null)
