@@ -17,7 +17,7 @@ const { addWrong, removeWrong, getValidWrongWords } = useWrongBook()
 
 // 出题来源：'all' = 全部未背熟词库；'wrong' = 仅错题本
 const sourceMode = ref('all')
-// 背诵模式：'random' = 随机背诵（整词库）；'group' = 分组背诵（按组出题）
+// 背诵模式：'random' = 随机背诵（整词库）；'group' = 简易分组背诵（按静态分配组出题）；'condgroup' = 条件分组背诵（按保存的筛选条件实时出题）
 const practiceMode = ref(localStorage.getItem('vt_practice_mode') === 'group' ? 'group' : 'random')
 const groups = ref([]) // { id, name, seq, size, mastered }
 const groupTotal = ref(0) // 当前词库总词数
@@ -25,7 +25,16 @@ const selectedGroupId = ref(null)
 const showGroupModal = ref(false) // 分组设置弹框
 const draftGroups = ref([]) // 弹框编辑副本
 const groupError = ref('')
+// 条件分组：每个组 = 一组保存的筛选条件（出题来源 + 类型 + 关键字），作为题源
+const condGroups = ref([]) // { id, name, seq, sourceMode, typeFilter, keywords }
+const selectedCondGroupId = ref(null)
+const showCondGroupModal = ref(false) // 条件分组设置弹框
+const condGroupError = ref('')
+// 条件分组设置弹框的编辑器状态：null=列表视图；对象=编辑中（id 为 null 表示新增）
+const condEditing = ref(null)
 watch(practiceMode, (m) => localStorage.setItem('vt_practice_mode', m))
+// 条件分组模式下筛选面板只读（选中组后条件填充到筛选，但不能编辑）
+const isCondReadonly = computed(() => practiceMode.value === 'condgroup')
 
 async function loadGroups() {
   try {
@@ -39,6 +48,33 @@ async function loadGroups() {
       if (groups.value.length && !current.value) next()
     }
   } catch (e) {}
+}
+// 把某条件组的筛选条件应用到当前筛选（condgroup 模式下筛选被锁定为该组条件）
+function applyCondGroupFilters(g) {
+  sourceMode.value = g.sourceMode || 'all'
+  typeFilter.value = g.typeFilter || 'all'
+  keywordFilters.value = Array.isArray(g.keywords) ? [...g.keywords] : []
+}
+async function loadCondGroups() {
+  try {
+    const r = await api.getCondGroups()
+    condGroups.value = r.groups || []
+    if (practiceMode.value === 'condgroup') {
+      if (!selectedCondGroupId.value || !condGroups.value.some((g) => g.id === selectedCondGroupId.value)) {
+        selectedCondGroupId.value = condGroups.value[0]?.id || null
+      }
+      const g = condGroups.value.find((x) => x.id === selectedCondGroupId.value)
+      if (g) applyCondGroupFilters(g)
+      if (condGroups.value.length && !current.value) next()
+    }
+  } catch (e) {}
+}
+// 条件摘要：如 "仅错题本 · 单词 · 关键字：B1L111、B1L112"
+function condSummary(g) {
+  const s = g.sourceMode === 'wrong' ? '仅错题本' : '全部'
+  const t = (typeFilterOptions.find((o) => o.value === g.typeFilter) || {}).label || '全部类型'
+  const k = Array.isArray(g.keywords) && g.keywords.length ? `关键字：${g.keywords.join('、')}` : ''
+  return [s, t, k].filter(Boolean).join(' · ')
 }
 // 词库变化（录入/删除/背诵次数）时刷新分组统计
 watch(() => words.value, loadGroups, { deep: true })
@@ -266,7 +302,11 @@ const available = computed(() => {
 })
 const allMastered = computed(() => hasWords.value && available.value.length === 0)
 // 分组模式：尚未设置任何分组
-const groupEmpty = computed(() => practiceMode.value === 'group' && !groups.value.length)
+const groupEmpty = computed(
+  () =>
+    (practiceMode.value === 'group' && !groups.value.length) ||
+    (practiceMode.value === 'condgroup' && !condGroups.value.length)
+)
 // 筛选条件下无可用词句：筛选生效且出题池为空
 const filterEmpty = computed(
   () => (typeFilter.value !== 'all' || keywordFilters.value.length > 0) && available.value.length === 0
@@ -1082,12 +1122,19 @@ function setSource(mode) {
   next()
 }
 
-// ===== 背诵模式切换（随机 / 分组） =====
+// ===== 背诵模式切换（随机 / 条件分组 / 简易分组） =====
 function setMode(m) {
   if (practiceMode.value === m) return
+  const prev = practiceMode.value
   practiceMode.value = m
   lastIndex.value = -1
   clearAutoTimer()
+  // 从条件分组切走：清掉组条件填充的筛选，避免残留锁定条件影响其他模式
+  if (prev === 'condgroup' && m !== 'condgroup') {
+    sourceMode.value = 'all'
+    typeFilter.value = 'all'
+    keywordFilters.value = ['']
+  }
   if (m === 'group') {
     if (!groups.value.length) {
       current.value = null
@@ -1099,11 +1146,41 @@ function setMode(m) {
       selectedGroupId.value = groups.value[0].id
     }
   }
+  if (m === 'condgroup') {
+    if (!condGroups.value.length) {
+      current.value = null
+      result.value = null
+      openCondGroupModal()
+      return
+    }
+    if (!selectedCondGroupId.value || !condGroups.value.some((g) => g.id === selectedCondGroupId.value)) {
+      selectedCondGroupId.value = condGroups.value[0].id
+    }
+    const g = condGroups.value.find((x) => x.id === selectedCondGroupId.value)
+    if (g) applyCondGroupFilters(g)
+  }
   next()
 }
 // 分组下拉切换（微信风格底部选择面板）
 const showGroupPicker = ref(false)
 const selectedGroup = computed(() => groups.value.find((g) => g.id === selectedGroupId.value) || null)
+// 条件分组下拉切换
+const showCondGroupPicker = ref(false)
+const selectedCondGroup = computed(
+  () => condGroups.value.find((g) => g.id === selectedCondGroupId.value) || null
+)
+function pickCondGroup(g) {
+  showCondGroupPicker.value = false
+  if (!g || g.id === selectedCondGroupId.value) return
+  selectedCondGroupId.value = g.id
+  applyCondGroupFilters(g)
+  lastIndex.value = -1
+  clearAutoTimer()
+  current.value = null
+  result.value = null
+  answer.value = ''
+  next()
+}
 // 类型/关键字过滤后的组统计：组选择器与选择弹层的"已背熟 x/xxx"随当前筛选条件实时变化
 const groupStats = computed(() => {
   const matchType = (w) => typeFilter.value === 'all' || (w.type || 'word') === typeFilter.value
@@ -1138,6 +1215,100 @@ function openGroupModal() {
   draftGroups.value = groups.value.map((g) => ({ id: g.id, name: g.name, seq: g.seq, size: g.size, mastered: g.mastered }))
   groupError.value = ''
   showGroupModal.value = true
+}
+
+// ===== 条件分组设置弹框（列表 + 新增/编辑 + 删除） =====
+function openCondGroupModal() {
+  condGroupError.value = ''
+  condEditing.value = null
+  showCondGroupModal.value = true
+}
+function closeCondGroupModal() {
+  showCondGroupModal.value = false
+  condEditing.value = null
+}
+function startCreateCondGroup() {
+  const maxSeq = condGroups.value.reduce((a, g) => Math.max(a, Number(g.seq) || 0), 0)
+  condEditing.value = {
+    id: null,
+    name: '',
+    seq: maxSeq + 1,
+    sourceMode: 'all',
+    typeFilter: 'all',
+    keywords: [''],
+  }
+  condGroupError.value = ''
+}
+function startEditCondGroup(g) {
+  condEditing.value = {
+    id: g.id,
+    name: g.name,
+    seq: g.seq,
+    sourceMode: g.sourceMode,
+    typeFilter: g.typeFilter,
+    keywords: Array.isArray(g.keywords) && g.keywords.length ? [...g.keywords] : [''],
+  }
+  condGroupError.value = ''
+}
+function addCondKwRow() {
+  if (condEditing.value.keywords.length >= 20) return
+  condEditing.value.keywords.push('')
+}
+function removeCondKwRow(i) {
+  condEditing.value.keywords.splice(i, 1)
+  if (!condEditing.value.keywords.length) condEditing.value.keywords = ['']
+}
+async function saveCondGroup() {
+  const e = condEditing.value
+  if (!e) return
+  const payload = {
+    name: e.name.trim(),
+    seq: Number(e.seq) || 0,
+    sourceMode: e.sourceMode,
+    typeFilter: e.typeFilter,
+    keywords: e.keywords.map((k) => (k || '').trim()).filter(Boolean),
+  }
+  if (!payload.name) {
+    condGroupError.value = '请填写分组名称'
+    return
+  }
+  try {
+    if (e.id) {
+      await api.updateCondGroup(e.id, payload)
+    } else {
+      await api.createCondGroup(payload)
+    }
+    await loadCondGroups()
+    // 编辑的是当前选中组：同步应用新条件
+    if (selectedCondGroupId.value && String(e.id) === String(selectedCondGroupId.value)) {
+      const g = condGroups.value.find((x) => String(x.id) === String(selectedCondGroupId.value))
+      if (g) applyCondGroupFilters(g)
+    }
+    condEditing.value = null
+    if (practiceMode.value === 'condgroup' && !current.value) next()
+  } catch (err) {
+    condGroupError.value = err?.message || '保存失败，请重试'
+  }
+}
+async function deleteCondGroup(g) {
+  if (!window.confirm(`确定删除条件分组「${g.name}」吗？`)) return
+  try {
+    await api.deleteCondGroup(g.id)
+    await loadCondGroups()
+    if (String(selectedCondGroupId.value) === String(g.id)) {
+      selectedCondGroupId.value = condGroups.value[0]?.id || null
+      if (selectedCondGroupId.value) {
+        applyCondGroupFilters(condGroups.value[0])
+      } else {
+        sourceMode.value = 'all'
+        typeFilter.value = 'all'
+        keywordFilters.value = ['']
+      }
+      if (practiceMode.value === 'condgroup' && !current.value) next()
+    }
+  } catch (err) {
+    condGroupError.value = err?.message || '删除失败，请重试'
+  }
 }
 function closeGroupModal() {
   showGroupModal.value = false
@@ -1320,11 +1491,13 @@ onMounted(() => {
   setPendingFromQuery()
   if (pendingWord.value) next()
   loadGroups()
+  loadCondGroups()
 })
 
 onActivated(() => {
   // KeepAlive 切回：静默刷新分组与今日统计（不打断当前题目，保留答题现场）
   loadGroups()
+  loadCondGroups()
   refreshToday()
   // 指定词跳转场景（词句库/详情弹框点背诵）：强制重设并出指定词，覆盖缓存残留/筛选状态/旧题占用等一切情况
   if (route.query.word) {
@@ -1418,7 +1591,8 @@ next()
     <div class="mode-row">
       <div class="mode-tabs">
         <button class="mode-tab" :class="{ active: practiceMode === 'random' }" @click="setMode('random')">随机背诵</button>
-        <button class="mode-tab" :class="{ active: practiceMode === 'group' }" @click="setMode('group')">分组背诵</button>
+        <button class="mode-tab" :class="{ active: practiceMode === 'condgroup' }" @click="setMode('condgroup')">条件分组背诵</button>
+        <button class="mode-tab" :class="{ active: practiceMode === 'group' }" @click="setMode('group')">简易分组背诵</button>
       </div>
       <button
         v-if="hasWords"
@@ -1431,18 +1605,18 @@ next()
       </button>
     </div>
 
-    <!-- 当前筛选条件标签（微信风格，可单独删除） -->
+    <!-- 当前筛选条件标签（微信风格，可单独删除；条件分组模式下只读不可删） -->
     <div v-if="activeFilterChips.length" class="filter-chips">
       <span v-for="chip in activeFilterChips" :key="chip.key" class="filter-chip">
         {{ chip.label }}
-        <button class="chip-del" title="移除该筛选" @click="removeFilterChip(chip.key)">
+        <button v-if="!isCondReadonly" class="chip-del" title="移除该筛选" @click="removeFilterChip(chip.key)">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </span>
       <span class="filter-total">共 {{ filteredTotal }} 条</span>
     </div>
 
-    <!-- 分组模式：组下拉选框 + 分组设置 -->
+    <!-- 简易分组模式：组下拉选框 + 分组设置 -->
     <div v-if="practiceMode === 'group'" class="group-row">
       <button v-if="groups.length" class="group-select" @click="showGroupPicker = true">
         <span class="group-select-name">{{ selectedGroup?.name }}</span>
@@ -1451,6 +1625,20 @@ next()
       </button>
       <span v-else class="group-empty-hint">尚未设置分组</span>
       <button class="group-set-btn" @click="openGroupModal">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+        分组设置
+      </button>
+    </div>
+
+    <!-- 条件分组模式：组下拉选框 + 条件分组设置 -->
+    <div v-if="practiceMode === 'condgroup'" class="group-row">
+      <button v-if="condGroups.length" class="group-select" @click="showCondGroupPicker = true">
+        <span class="group-select-name">{{ selectedCondGroup?.name }}</span>
+        <span class="group-select-progress">{{ selectedCondGroup ? condSummary(selectedCondGroup) : '' }}</span>
+        <svg class="group-select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <span v-else class="group-empty-hint">尚未设置条件分组</span>
+      <button class="group-set-btn" @click="openCondGroupModal">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
         分组设置
       </button>
@@ -1471,9 +1659,9 @@ next()
       <div class="empty-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
       </div>
-      <p class="empty-title">尚未设置分组</p>
-      <p class="empty-desc">点击上方「分组设置」把词句分成若干组，一组一组来背</p>
-      <button class="empty-btn" @click="openGroupModal">去设置分组</button>
+      <p class="empty-title">{{ practiceMode === 'condgroup' ? '尚未设置条件分组' : '尚未设置分组' }}</p>
+      <p class="empty-desc">{{ practiceMode === 'condgroup' ? '保存一组筛选条件作为题源，一组一组来背' : '点击上方「分组设置」把词句分成若干组，一组一组来背' }}</p>
+      <button class="empty-btn" @click="practiceMode === 'condgroup' ? openCondGroupModal() : openGroupModal()">去设置分组</button>
     </div>
 
     <!-- 错题本模式：错题本为空 -->
@@ -1501,19 +1689,19 @@ next()
       <div class="empty-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
       </div>
-      <p class="empty-title">{{ practiceMode === 'group' ? '所有分组都背完了' : '全部背熟了' }}</p>
-      <p class="empty-desc">{{ practiceMode === 'group' ? '所选分组中的词句都已达到背熟阈值' : '词句库中所有词句都已达到背熟阈值' }}</p>
+      <p class="empty-title">{{ practiceMode === 'group' ? '所有分组都背完了' : practiceMode === 'condgroup' ? '该条件组都背完了' : '全部背熟了' }}</p>
+      <p class="empty-desc">{{ practiceMode === 'group' ? '所选分组中的词句都已达到背熟阈值' : practiceMode === 'condgroup' ? '该条件组命中的未背熟词句都已背完' : '词句库中所有词句都已达到背熟阈值' }}</p>
       <button class="empty-btn" @click="router.push('/settings')">去设置调整</button>
     </div>
 
-    <!-- 类型筛选下没有可练习词句 -->
+    <!-- 筛选下没有可练习词句 -->
     <div v-else-if="filterEmpty" class="empty-state">
       <div class="empty-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </div>
       <p class="empty-title">「{{ filterSummary }}」下没有可练习的词句</p>
-      <p class="empty-desc">试试切换类型筛选，或先录入一些{{ filterSummary }}</p>
-      <button class="empty-btn" @click="clearTypeFilter">清除筛选</button>
+      <p class="empty-desc">{{ isCondReadonly ? '该条件组命中的词句都已背熟或不存在，可在分组设置里调整条件' : '试试切换类型筛选，或先录入一些' + filterSummary }}</p>
+      <button v-if="!isCondReadonly" class="empty-btn" @click="clearTypeFilter">清除筛选</button>
     </div>
 
     <!-- 有可练习单词 -->
@@ -1522,7 +1710,7 @@ next()
       <transition name="sheet">
         <div v-if="showFilterSheet" class="sheet-mask" @click.self="closeFilterSheet" @touchstart="onLayerTouchStart" @touchmove="onLayerMaskTouchmove">
           <div class="sheet">
-            <div class="sheet-title">筛选</div>
+            <div class="sheet-title">筛选<span v-if="isCondReadonly" class="sheet-readonly-tip">（当前为条件分组，只读）</span></div>
             <div class="sheet-body">
               <div class="sheet-group">
                 <div class="sheet-group-title">出题来源</div>
@@ -1531,7 +1719,8 @@ next()
                     v-for="opt in sourceOptions"
                     :key="opt.value"
                     class="sheet-opt"
-                    :class="{ active: draftSourceMode === opt.value }"
+                    :class="{ active: draftSourceMode === opt.value, readonly: isCondReadonly }"
+                    :disabled="isCondReadonly"
                     @click="draftSourceMode = opt.value"
                   >{{ opt.label }}</button>
                 </div>
@@ -1543,7 +1732,8 @@ next()
                     v-for="opt in typeFilterOptions"
                     :key="opt.value"
                     class="sheet-opt"
-                    :class="{ active: draftTypeFilter === opt.value }"
+                    :class="{ active: draftTypeFilter === opt.value, readonly: isCondReadonly }"
+                    :disabled="isCondReadonly"
                     @click="draftTypeFilter = opt.value"
                   >{{ opt.label }}</button>
                 </div>
@@ -1561,12 +1751,14 @@ next()
                       type="text"
                       placeholder="按备注 / 中文 / 英文过滤"
                       maxlength="50"
+                      :readonly="isCondReadonly"
+                      :disabled="isCondReadonly"
                       @focus="kwFocusIdx = i"
                       @blur="kwFocusIdx = -1"
                       @keydown.enter="applyFilterSheet"
                     />
                     <button
-                      v-if="draftKeywords[i] && kwFocusIdx === i"
+                      v-if="draftKeywords[i] && kwFocusIdx === i && !isCondReadonly"
                       class="kw-clear"
                       type="button"
                       @mousedown.prevent
@@ -1578,7 +1770,7 @@ next()
                     </button>
                   </div>
                   <button
-                    v-if="draftKeywords.length > 1"
+                    v-if="draftKeywords.length > 1 && !isCondReadonly"
                     class="kw-del"
                     type="button"
                     @click="removeKeywordRow(i)"
@@ -1588,12 +1780,17 @@ next()
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                   </button>
                 </div>
-                <button v-if="draftKeywords.length < 20" type="button" class="kw-add" @click="addKeywordRow">+ 添加关键字</button>
+                <button v-if="draftKeywords.length < 20 && !isCondReadonly" type="button" class="kw-add" @click="addKeywordRow">+ 添加关键字</button>
               </div>
             </div>
             <div class="sheet-foot">
-              <button class="sheet-btn ghost" @click="resetFilterSheet">重置</button>
-              <button class="sheet-btn primary" @click="applyFilterSheet">确定</button>
+              <template v-if="isCondReadonly">
+                <button class="sheet-btn primary" @click="closeFilterSheet">关闭</button>
+              </template>
+              <template v-else>
+                <button class="sheet-btn ghost" @click="resetFilterSheet">重置</button>
+                <button class="sheet-btn primary" @click="applyFilterSheet">确定</button>
+              </template>
             </div>
           </div>
         </div>
@@ -1902,7 +2099,7 @@ next()
       </div>
     </div>
 
-    <!-- 分组设置弹框 -->
+    <!-- 分组设置弹框（简易分组） -->
     <div v-if="showGroupModal" class="modal-mask" @click.self="closeGroupModal" @touchstart="onLayerTouchStart" @touchmove="onLayerMaskTouchmove">
       <div class="modal group-modal">
         <div class="modal-head">
@@ -1949,6 +2146,149 @@ next()
           <button class="btn ghost group-cancel" @click="closeGroupModal">取消</button>
           <button class="btn primary group-save" :disabled="!draftValid" @click="saveGroupsDraft">保存</button>
         </div>
+      </div>
+    </div>
+
+    <!-- 选择条件分组（微信风格底部弹层） -->
+    <div v-if="showCondGroupPicker" class="picker-mask" @click.self="showCondGroupPicker = false" @touchstart="onLayerTouchStart" @touchmove="onLayerMaskTouchmove">
+      <div class="picker-sheet">
+        <div class="picker-head">选择条件分组</div>
+        <div class="picker-list">
+          <button v-for="g in condGroups" :key="g.id" class="picker-item" @click="pickCondGroup(g)">
+            <span class="picker-name">{{ g.name }}</span>
+            <span class="picker-progress">{{ condSummary(g) }}</span>
+            <svg v-if="g.id === selectedCondGroupId" class="picker-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </button>
+        </div>
+        <button class="picker-cancel" @click="showCondGroupPicker = false">取消</button>
+      </div>
+    </div>
+
+    <!-- 条件分组设置弹框（列表视图 / 编辑视图） -->
+    <div v-if="showCondGroupModal" class="modal-mask" @click.self="closeCondGroupModal" @touchstart="onLayerTouchStart" @touchmove="onLayerMaskTouchmove">
+      <div class="modal cond-modal">
+        <!-- 列表视图 -->
+        <template v-if="!condEditing">
+          <div class="modal-head">
+            <h3>条件分组设置</h3>
+            <button class="modal-close" @click="closeCondGroupModal">✕</button>
+          </div>
+          <div class="modal-body cond-modal-body">
+            <div v-if="!condGroups.length" class="empty-tip">还没有条件分组，点击下方「新增条件分组」开始</div>
+            <div v-for="g in condGroups" :key="g.id" class="cond-card">
+              <div class="cond-card-main">
+                <div class="cond-card-title">
+                  <span class="cond-seq">#{{ g.seq }}</span>
+                  <span class="cond-name">{{ g.name }}</span>
+                </div>
+                <div class="cond-summary">{{ condSummary(g) }}</div>
+              </div>
+              <div class="cond-card-ops">
+                <button class="cond-edit-btn" title="编辑" @click="startEditCondGroup(g)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button class="cond-del-btn" title="删除" @click="deleteCondGroup(g)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              </div>
+            </div>
+            <button class="g-add" @click="startCreateCondGroup">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              新增条件分组
+            </button>
+            <p v-if="condGroupError" class="group-error">{{ condGroupError }}</p>
+          </div>
+          <div class="group-modal-foot">
+            <button class="btn ghost group-cancel" @click="closeCondGroupModal">关闭</button>
+          </div>
+        </template>
+        <!-- 编辑视图：序号 + 名称 + 条件选择器（与筛选功能一致） -->
+        <template v-else>
+          <div class="modal-head">
+            <h3>{{ condEditing.id ? '编辑条件分组' : '新增条件分组' }}</h3>
+            <button class="modal-close" @click="condEditing = null">✕</button>
+          </div>
+          <div class="modal-body cond-modal-body">
+            <div class="ce-row">
+              <span class="ce-label">序号</span>
+              <input class="ce-input ce-seq" type="number" min="1" v-model.number="condEditing.seq" />
+            </div>
+            <div class="ce-row">
+              <span class="ce-label">名称</span>
+              <input class="ce-input" type="text" v-model="condEditing.name" placeholder="给这组条件起个名字" maxlength="50" />
+            </div>
+            <div class="ce-group">
+              <div class="ce-group-title">出题来源</div>
+              <div class="sheet-opts">
+                <button
+                  v-for="opt in sourceOptions"
+                  :key="opt.value"
+                  class="sheet-opt"
+                  :class="{ active: condEditing.sourceMode === opt.value }"
+                  @click="condEditing.sourceMode = opt.value"
+                >{{ opt.label }}</button>
+              </div>
+            </div>
+            <div class="ce-group">
+              <div class="ce-group-title">类型</div>
+              <div class="sheet-opts">
+                <button
+                  v-for="opt in typeFilterOptions"
+                  :key="opt.value"
+                  class="sheet-opt"
+                  :class="{ active: condEditing.typeFilter === opt.value }"
+                  @click="condEditing.typeFilter = opt.value"
+                >{{ opt.label }}</button>
+              </div>
+            </div>
+            <div class="ce-group">
+              <div class="ce-group-title">
+                关键字
+                <span class="kw-count">{{ condEditing.keywords.length }}/20</span>
+              </div>
+              <div v-for="(k, i) in condEditing.keywords" :key="'cekw' + i" class="kw-row">
+                <div class="kw-input-wrap">
+                  <input
+                    v-model="condEditing.keywords[i]"
+                    class="sheet-keyword-input"
+                    type="text"
+                    placeholder="按备注 / 中文 / 英文过滤"
+                    maxlength="50"
+                    @focus="kwFocusIdx = i"
+                    @blur="kwFocusIdx = -1"
+                  />
+                  <button
+                    v-if="condEditing.keywords[i] && kwFocusIdx === i"
+                    class="kw-clear"
+                    type="button"
+                    @mousedown.prevent
+                    @click="condEditing.keywords[i] = ''"
+                    title="清空内容"
+                    aria-label="清空该关键字"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+                <button
+                  v-if="condEditing.keywords.length > 1"
+                  class="kw-del"
+                  type="button"
+                  @click="removeCondKwRow(i)"
+                  title="删除该关键字"
+                  aria-label="删除该关键字"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                </button>
+              </div>
+              <button v-if="condEditing.keywords.length < 20" type="button" class="kw-add" @click="addCondKwRow">+ 添加关键字</button>
+            </div>
+            <p v-if="condGroupError" class="group-error">{{ condGroupError }}</p>
+          </div>
+          <div class="group-modal-foot">
+            <button class="btn ghost group-cancel" @click="condEditing = null">取消</button>
+            <button class="btn primary group-save" @click="saveCondGroup">保存</button>
+          </div>
+        </template>
       </div>
     </div>
 </template>
@@ -2427,6 +2767,135 @@ next()
 
 .group-modal-foot .btn {
   flex: 1;
+}
+
+/* 条件分组设置弹框（微信风格，列表 + 编辑器） */
+.cond-modal {
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+.cond-modal-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.cond-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 0.5px solid #ececec;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.cond-card-main {
+  flex: 1;
+  min-width: 0;
+}
+.cond-card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  color: var(--text-main);
+}
+.cond-seq {
+  font-size: 12px;
+  color: var(--primary);
+  background: rgba(26, 173, 25, 0.1);
+  border-radius: 4px;
+  padding: 1px 5px;
+  flex-shrink: 0;
+}
+.cond-name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cond-summary {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-sub);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cond-card-ops {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.cond-edit-btn,
+.cond-del-btn {
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: #f2f2f2;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #576b95;
+  cursor: pointer;
+}
+.cond-del-btn {
+  color: #fa5151;
+}
+.cond-edit-btn:active,
+.cond-del-btn:active {
+  background: #e5e5e5;
+}
+/* 编辑器：序号 + 名称 + 条件选择 */
+.ce-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.ce-label {
+  width: 36px;
+  font-size: 14px;
+  color: var(--text-main);
+  flex-shrink: 0;
+}
+.ce-input {
+  flex: 1;
+  height: 36px;
+  border: 0.5px solid #e0e0e0;
+  border-radius: 8px;
+  background: #f7f7f7;
+  font-size: 14px;
+  padding: 0 10px;
+  color: var(--text-main);
+  outline: none;
+}
+.ce-input:focus {
+  border-color: var(--primary);
+  background: #fff;
+}
+.ce-seq {
+  width: 70px;
+  flex: none;
+}
+.ce-group {
+  margin-top: 12px;
+}
+.ce-group-title {
+  font-size: 14px;
+  color: var(--text-main);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+/* 筛选只读提示（条件分组模式） */
+.sheet-readonly-tip {
+  font-size: 12px;
+  color: var(--text-sub);
+  font-weight: 400;
+}
+.sheet-opt.readonly {
+  opacity: 0.55;
 }
 
 /* 筛选底部面板（微信风格） */

@@ -443,6 +443,77 @@ app.get('/api/state', (req, res) => {
   })
 })
 
+// ============ 条件分组 API（保存筛选条件组合，作为背诵题源） ============
+// 校验并规范化一组条件
+function normalizeCondGroup(body) {
+  const name = String(body?.name || '').trim()
+  if (!name) return { error: '分组名称不能为空' }
+  if (name.length > 50) return { error: '分组名称不能超过50字' }
+  const sourceMode = body?.sourceMode === 'wrong' ? 'wrong' : 'all'
+  const typeFilter = ['all', 'word', 'phrase', 'sentence'].includes(body?.typeFilter) ? body.typeFilter : 'all'
+  const rawKeywords = Array.isArray(body?.keywords) ? body.keywords : []
+  if (rawKeywords.length > 20) return { error: '关键字最多20个' }
+  const keywords = rawKeywords
+    .map((k) => String(k || '').trim())
+    .filter(Boolean)
+    .slice(0, 20)
+  const seq = Number.isFinite(Number(body?.seq)) ? Math.max(0, Math.floor(Number(body.seq))) : 0
+  return { name, sourceMode, typeFilter, keywords, seq }
+}
+// 读取条件分组列表
+app.get('/api/cond-groups', (req, res) => {
+  const uid = req.userId
+  const groups = db
+    .prepare('SELECT * FROM condition_groups WHERE user_id = ? ORDER BY seq ASC, id ASC')
+    .all(uid)
+    .map((g) => {
+      let keywords = []
+      try { keywords = JSON.parse(g.keywords || '[]') } catch (e) {}
+      return {
+        id: g.id,
+        name: g.name,
+        seq: g.seq,
+        sourceMode: g.source_mode,
+        typeFilter: g.type_filter,
+        keywords: Array.isArray(keywords) ? keywords : [],
+      }
+    })
+  res.json({ groups })
+})
+// 新增条件分组
+app.post('/api/cond-groups', (req, res) => {
+  const uid = req.userId
+  const c = normalizeCondGroup(req.body)
+  if (c.error) return res.status(400).json({ error: c.error })
+  const r = db
+    .prepare(
+      'INSERT INTO condition_groups (user_id, name, seq, source_mode, type_filter, keywords, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    )
+    .run(uid, c.name, c.seq, c.sourceMode, c.typeFilter, JSON.stringify(c.keywords), Date.now(), Date.now())
+  res.json({ id: Number(r.lastInsertRowid), ...c })
+})
+// 修改条件分组
+app.put('/api/cond-groups/:id', (req, res) => {
+  const uid = req.userId
+  const id = Number(req.params.id)
+  const exist = db.prepare('SELECT id FROM condition_groups WHERE id = ? AND user_id = ?').get(id, uid)
+  if (!exist) return res.status(404).json({ error: '分组不存在' })
+  const c = normalizeCondGroup(req.body)
+  if (c.error) return res.status(400).json({ error: c.error })
+  db.prepare(
+    'UPDATE condition_groups SET name = ?, seq = ?, source_mode = ?, type_filter = ?, keywords = ?, updated_at = ? WHERE id = ? AND user_id = ?'
+  ).run(c.name, c.seq, c.sourceMode, c.typeFilter, JSON.stringify(c.keywords), Date.now(), id, uid)
+  res.json({ id, ...c })
+})
+// 删除条件分组
+app.delete('/api/cond-groups/:id', (req, res) => {
+  const uid = req.userId
+  const id = Number(req.params.id)
+  const r = db.prepare('DELETE FROM condition_groups WHERE id = ? AND user_id = ?').run(id, uid)
+  if (!r.changes) return res.status(404).json({ error: '分组不存在' })
+  res.json({ ok: true })
+})
+
 // ============ 分组 API ============
 // 读取分组配置（含每组实际数量与已背熟数）
 app.get('/api/groups', (req, res) => {

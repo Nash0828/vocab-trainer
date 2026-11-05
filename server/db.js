@@ -119,6 +119,20 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_word_groups_group ON word_groups(group_id);
+
+  CREATE TABLE IF NOT EXISTS condition_groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    seq INTEGER NOT NULL DEFAULT 0,
+    source_mode TEXT NOT NULL DEFAULT 'all',
+    type_filter TEXT NOT NULL DEFAULT 'all',
+    keywords TEXT NOT NULL DEFAULT '[]',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_condition_groups_user ON condition_groups(user_id);
 `)
 
 // 迁移：旧表加列（已存在则忽略）

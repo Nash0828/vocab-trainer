@@ -61,6 +61,12 @@ export const api = {
   saveGroups: (groups) => req('/api/groups/save', { method: 'POST', body: { groups } }),
   reshuffleGroups: () => req('/api/groups/reshuffle', { method: 'POST', body: {} }),
 
+  // 条件分组（保存筛选条件组合作为题源）
+  getCondGroups: () => req('/api/cond-groups'),
+  createCondGroup: (data) => req('/api/cond-groups', { method: 'POST', body: data }),
+  updateCondGroup: (id, data) => req(`/api/cond-groups/${id}`, { method: 'PUT', body: data }),
+  deleteCondGroup: (id) => req(`/api/cond-groups/${id}`, { method: 'DELETE' }),
+
   // 背诵记录
   addRecord: (data) => req('/api/records', { method: 'POST', body: data }),
   clearDay: (date) => req(`/api/records/${date}`, { method: 'DELETE' }),
