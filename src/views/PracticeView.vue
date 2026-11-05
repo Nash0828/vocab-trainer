@@ -1590,9 +1590,9 @@ next()
     <!-- 背诵模式切换 + 筛选入口（一行） -->
     <div class="mode-row">
       <div class="mode-tabs">
-        <button class="mode-tab" :class="{ active: practiceMode === 'random' }" @click="setMode('random')">随机背诵</button>
-        <button class="mode-tab" :class="{ active: practiceMode === 'condgroup' }" @click="setMode('condgroup')">条件分组背诵</button>
-        <button class="mode-tab" :class="{ active: practiceMode === 'group' }" @click="setMode('group')">简易分组背诵</button>
+        <button class="mode-tab" :class="{ active: practiceMode === 'random' }" @click="setMode('random')">随机背</button>
+        <button class="mode-tab" :class="{ active: practiceMode === 'condgroup' }" @click="setMode('condgroup')">条件背</button>
+        <button class="mode-tab" :class="{ active: practiceMode === 'group' }" @click="setMode('group')">分组背</button>
       </div>
       <button
         v-if="hasWords"
