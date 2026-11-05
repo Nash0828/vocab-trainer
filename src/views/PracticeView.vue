@@ -76,6 +76,22 @@ function condSummary(g) {
   const k = Array.isArray(g.keywords) && g.keywords.length ? `关键字：${g.keywords.join('、')}` : ''
   return [s, t, k].filter(Boolean).join(' · ')
 }
+// 条件组实际可背词句数：组条件 ∩ 未背熟（与出题池同口径）
+function condGroupPoolCount(g) {
+  const kw = (g.keywords || []).map((x) => String(x || '').trim()).filter(Boolean)
+  const matchK = (w) =>
+    !kw.length ||
+    kw.some((k) =>
+      [w.english, w.chinese, w.remark || ''].some((f) => String(f || '').toLowerCase().includes(k.toLowerCase()))
+    )
+  const matchT = (w) => g.typeFilter === 'all' || (w.type || 'word') === g.typeFilter
+  let list = words.value.filter((w) => !isMastered(w) && matchT(w) && matchK(w))
+  if (g.sourceMode === 'wrong') {
+    const ids = new Set(wrongValid.value.map((w) => String(w.id)))
+    list = list.filter((w) => ids.has(String(w.id)))
+  }
+  return list.length
+}
 // 词库变化（录入/删除/背诵次数）时刷新分组统计
 watch(() => words.value, loadGroups, { deep: true })
 // 词库变化且当前无题时自动出题（如空词库时先录入了词句再回到背诵页）
@@ -2157,7 +2173,7 @@ next()
         <div class="picker-list">
           <button v-for="g in condGroups" :key="g.id" class="picker-item" @click="pickCondGroup(g)">
             <span class="picker-name">{{ g.name }}</span>
-            <span class="picker-progress">{{ condSummary(g) }}</span>
+            <span class="picker-progress">待背 {{ condGroupPoolCount(g) }} 条</span>
             <svg v-if="g.id === selectedCondGroupId" class="picker-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </button>
         </div>
