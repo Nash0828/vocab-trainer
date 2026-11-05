@@ -62,12 +62,22 @@ const typeFilterOptions = [
 const showFilterSheet = ref(false)
 const draftSourceMode = ref('all')
 const draftTypeFilter = ref('all')
-const keywordFilter = ref('') // 关键字：在中文/英文/备注中过滤
-const draftKeywordFilter = ref('')
+const keywordFilters = ref([]) // 生效关键字（多个 = 组合搜索，命中任一即匹配）：在中文/英文/备注中过滤
+const draftKeywords = ref(['']) // 草稿关键字输入框，默认 1 个，最多 20 个
+const kwFocusIdx = ref(-1) // 关键字输入框聚焦索引（用于显示清空按钮）
 const sourceOptions = [
   { value: 'all', label: '全部' },
   { value: 'wrong', label: '仅错题本' },
 ]
+function addKeywordRow() {
+  if (draftKeywords.value.length >= 20) return
+  draftKeywords.value.push('')
+}
+function removeKeywordRow(i) {
+  if (draftKeywords.value.length <= 1) return
+  draftKeywords.value.splice(i, 1)
+  if (kwFocusIdx.value >= draftKeywords.value.length) kwFocusIdx.value = -1
+}
 // 筛选按钮摘要：如 "全部未背熟" / "仅错题本 · 短语"
 const filterSummary = computed(() => {
   const s = sourceOptions.find((o) => o.value === sourceMode.value)?.label || '全部未背熟'
@@ -75,12 +85,14 @@ const filterSummary = computed(() => {
     typeFilter.value !== 'all'
       ? (typeFilterOptions.find((o) => o.value === typeFilter.value)?.label || '')
       : ''
-  const k = keywordFilter.value ? `"${keywordFilter.value}"` : ''
+  const k = keywordFilters.value.length
+    ? keywordFilters.value.map((x) => `"${x}"`).join('、')
+    : ''
   return [s, t, k].filter(Boolean).join(' · ')
 })
 // 是否启用了非默认筛选（用于按钮绿色高亮）
 const hasFilter = computed(
-  () => sourceMode.value !== 'all' || typeFilter.value !== 'all' || keywordFilter.value !== ''
+  () => sourceMode.value !== 'all' || typeFilter.value !== 'all' || keywordFilters.value.length > 0
 )
 // 当前生效的筛选条件标签（chips）：仅错题本 / 类型 / 关键字
 const activeFilterChips = computed(() => {
@@ -90,14 +102,14 @@ const activeFilterChips = computed(() => {
     const t = typeFilterOptions.find((o) => o.value === typeFilter.value)?.label
     if (t) chips.push({ key: 'type', label: t })
   }
-  if (keywordFilter.value) chips.push({ key: 'keyword', label: `关键字：${keywordFilter.value}` })
+  if (keywordFilters.value.length) chips.push({ key: 'keyword', label: `关键字：${keywordFilters.value.join('、')}` })
   return chips
 })
 // 删除单个筛选条件（微信风格：点标签上的 × 移除）
 function removeFilterChip(key) {
   if (key === 'source') sourceMode.value = 'all'
   else if (key === 'type') typeFilter.value = 'all'
-  else if (key === 'keyword') keywordFilter.value = ''
+  else if (key === 'keyword') keywordFilters.value = []
   lastIndex.value = -1
   clearAutoTimer()
   next()
@@ -105,7 +117,7 @@ function removeFilterChip(key) {
 function openFilterSheet() {
   draftSourceMode.value = sourceMode.value
   draftTypeFilter.value = typeFilter.value
-  draftKeywordFilter.value = keywordFilter.value
+  draftKeywords.value = keywordFilters.value.length ? [...keywordFilters.value] : ['']
   showFilterSheet.value = true
 }
 function closeFilterSheet() {
@@ -114,10 +126,10 @@ function closeFilterSheet() {
 function resetFilterSheet() {
   draftSourceMode.value = 'all'
   draftTypeFilter.value = 'all'
-  draftKeywordFilter.value = ''
+  draftKeywords.value = ['']
   sourceMode.value = 'all'
   typeFilter.value = 'all'
-  keywordFilter.value = ''
+  keywordFilters.value = []
   showFilterSheet.value = false
   lastIndex.value = -1
   clearAutoTimer()
@@ -126,11 +138,19 @@ function resetFilterSheet() {
 function applyFilterSheet() {
   sourceMode.value = draftSourceMode.value
   typeFilter.value = draftTypeFilter.value
-  keywordFilter.value = draftKeywordFilter.value.trim()
+  keywordFilters.value = draftKeywords.value.map((t) => String(t || '').trim()).filter(Boolean)
   showFilterSheet.value = false
   lastIndex.value = -1
   clearAutoTimer()
   next()
+}
+// 关键字匹配：组合搜索（OR）——任一关键字命中中文/英文/备注任一字段即匹配
+function matchKeyword(w) {
+  if (!keywordFilters.value.length) return true
+  const fields = [w.english, w.chinese, w.remark || '']
+  return keywordFilters.value.some((k) =>
+    fields.some((f) => String(f || '').toLowerCase().includes(k.toLowerCase()))
+  )
 }
 // 当前筛选条件下词句总数（含已背熟）：chips 行右侧"共 N 条"展示
 const filteredTotal = computed(() => {
@@ -139,11 +159,6 @@ const filteredTotal = computed(() => {
     return groupStats.value.reduce((sum, g) => sum + (g.size || 0), 0)
   }
   const matchType = (w) => typeFilter.value === 'all' || (w.type || 'word') === typeFilter.value
-  const matchKeyword = (w) =>
-    !keywordFilter.value ||
-    [w.english, w.chinese, w.remark || ''].some((f) =>
-      String(f || '').toLowerCase().includes(keywordFilter.value.toLowerCase())
-    )
   let list = words.value.filter((w) => matchType(w) && matchKeyword(w))
   if (sourceMode.value === 'wrong') {
     const ids = new Set(wrongValid.value.map((w) => String(w.id)))
@@ -233,11 +248,6 @@ function resolveWord(item) {
 // 出题池：随机模式 = 未背熟单词 ∩ 类型/关键字筛选；分组模式 = 所选组内未背熟 ∩ 类型/关键字筛选；错题本模式 = 错题本中且未背熟 ∩ 类型/关键字筛选（组内错题）
 const available = computed(() => {
   const matchType = (w) => typeFilter.value === 'all' || (w.type || 'word') === typeFilter.value
-  const matchKeyword = (w) =>
-    !keywordFilter.value ||
-    [w.english, w.chinese, w.remark || ''].some((f) =>
-      String(f || '').toLowerCase().includes(keywordFilter.value.toLowerCase())
-    )
   let base
   if (practiceMode.value === 'group') {
     if (!selectedGroupId.value) return []
@@ -259,7 +269,7 @@ const allMastered = computed(() => hasWords.value && available.value.length === 
 const groupEmpty = computed(() => practiceMode.value === 'group' && !groups.value.length)
 // 筛选条件下无可用词句：筛选生效且出题池为空
 const filterEmpty = computed(
-  () => (typeFilter.value !== 'all' || keywordFilter.value !== '') && available.value.length === 0
+  () => (typeFilter.value !== 'all' || keywordFilters.value.length > 0) && available.value.length === 0
 )
 // 错题本模式空状态：'empty'=错题本为空；'all-mastered'=错题本单词已全部背熟；null=正常
 const wrongState = computed(() => {
@@ -1097,11 +1107,6 @@ const selectedGroup = computed(() => groups.value.find((g) => g.id === selectedG
 // 类型/关键字过滤后的组统计：组选择器与选择弹层的"已背熟 x/xxx"随当前筛选条件实时变化
 const groupStats = computed(() => {
   const matchType = (w) => typeFilter.value === 'all' || (w.type || 'word') === typeFilter.value
-  const matchKeyword = (w) =>
-    !keywordFilter.value ||
-    [w.english, w.chinese, w.remark || ''].some((f) =>
-      String(f || '').toLowerCase().includes(keywordFilter.value.toLowerCase())
-    )
   // 仅错题本来源：只统计组内错题本中的词句
   const wrongIds =
     sourceMode.value === 'wrong' ? new Set(wrongValid.value.map((w) => String(w.id))) : null
@@ -1241,7 +1246,7 @@ function setPendingFromQuery() {
   // 跳转背诵指定词：清空筛选条件（类型/来源/关键字），分组模式与所选组保留
   typeFilter.value = 'all'
   sourceMode.value = 'all'
-  keywordFilter.value = ''
+  keywordFilters.value = []
   const w = words.value.find((x) => x.english.trim().toLowerCase() === String(q).trim().toLowerCase())
   if (w) pendingWord.value = w
 }
@@ -1544,15 +1549,46 @@ next()
                 </div>
               </div>
               <div class="sheet-group">
-                <div class="sheet-group-title">关键字</div>
-                <input
-                  v-model="draftKeywordFilter"
-                  class="sheet-keyword-input"
-                  type="text"
-                  placeholder="按备注 / 中文 / 英文过滤"
-                  maxlength="50"
-                  @keydown.enter="applyFilterSheet"
-                />
+                <div class="sheet-group-title">
+                  关键字
+                  <span class="kw-count">{{ draftKeywords.length }}/20</span>
+                </div>
+                <div v-for="(k, i) in draftKeywords" :key="'kw' + i" class="kw-row">
+                  <div class="kw-input-wrap">
+                    <input
+                      v-model="draftKeywords[i]"
+                      class="sheet-keyword-input"
+                      type="text"
+                      placeholder="按备注 / 中文 / 英文过滤"
+                      maxlength="50"
+                      @focus="kwFocusIdx = i"
+                      @blur="kwFocusIdx = -1"
+                      @keydown.enter="applyFilterSheet"
+                    />
+                    <button
+                      v-if="draftKeywords[i] && kwFocusIdx === i"
+                      class="kw-clear"
+                      type="button"
+                      @mousedown.prevent
+                      @click="draftKeywords[i] = ''"
+                      title="清空内容"
+                      aria-label="清空该关键字"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                  <button
+                    v-if="draftKeywords.length > 1"
+                    class="kw-del"
+                    type="button"
+                    @click="removeKeywordRow(i)"
+                    title="删除该关键字"
+                    aria-label="删除该关键字"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                  </button>
+                </div>
+                <button v-if="draftKeywords.length < 20" type="button" class="kw-add" @click="addKeywordRow">+ 添加关键字</button>
               </div>
             </div>
             <div class="sheet-foot">
@@ -2461,7 +2497,7 @@ next()
   box-sizing: border-box;
   border: 1px solid #e5e5e5;
   border-radius: 6px;
-  padding: 8px 12px;
+  padding: 8px 34px 8px 12px;
   font-size: 14px;
   color: var(--text-main);
   background: #fff;
@@ -2473,6 +2509,75 @@ next()
 }
 .sheet-keyword-input::placeholder {
   color: #b2b2b2;
+}
+/* 多关键字组合搜索：微信风格输入行（输入框 + 清空× + 删除行 + 添加） */
+.kw-count {
+  color: #b2b2b2;
+  font-size: 12px;
+  font-weight: 400;
+  margin-left: 4px;
+}
+.kw-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.kw-input-wrap {
+  position: relative;
+  flex: 1;
+}
+.kw-clear {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 8px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #b2b2b2;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+}
+.kw-clear:active {
+  background: #8c8c8c;
+}
+.kw-del {
+  flex-shrink: 0;
+  margin-top: 2px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  color: #b2b2b2;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.kw-del:active {
+  background: #f2f2f2;
+}
+.kw-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  color: #576b95;
+  font-size: 14px;
+  padding: 6px 2px;
+  cursor: pointer;
+}
+.kw-add:active {
+  opacity: 0.7;
 }
 .sheet-foot {
   display: flex;
