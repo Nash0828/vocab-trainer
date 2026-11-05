@@ -97,10 +97,14 @@ function condGroupPoolCount(g) {
 // 词库变化（录入/删除/背诵次数）时刷新分组统计
 watch(() => words.value, loadGroups, { deep: true })
 // 词库变化且当前无题时自动出题（如空词库时先录入了词句再回到背诵页）
+// 同时监听数组引用与长度：iOS 后台冻结恢复时 loadAll 会整体替换 words 数组（长度可能不变），
+// 只监听 length 会漏掉该场景，导致条件背等 current 为空时补数据后不出题
 watch(
-  () => words.value.length,
+  () => [words.value, words.value.length],
   () => {
-    if (!current.value && available.value.length) next()
+    if (!current.value || !words.value.some((w) => String(w.id) === String(current.value.id))) {
+      if (available.value.length) next()
+    }
   }
 )
 // 类型筛选：'all' | 'word' | 'phrase' | 'sentence'
