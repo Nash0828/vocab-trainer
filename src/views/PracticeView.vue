@@ -79,6 +79,11 @@ async function loadCondGroups() {
     }
   } catch (e) {}
 }
+// 全局补数完成（iOS 后台冻结恢复 recoverIfEmpty 补数）后：条件背模式重新拉取条件组并应用。
+// 补数链路只补 words/records/wrongbook，不含条件组；words 到位但组数据缺失时会卡在"尚未设置条件分组"空状态
+function onDataRefreshed() {
+  if (practiceMode.value === 'condgroup') loadCondGroups()
+}
 // 条件摘要：如 "仅错题本 · 单词 · 关键字：B1L111、B1L112"
 function condSummary(g) {
   const s = g.sourceMode === 'wrong' ? '仅错题本' : '全部'
@@ -110,6 +115,11 @@ watch(() => words.value, loadGroups, { deep: true })
 watch(
   () => [words.value, words.value.length],
   () => {
+    // 条件背模式：words 已变化但条件组数据缺失（如 iOS 后台恢复时组加载失败/未加载）时补拉一次，
+    // 否则 available 出题池为空，条件背会卡在"尚未设置条件分组"空状态不出题
+    if (practiceMode.value === 'condgroup' && !condGroups.value.length) {
+      loadCondGroups()
+    }
     if (!current.value || !words.value.some((w) => String(w.id) === String(current.value.id))) {
       if (available.value.length) next()
     }
@@ -1531,6 +1541,12 @@ onMounted(() => {
   if (pendingWord.value) next()
   loadGroups()
   loadCondGroups()
+  // 条件组加载失败重试：iOS 首包网络不稳/后台冻结恢复时首次 loadCondGroups 可能失败，
+  // 若 words 已到位而组数据缺失，条件背会卡在"尚未设置条件分组"空状态不出题，多档延迟补拉
+  setTimeout(loadCondGroups, 800)
+  setTimeout(loadCondGroups, 2000)
+  setTimeout(loadCondGroups, 5000)
+  window.addEventListener('vt:data-refreshed', onDataRefreshed)
 })
 
 onActivated(() => {
@@ -1585,6 +1601,7 @@ watch(words, () => {
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onGlobalKeydown)
   document.removeEventListener('click', closeWordBubble)
+  window.removeEventListener('vt:data-refreshed', onDataRefreshed)
   clearAutoTimer()
   if (todayInterval) clearInterval(todayInterval)
 })

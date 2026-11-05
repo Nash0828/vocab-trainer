@@ -76,7 +76,11 @@ async function bootstrap() {
       }
     }
     recovering = false
-    if (ok) console.log('已自动补全数据')
+    if (ok) {
+      console.log('已自动补全数据')
+      // 通知各页面：全局补数完成（如条件背需要重新拉取条件组，否则 words 已到位但组数据缺失会卡在空状态不出题）
+      window.dispatchEvent(new CustomEvent('vt:data-refreshed'))
+    }
   }
   document.addEventListener('visibilitychange', recoverIfEmpty)
   window.addEventListener('focus', recoverIfEmpty)
