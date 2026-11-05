@@ -16,8 +16,10 @@ const {
   importData,
 } = useWords()
 
-// 句子朗读音色（豆包 TTS）
+// 句子朗读音色（豆包 TTS）；random_us / random_uk 为随机音色（每次朗读随机挑一个美音/英音）
 const TTS_VOICES = [
+  { voice: 'random_us', label: '随机美音', desc: '每次随机' },
+  { voice: 'random_uk', label: '随机英音', desc: '每次随机' },
   { voice: 'en_female_jenny_uranus_bigtts', label: 'Jenny', desc: '美音女声' },
   { voice: 'en_female_dacey_uranus_bigtts', label: 'Dacey', desc: '美音女声' },
   { voice: 'en_female_stokie_uranus_bigtts', label: 'Stokie', desc: '美音女声' },
@@ -28,6 +30,9 @@ const TTS_VOICES = [
   { voice: 'en_male_alex_uranus_bigtts', label: 'Alex', desc: '美音男声' },
   { voice: 'en_male_josh_uranus_bigtts', label: 'Josh', desc: '美音男声' },
   { voice: 'en_female_authoritative-british_uranus_bigtts', label: 'Charlotte', desc: '英音女声' },
+  { voice: 'en_male_father-christmas_uranus_bigtts', label: 'Alfred', desc: '英音男声' },
+  { voice: 'en_male_knightley_uranus_bigtts', label: 'Knightley', desc: '英音男声' },
+  { voice: 'en_male_russell_uranus_bigtts', label: 'Russell', desc: '英音男声' },
 ]
 const currentVoiceName = computed(() => {
   const v = TTS_VOICES.find((x) => x.voice === settings.value.sentenceVoice)

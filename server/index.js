@@ -97,8 +97,10 @@ function getAutoNext(uid) {
   const row = db.prepare("SELECT value FROM settings WHERE user_id = ? AND key = 'autoNext'").get(uid)
   return row?.value !== '0'
 }
-// 句子朗读音色（豆包 TTS）：白名单校验，默认 Jenny
+// 句子朗读音色（豆包 TTS）：白名单校验，默认 Tim；random_us/random_uk 为随机音色（每次朗读时随机挑一个美音/英音）
 const TTS_VOICES = {
+  'random_us': '随机（美音）',
+  'random_uk': '随机（英音）',
   'en_female_jenny_uranus_bigtts': 'Jenny（美音女声）',
   'en_female_dacey_uranus_bigtts': 'Dacey（美音女声）',
   'en_female_stokie_uranus_bigtts': 'Stokie（美音女声）',
@@ -109,8 +111,22 @@ const TTS_VOICES = {
   'en_male_alex_uranus_bigtts': 'Alex（美音男声）',
   'en_male_josh_uranus_bigtts': 'Josh（美音男声）',
   'en_female_authoritative-british_uranus_bigtts': 'Charlotte（英音女声）',
+  'en_male_father-christmas_uranus_bigtts': 'Alfred（英音男声）',
+  'en_male_knightley_uranus_bigtts': 'Knightley（英音男声）',
+  'en_male_russell_uranus_bigtts': 'Russell（英音男声）',
 }
 const DEFAULT_VOICE = 'en_male_tim_uranus_bigtts'
+// 随机音色解析：random_us 从美音音色随机抽一个，random_uk 从英音音色随机抽一个
+function resolveSpeaker(speaker) {
+  if (speaker === 'random_us' || speaker === 'random_uk') {
+    const isUk = speaker === 'random_uk'
+    const pool = Object.keys(TTS_VOICES).filter(
+      (k) => k !== 'random_us' && k !== 'random_uk' && TTS_VOICES[k].includes(isUk ? '英音' : '美音')
+    )
+    if (pool.length) return pool[Math.floor(Math.random() * pool.length)]
+  }
+  return speaker
+}
 function getSentenceVoice(uid) {
   const row = db.prepare("SELECT value FROM settings WHERE user_id = ? AND key = 'sentenceVoice'").get(uid)
   return row?.value && TTS_VOICES[row.value] ? row.value : DEFAULT_VOICE
@@ -1216,7 +1232,7 @@ app.get('/api/tts', async (req, res) => {
   if (!text) return res.status(400).json({ error: '缺少 text 参数' })
   // voice 参数（试听等指定音色）；未传时用该用户的句子音色设置
   const voiceParam = String(req.query.voice || '').trim()
-  const speaker = voiceParam && TTS_VOICES[voiceParam] ? voiceParam : getSentenceVoice(req.userId)
+  const speaker = resolveSpeaker(voiceParam && TTS_VOICES[voiceParam] ? voiceParam : getSentenceVoice(req.userId))
   // type 参数：word/phrase/sentence（前端词句类型）；未传时按是否含空格推断
   const typeParam = String(req.query.type || '').trim()
   const isWord = !/\s/.test(text)
