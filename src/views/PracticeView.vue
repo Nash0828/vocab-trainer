@@ -27,7 +27,7 @@ const draftGroups = ref([]) // 弹框编辑副本
 const groupError = ref('')
 // 条件分组：每个组 = 一组保存的筛选条件（出题来源 + 类型 + 关键字），作为题源
 const condGroups = ref([]) // { id, name, seq, sourceMode, typeFilter, keywords }
-const selectedCondGroupId = ref(null)
+const selectedCondGroupId = ref(Number(localStorage.getItem('vt_condgroup_id')) || null)
 const showCondGroupModal = ref(false) // 条件分组设置弹框
 const condGroupError = ref('')
 // 条件分组设置弹框的编辑器状态：null=列表视图；对象=编辑中（id 为 null 表示新增）
@@ -63,6 +63,7 @@ async function loadCondGroups() {
       if (!selectedCondGroupId.value || !condGroups.value.some((g) => g.id === selectedCondGroupId.value)) {
         selectedCondGroupId.value = condGroups.value[0]?.id || null
       }
+      localStorage.setItem('vt_condgroup_id', String(selectedCondGroupId.value || ''))
       const g = condGroups.value.find((x) => x.id === selectedCondGroupId.value)
       if (g) applyCondGroupFilters(g)
       if (condGroups.value.length && !current.value) next()
@@ -1171,6 +1172,7 @@ function setMode(m) {
     }
     if (!selectedCondGroupId.value || !condGroups.value.some((g) => g.id === selectedCondGroupId.value)) {
       selectedCondGroupId.value = condGroups.value[0].id
+      localStorage.setItem('vt_condgroup_id', String(condGroups.value[0].id))
     }
     const g = condGroups.value.find((x) => x.id === selectedCondGroupId.value)
     if (g) applyCondGroupFilters(g)
@@ -1189,6 +1191,7 @@ function pickCondGroup(g) {
   showCondGroupPicker.value = false
   if (!g || g.id === selectedCondGroupId.value) return
   selectedCondGroupId.value = g.id
+  localStorage.setItem('vt_condgroup_id', String(g.id))
   applyCondGroupFilters(g)
   lastIndex.value = -1
   clearAutoTimer()
