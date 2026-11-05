@@ -2873,17 +2873,21 @@ next()
 .ce-input {
   flex: 1;
   height: 36px;
-  border: 0.5px solid #e0e0e0;
-  border-radius: 8px;
-  background: #f7f7f7;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  background: #fff;
   font-size: 14px;
-  padding: 0 10px;
+  padding: 0 12px;
   color: var(--text-main);
   outline: none;
+  transition: border-color 0.2s;
 }
 .ce-input:focus {
   border-color: var(--primary);
   background: #fff;
+}
+.ce-input::placeholder {
+  color: #b2b2b2;
 }
 .ce-seq {
   width: 70px;
