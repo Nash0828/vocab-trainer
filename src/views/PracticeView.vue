@@ -1133,7 +1133,7 @@ function setMode(m) {
   if (prev === 'condgroup' && m !== 'condgroup') {
     sourceMode.value = 'all'
     typeFilter.value = 'all'
-    keywordFilters.value = ['']
+    keywordFilters.value = []
   }
   if (m === 'group') {
     if (!groups.value.length) {
@@ -1302,7 +1302,7 @@ async function deleteCondGroup(g) {
       } else {
         sourceMode.value = 'all'
         typeFilter.value = 'all'
-        keywordFilters.value = ['']
+        keywordFilters.value = []
       }
       if (practiceMode.value === 'condgroup' && !current.value) next()
     }
