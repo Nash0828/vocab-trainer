@@ -67,7 +67,15 @@ async function loadCondGroups() {
       localStorage.setItem('vt_condgroup_id', String(selectedCondGroupId.value || ''))
       const g = condGroups.value.find((x) => x.id === selectedCondGroupId.value)
       if (g) applyCondGroupFilters(g)
-      if (condGroups.value.length && !current.value) next()
+      // 当前题不在本组出题池时强制重出：覆盖刷新/补数时序竞态——words 先到位、组条件后应用，
+      // 期间自动出题 watch 可能先按未过滤的全库抽了题（如 festival），组条件应用后旧题不在池内必须换掉
+      if (
+        condGroups.value.length &&
+        (!current.value || !available.value.some((w) => String(w.id) === String(current.value.id)))
+      ) {
+        answeredLock.value = false
+        next()
+      }
     }
   } catch (e) {}
 }
@@ -1151,6 +1159,13 @@ function setMode(m) {
   practiceMode.value = m
   lastIndex.value = -1
   clearAutoTimer()
+  answeredLock.value = false // 模式切换：解除语音锁，避免上一模式提交后锁题导致旧题残留
+  // 模式切换：解除语音锁。否则上一模式提交/显示答案后语音播放期间（answeredLock=true），
+  // 下方 next() 会被锁直接 return，current 残留上一模式旧题（如随机背的 festival 出现在条件背）
+  answeredLock.value = false
+  result.value = null
+  revealed.value = false
+  isRedo.value = false
   // 从条件分组切走：清掉组条件填充的筛选，避免残留锁定条件影响其他模式
   if (prev === 'condgroup' && m !== 'condgroup') {
     sourceMode.value = 'all'
