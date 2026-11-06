@@ -2053,8 +2053,8 @@ next()
           <div class="dict-title-row">
             <h3>{{ dictModal.word }}</h3>
             <button class="dict-copy" :class="{ copied: copyDone }" @click="copyDictTitle" :title="copyDone ? '已复制' : '复制标题'">
-              <svg v-if="!copyDone" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              <svg v-else width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg v-if="!copyDone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             </button>
           </div>
           <button class="dict-close" @click="closeDict">✕</button>
@@ -3729,7 +3729,7 @@ next()
   border: none;
   background: none;
   padding: 4px;
-  margin: -2px 0 0;
+  margin: 1px 0 0;
   color: #888;
   cursor: pointer;
   display: flex;
