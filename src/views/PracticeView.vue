@@ -2050,13 +2050,10 @@ next()
     <div v-if="dictModal" class="dict-mask" @click.self="closeDict" @touchstart="onLayerTouchStart" @touchmove="onLayerMaskTouchmove">
       <div class="dict-modal">
         <div class="dict-head">
-          <div class="dict-title-row">
-            <h3>{{ dictModal.word }}</h3>
-            <button class="dict-copy" :class="{ copied: copyDone }" @click="copyDictTitle" :title="copyDone ? '已复制' : '复制标题'">
-              <svg v-if="!copyDone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            </button>
-          </div>
+          <h3>{{ dictModal.word }}<button class="dict-copy" :class="{ copied: copyDone }" @click="copyDictTitle" :title="copyDone ? '已复制' : '复制标题'">
+            <svg v-if="!copyDone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </button></h3>
           <button class="dict-close" @click="closeDict">✕</button>
         </div>
         <div class="dict-body">
@@ -3706,35 +3703,29 @@ next()
   border-bottom: 0.5px solid #f0f0f0;
 }
 
-.dict-title-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  max-width: calc(100% - 44px);
-}
-
 .dict-head h3 {
   font-size: 18px;
   margin: 0;
   color: var(--text-main);
   font-weight: 600;
   max-width: 100%;
+  padding: 0 40px 0 0;
   word-break: break-word;
   line-height: 1.4;
   text-align: left;
 }
 
 .dict-copy {
-  flex: none;
-  border: none;
-  background: none;
-  padding: 4px;
-  margin: 1px 0 0;
-  color: #888;
-  cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  vertical-align: -3px;
+  margin-left: 2px;
+  padding: 2px;
+  border: none;
+  background: none;
+  color: #888;
+  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
