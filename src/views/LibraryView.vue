@@ -59,6 +59,36 @@ let tipTimer = null
 
 // ===== 词典查询弹窗 =====
 const dictModal = ref(null)
+// 详情弹框：复制标题（优先 Clipboard API，失败降级隐藏 textarea + execCommand，兼容 iOS）
+const copyDone = ref(false)
+let copyDoneTimer = null
+function copyDictTitle() {
+  const text = dictModal.value?.word || ''
+  if (!text) return
+  const done = () => {
+    copyDone.value = true
+    clearTimeout(copyDoneTimer)
+    copyDoneTimer = setTimeout(() => (copyDone.value = false), 1500)
+  }
+  const fallback = () => {
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none'
+      document.body.appendChild(ta)
+      ta.focus()
+      ta.select()
+      const ok = document.execCommand('copy')
+      document.body.removeChild(ta)
+      if (ok) done()
+    } catch (e) {}
+  }
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(done).catch(fallback)
+  } else {
+    fallback()
+  }
+}
 // 把用户录入的关联词句插到详情弹框：相关短语放 data.phrases（例句区块上方），例句插到有道例句最前
 function prependExampleSentences(data, wordText) {
   if (!data) return
@@ -1378,7 +1408,13 @@ function formatTime(ts) {
     <div v-if="dictModal" class="dict-mask" @click.self="closeDict" @touchstart="onLayerTouchStart" @touchmove="onLayerMaskTouchmove">
       <div class="dict-modal">
         <div class="dict-head">
-          <h3>{{ dictModal.word }}</h3>
+          <div class="dict-title-row">
+            <h3>{{ dictModal.word }}</h3>
+            <button class="dict-copy" :class="{ copied: copyDone }" @click="copyDictTitle" :title="copyDone ? '已复制' : '复制标题'">
+              <svg v-if="!copyDone" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <svg v-else width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </button>
+          </div>
           <button class="dict-close" @click="closeDict">✕</button>
         </div>
         <div class="dict-body">
@@ -2417,16 +2453,40 @@ function formatTime(ts) {
   border-bottom: 0.5px solid #f0f0f0;
 }
 
+.dict-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: calc(100% - 44px);
+}
+
 .dict-head h3 {
   font-size: 18px;
   margin: 0;
   color: var(--text-main);
   font-weight: 600;
   max-width: 100%;
-  padding: 0 40px 0 0;
   word-break: break-word;
   line-height: 1.4;
   text-align: left;
+}
+
+.dict-copy {
+  flex: none;
+  border: none;
+  background: none;
+  padding: 4px;
+  margin: -2px 0 0;
+  color: #888;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dict-copy.copied {
+  color: #07c160;
 }
 
 .dict-close {
