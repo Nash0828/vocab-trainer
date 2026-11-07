@@ -3331,7 +3331,7 @@ next()
 }
 
 .quiz-word {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 700;
   color: var(--text-main);
   margin: 0 0 4px;
@@ -3340,10 +3340,10 @@ next()
   line-height: 1.35;
 }
 .quiz-word.long {
-  font-size: 24px;
+  font-size: 22px;
 }
 .quiz-word.xlong {
-  font-size: 19px;
+  font-size: 18px;
 }
 
 .quiz-pos {
