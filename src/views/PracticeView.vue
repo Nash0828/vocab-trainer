@@ -279,7 +279,12 @@ async function persistCondGroupFromFilters() {
     return false
   }
 }
+let lastApplyAt = 0
 async function applyFilterSheet() {
+  const now = Date.now()
+  if (now - lastApplyAt < 400) return
+  lastApplyAt = now
+  if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur()
   const mv = validateMastery(draftMasteryLimit.value)
   if (!mv.ok) {
     filterError.value = mv.error
@@ -1448,7 +1453,11 @@ function removeCondKwRow(i) {
   condEditing.value.keywords.splice(i, 1)
   if (!condEditing.value.keywords.length) condEditing.value.keywords = ['']
 }
+let lastCondSaveAt = 0
 async function saveCondGroup() {
+  const now = Date.now()
+  if (now - lastCondSaveAt < 400) return
+  lastCondSaveAt = now
   const e = condEditing.value
   if (!e) return
   const mv = validateMastery(e.masteryLimit)
@@ -1481,6 +1490,8 @@ async function saveCondGroup() {
       if (g) applyCondGroupFilters(g)
     }
     condEditing.value = null
+    // touchstart 提交不走默认失焦，成功后主动收起软键盘
+    if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur()
     if (practiceMode.value === 'condgroup' && !current.value) next()
   } catch (err) {
     condGroupError.value = err?.message || '保存失败，请重试'
@@ -2014,8 +2025,8 @@ next()
               </div>
             </div>
             <div class="sheet-foot">
-              <button class="sheet-btn ghost" @mousedown.prevent @click="resetFilterSheet">重置</button>
-              <button class="sheet-btn primary" @mousedown.prevent @click="applyFilterSheet">确定</button>
+              <button class="sheet-btn ghost" @touchstart.prevent="resetFilterSheet" @mousedown.prevent @click="resetFilterSheet">重置</button>
+              <button class="sheet-btn primary" @touchstart.prevent="applyFilterSheet" @mousedown.prevent @click="applyFilterSheet">确定</button>
             </div>
           </div>
         </div>
@@ -2568,7 +2579,7 @@ next()
           </div>
           <div class="group-modal-foot">
             <button class="btn ghost group-cancel" @click="condEditing = null">取消</button>
-            <button class="btn primary group-save" @mousedown.prevent @click="saveCondGroup">保存</button>
+            <button class="btn primary group-save" @touchstart.prevent="saveCondGroup" @mousedown.prevent @click="saveCondGroup">保存</button>
           </div>
         </template>
       </div>
