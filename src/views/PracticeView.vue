@@ -278,6 +278,12 @@ function onLayerMaskTouchmove(e) {
 }
 
 const current = ref(null)
+// 中文释义显示/隐藏（切题后保持，localStorage 记忆）
+const showChinese = ref(localStorage.getItem('vt_show_chinese') !== '0')
+function toggleChinese() {
+  showChinese.value = !showChinese.value
+  localStorage.setItem('vt_show_chinese', showChinese.value ? '1' : '0')
+}
 // 中文为短语/句子时自适应缩小字号
 const quizWordClass = computed(() => {
   const len = (current.value?.chinese || '').length
@@ -1887,11 +1893,15 @@ next()
 
       <!-- 答题区（current 为空时不渲染，避免空指针崩溃） -->
       <div v-if="current" class="quiz-card">
+        <button class="quiz-eye-btn" :title="showChinese ? '隐藏中文释义' : '显示中文释义'" :aria-label="showChinese ? '隐藏中文释义' : '显示中文释义'" @click="toggleChinese">
+          <svg v-if="showChinese" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
         <button class="quiz-edit-btn" title="更正当前词句" @click="goEditCurrent">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
-        <p class="quiz-label">中文</p>
-        <p class="quiz-word" :class="quizWordClass">{{ current.chinese }}</p>
+        <p v-if="showChinese" class="quiz-label">中文</p>
+        <p v-if="showChinese" class="quiz-word" :class="quizWordClass">{{ current.chinese }}</p>
         <p v-if="current.type && current.type !== 'word'" class="quiz-type">{{ current.type === 'phrase' ? '短语' : '句子' }}</p>
         <p v-if="current.pos" class="quiz-pos">{{ current.pos }}</p>
 
@@ -3296,6 +3306,28 @@ next()
   font-size: 13px;
   color: var(--text-sub);
   margin-bottom: 8px;
+}
+
+/* 显示/隐藏中文释义：眼睛图标，位于右上角铅笔左侧 */
+.quiz-eye-btn {
+  position: absolute;
+  top: 12px;
+  right: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-sub);
+  border-radius: 50%;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.quiz-eye-btn:active {
+  background: rgba(0, 0, 0, 0.06);
 }
 
 /* 更正当前词句：铅笔图标绝对定位在卡片右上角（不占文档流，不影响"中文"居中） */
