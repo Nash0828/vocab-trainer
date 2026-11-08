@@ -1937,117 +1937,6 @@ next()
 
     <!-- 有可练习单词 -->
     <template v-else>
-      <!-- 筛选底部面板：出题来源 + 类型 -->
-      <transition name="sheet">
-        <div v-if="showFilterSheet" class="sheet-mask" @click.self="closeFilterSheet" @touchstart="onLayerTouchStart" @touchmove="onLayerMaskTouchmove">
-          <div class="sheet">
-            <div class="sheet-title">筛选<span v-if="isCondReadonly" class="sheet-readonly-tip">（修改将保存到当前条件分组）</span></div>
-            <div class="sheet-body">
-              <div class="sheet-group">
-                <div class="sheet-group-title">出题来源</div>
-                <div class="sheet-opts">
-                  <button
-                    v-for="opt in sourceOptions"
-                    :key="opt.value"
-                    class="sheet-opt"
-                     :class="{ active: draftSourceMode === opt.value }"
-                    @click="draftSourceMode = opt.value"
-                  >{{ opt.label }}</button>
-                </div>
-              </div>
-              <div class="sheet-group">
-                <div class="sheet-group-title">类型</div>
-                <div class="sheet-opts">
-                  <button
-                    v-for="opt in typeFilterOptions"
-                    :key="opt.value"
-                    class="sheet-opt"
-                     :class="{ active: draftTypeFilter === opt.value }"
-                    @click="draftTypeFilter = opt.value"
-                  >{{ opt.label }}</button>
-                </div>
-              </div>
-              <div class="sheet-group">
-                <div class="sheet-group-title">背熟次数</div>
-                <div class="kw-input-wrap mastery-wrap">
-                  <input
-                    v-model="draftMasteryLimit"
-                    class="sheet-keyword-input mastery-input"
-                    type="number"
-                    inputmode="numeric"
-                    min="0"
-                    max="999"
-                    :max="threshold"
-                    placeholder="留空为全部，只出不超过这次数的词"
-                    @input="filterError = ''"
-                    @focus="masteryFocus = true"
-                    @blur="masteryFocus = false"
-                    @keydown.enter="applyFilterSheet"
-                  />
-                  <button
-                    v-if="draftMasteryLimit && masteryFocus"
-                    class="kw-clear"
-                    type="button"
-                    @mousedown.prevent
-                    @click="draftMasteryLimit = ''"
-                    title="清空内容"
-                    aria-label="清空背熟次数"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  </button>
-                </div>
-                <p v-if="filterError" class="mastery-error">{{ filterError }}</p>
-              </div>
-              <div class="sheet-group">
-                <div class="sheet-group-title">
-                  关键字
-                  <span class="kw-count">{{ draftKeywords.length }}/20</span>
-                </div>
-                <div v-for="(k, i) in draftKeywords" :key="'kw' + i" class="kw-row">
-                  <div class="kw-input-wrap">
-                    <input
-                      v-model="draftKeywords[i]"
-                      class="sheet-keyword-input"
-                      type="text"
-                      placeholder="按备注 / 中文 / 英文过滤"
-                      maxlength="50"
-                      @focus="kwFocusIdx = i"
-                      @blur="kwFocusIdx = -1"
-                      @keydown.enter="applyFilterSheet"
-                    />
-                    <button
-                      v-if="draftKeywords[i] && kwFocusIdx === i"
-                      class="kw-clear"
-                      type="button"
-                      @mousedown.prevent
-                      @click="draftKeywords[i] = ''"
-                      title="清空内容"
-                      aria-label="清空该关键字"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    </button>
-                  </div>
-                  <button
-                    v-if="draftKeywords.length > 1"
-                    class="kw-del"
-                    type="button"
-                    @click="removeKeywordRow(i)"
-                    title="删除该关键字"
-                    aria-label="删除该关键字"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                  </button>
-                </div>
-                <button v-if="draftKeywords.length < 20" type="button" class="kw-add" @click="addKeywordRow">+ 添加关键字</button>
-              </div>
-            </div>
-            <div class="sheet-foot">
-              <button class="sheet-btn ghost" @mousedown.prevent @click="resetFilterSheet">重置</button>
-              <button class="sheet-btn primary" @touchstart.prevent="applyFilterSheet" @mousedown.prevent @click="applyFilterSheet">确定</button>
-            </div>
-          </div>
-        </div>
-      </transition>
 
       <!-- 答题区（current 为空时不渲染，避免空指针崩溃） -->
       <div v-if="current" class="quiz-card">
@@ -2169,6 +2058,118 @@ next()
       </div>
       <div v-else class="quiz-loading">正在准备题目…</div>
     </template>
+
+    <!-- 筛选底部面板：任意状态都可打开 -->
+    <transition name="sheet">
+      <div v-if="showFilterSheet" class="sheet-mask" @click.self="closeFilterSheet" @touchstart="onLayerTouchStart" @touchmove="onLayerMaskTouchmove">
+        <div class="sheet">
+          <div class="sheet-title">筛选<span v-if="isCondReadonly" class="sheet-readonly-tip">（修改将保存到当前条件分组）</span></div>
+          <div class="sheet-body">
+            <div class="sheet-group">
+              <div class="sheet-group-title">出题来源</div>
+              <div class="sheet-opts">
+                <button
+                  v-for="opt in sourceOptions"
+                  :key="opt.value"
+                  class="sheet-opt"
+                   :class="{ active: draftSourceMode === opt.value }"
+                  @click="draftSourceMode = opt.value"
+                >{{ opt.label }}</button>
+              </div>
+            </div>
+            <div class="sheet-group">
+              <div class="sheet-group-title">类型</div>
+              <div class="sheet-opts">
+                <button
+                  v-for="opt in typeFilterOptions"
+                  :key="opt.value"
+                  class="sheet-opt"
+                   :class="{ active: draftTypeFilter === opt.value }"
+                  @click="draftTypeFilter = opt.value"
+                >{{ opt.label }}</button>
+              </div>
+            </div>
+            <div class="sheet-group">
+              <div class="sheet-group-title">背熟次数</div>
+              <div class="kw-input-wrap mastery-wrap">
+                <input
+                  v-model="draftMasteryLimit"
+                  class="sheet-keyword-input mastery-input"
+                  type="number"
+                  inputmode="numeric"
+                  min="0"
+                  max="999"
+                  :max="threshold"
+                  placeholder="留空为全部，只出不超过这次数的词"
+                  @input="filterError = ''"
+                  @focus="masteryFocus = true"
+                  @blur="masteryFocus = false"
+                  @keydown.enter="applyFilterSheet"
+                />
+                <button
+                  v-if="draftMasteryLimit && masteryFocus"
+                  class="kw-clear"
+                  type="button"
+                  @mousedown.prevent
+                  @click="draftMasteryLimit = ''"
+                  title="清空内容"
+                  aria-label="清空背熟次数"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <p v-if="filterError" class="mastery-error">{{ filterError }}</p>
+            </div>
+            <div class="sheet-group">
+              <div class="sheet-group-title">
+                关键字
+                <span class="kw-count">{{ draftKeywords.length }}/20</span>
+              </div>
+              <div v-for="(k, i) in draftKeywords" :key="'kw' + i" class="kw-row">
+                <div class="kw-input-wrap">
+                  <input
+                    v-model="draftKeywords[i]"
+                    class="sheet-keyword-input"
+                    type="text"
+                    placeholder="按备注 / 中文 / 英文过滤"
+                    maxlength="50"
+                    @focus="kwFocusIdx = i"
+                    @blur="kwFocusIdx = -1"
+                    @keydown.enter="applyFilterSheet"
+                  />
+                  <button
+                    v-if="draftKeywords[i] && kwFocusIdx === i"
+                    class="kw-clear"
+                    type="button"
+                    @mousedown.prevent
+                    @click="draftKeywords[i] = ''"
+                    title="清空内容"
+                    aria-label="清空该关键字"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+                <button
+                  v-if="draftKeywords.length > 1"
+                  class="kw-del"
+                  type="button"
+                  @click="removeKeywordRow(i)"
+                  title="删除该关键字"
+                  aria-label="删除该关键字"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                </button>
+              </div>
+              <button v-if="draftKeywords.length < 20" type="button" class="kw-add" @click="addKeywordRow">+ 添加关键字</button>
+            </div>
+          </div>
+          <div class="sheet-foot">
+            <button class="sheet-btn ghost" @mousedown.prevent @click="resetFilterSheet">重置</button>
+            <button class="sheet-btn primary" @touchstart.prevent="applyFilterSheet" @mousedown.prevent @click="applyFilterSheet">确定</button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 
     <!-- 今日记录弹窗 -->
