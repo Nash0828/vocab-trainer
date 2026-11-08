@@ -243,6 +243,13 @@ function closeFilterSheet() {
   showFilterSheet.value = false
 }
 async function resetFilterSheet() {
+  // 条件背：重置会写回并清空当前分组，先确认
+  if (practiceMode.value === 'condgroup' && selectedCondGroup.value) {
+    if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur()
+    const gname = selectedCondGroup.value.name || '当前条件分组'
+    const ok = window.confirm(`重置后「${gname}」的出题来源、类型、背熟次数和关键字都会清空，并保存到这个分组。确定重置吗？`)
+    if (!ok) return
+  }
   filterError.value = ''
   draftSourceMode.value = 'all'
   draftTypeFilter.value = 'all'
@@ -2025,7 +2032,7 @@ next()
               </div>
             </div>
             <div class="sheet-foot">
-              <button class="sheet-btn ghost" @touchstart.prevent="resetFilterSheet" @mousedown.prevent @click="resetFilterSheet">重置</button>
+              <button class="sheet-btn ghost" @mousedown.prevent @click="resetFilterSheet">重置</button>
               <button class="sheet-btn primary" @touchstart.prevent="applyFilterSheet" @mousedown.prevent @click="applyFilterSheet">确定</button>
             </div>
           </div>
