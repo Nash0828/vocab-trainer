@@ -1253,6 +1253,8 @@ function setMode(m) {
   if (prev === 'condgroup' && m !== 'condgroup') {
     sourceMode.value = 'all'
     typeFilter.value = 'all'
+    masteryLimit.value = null
+    draftMasteryLimit.value = ''
     keywordFilters.value = []
   }
   if (m === 'group') {
