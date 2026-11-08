@@ -161,6 +161,8 @@ const draftTypeFilter = ref('all')
 const keywordFilters = ref([]) // 生效关键字（多个 = 组合搜索，命中任一即匹配）：在中文/英文/备注中过滤
 const draftKeywords = ref(['']) // 草稿关键字输入框，默认 1 个，最多 20 个
 const kwFocusIdx = ref(-1) // 关键字输入框聚焦索引（用于显示清空按钮）
+const masteryFocus = ref(false) // 背熟次数输入框聚焦态（用于显示清空按钮）
+const nameFocus = ref(false) // 条件分组名称输入框聚焦态
 const sourceOptions = [
   { value: 'all', label: '全部' },
   { value: 'wrong', label: '仅错题本' },
@@ -1872,18 +1874,33 @@ next()
               </div>
               <div class="sheet-group">
                 <div class="sheet-group-title">背熟次数</div>
-                <input
-                  v-model="draftMasteryLimit"
-                  class="sheet-keyword-input mastery-input"
-                  type="number"
-                  inputmode="numeric"
-                  min="1"
-                  max="999"
-                  placeholder="留空为全部，只出少于这次数的词"
-                  :readonly="isCondReadonly"
-                  :disabled="isCondReadonly"
-                  @keydown.enter="applyFilterSheet"
-                />
+                <div class="kw-input-wrap mastery-wrap">
+                  <input
+                    v-model="draftMasteryLimit"
+                    class="sheet-keyword-input mastery-input"
+                    type="number"
+                    inputmode="numeric"
+                    min="1"
+                    max="999"
+                    placeholder="留空为全部，只出少于这次数的词"
+                    :readonly="isCondReadonly"
+                    :disabled="isCondReadonly"
+                    @focus="masteryFocus = true"
+                    @blur="masteryFocus = false"
+                    @keydown.enter="applyFilterSheet"
+                  />
+                  <button
+                    v-if="draftMasteryLimit && masteryFocus && !isCondReadonly"
+                    class="kw-clear"
+                    type="button"
+                    @mousedown.prevent
+                    @click="draftMasteryLimit = ''"
+                    title="清空内容"
+                    aria-label="清空背熟次数"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
               </div>
               <div class="sheet-group">
                 <div class="sheet-group-title">
@@ -2369,7 +2386,28 @@ next()
             </div>
             <div class="ce-row">
               <span class="ce-label">名称</span>
-              <input class="ce-input" type="text" v-model="condEditing.name" placeholder="给这组条件起个名字" maxlength="50" />
+              <div class="kw-input-wrap">
+                <input
+                  class="ce-input"
+                  type="text"
+                  v-model="condEditing.name"
+                  placeholder="给这组条件起个名字"
+                  maxlength="50"
+                  @focus="nameFocus = true"
+                  @blur="nameFocus = false"
+                />
+                <button
+                  v-if="condEditing.name && nameFocus"
+                  class="kw-clear"
+                  type="button"
+                  @mousedown.prevent
+                  @click="condEditing.name = ''"
+                  title="清空内容"
+                  aria-label="清空名称"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
             </div>
             <div class="ce-group">
               <div class="ce-group-title">出题来源</div>
@@ -2397,16 +2435,31 @@ next()
             </div>
             <div class="ce-group">
               <div class="ce-group-title">背熟次数</div>
-              <input
-                class="ce-input mastery-input"
-                type="number"
-                inputmode="numeric"
-                min="1"
-                max="999"
-                placeholder="留空为全部，只出少于这次数的词"
-                :value="condEditing.masteryLimit ?? ''"
-                @input="condEditing.masteryLimit = normalizeMasteryLimit($event.target.value)"
-              />
+              <div class="kw-input-wrap mastery-wrap">
+                <input
+                  class="ce-input mastery-input"
+                  type="number"
+                  inputmode="numeric"
+                  min="1"
+                  max="999"
+                  placeholder="留空为全部，只出少于这次数的词"
+                  :value="condEditing.masteryLimit ?? ''"
+                  @focus="masteryFocus = true"
+                  @blur="masteryFocus = false"
+                  @input="condEditing.masteryLimit = normalizeMasteryLimit($event.target.value)"
+                />
+                <button
+                  v-if="condEditing.masteryLimit && masteryFocus"
+                  class="kw-clear"
+                  type="button"
+                  @mousedown.prevent
+                  @click="condEditing.masteryLimit = null"
+                  title="清空内容"
+                  aria-label="清空背熟次数"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
             </div>
             <div class="ce-group">
               <div class="ce-group-title">
@@ -3154,8 +3207,17 @@ next()
   transition: border-color 0.2s;
 }
 /* 背熟次数输入框：全宽、无右侧清空位；隐藏数字框上下箭头（微信风格） */
+.mastery-wrap {
+  width: 100%;
+  flex: none;
+}
+/* wrap 内的条件弹框输入框保持占满整行 */
+.kw-input-wrap > .ce-input {
+  width: 100%;
+  box-sizing: border-box;
+}
 .mastery-input {
-  padding-right: 12px;
+  padding-right: 34px;
   width: 100%;
   box-sizing: border-box;
   -moz-appearance: textfield;
