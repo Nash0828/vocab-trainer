@@ -54,6 +54,7 @@ async function loadGroups() {
 function applyCondGroupFilters(g) {
   sourceMode.value = g.sourceMode || 'all'
   typeFilter.value = g.typeFilter || 'all'
+  masteryLimit.value = g.masteryLimit === null || g.masteryLimit === undefined ? null : Number(g.masteryLimit)
   keywordFilters.value = Array.isArray(g.keywords) ? [...g.keywords] : []
 }
 async function loadCondGroups() {
@@ -87,9 +88,12 @@ function onDataRefreshed() {
 // 条件摘要：如 "仅错题本 · 单词 · 关键字：B1L111、B1L112"
 function condSummary(g) {
   const s = g.sourceMode === 'wrong' ? '仅错题本' : '全部'
-  const t = (typeFilterOptions.find((o) => o.value === g.typeFilter) || {}).label || '全部类型'
+  // 类型为「全部」时不重复展示（避免出现「全部 · 全部」）
+  const t = g.typeFilter === 'all' ? '' : (typeFilterOptions.find((o) => o.value === g.typeFilter) || {}).label || ''
   const k = Array.isArray(g.keywords) && g.keywords.length ? `关键字：${g.keywords.join('、')}` : ''
-  return [s, t, k].filter(Boolean).join(' · ')
+  const m =
+    g.masteryLimit === null || g.masteryLimit === undefined ? '' : `背熟 < ${Number(g.masteryLimit)} 次`
+  return [s, t, m, k].filter(Boolean).join(' · ')
 }
 // 条件组实际可背词句数：组条件 ∩ 未背熟（与出题池同口径）
 function condGroupPoolCount(g) {
@@ -100,7 +104,9 @@ function condGroupPoolCount(g) {
       [w.english, w.chinese, w.remark || ''].some((f) => String(f || '').toLowerCase().includes(k.toLowerCase()))
     )
   const matchT = (w) => g.typeFilter === 'all' || (w.type || 'word') === g.typeFilter
-  let list = words.value.filter((w) => !isMastered(w) && matchT(w) && matchK(w))
+  const mLimit = g.masteryLimit === null || g.masteryLimit === undefined ? null : Number(g.masteryLimit)
+  const matchM = (w) => mLimit === null || (Number(w?.count) || 0) < mLimit
+  let list = words.value.filter((w) => !isMastered(w) && matchT(w) && matchM(w) && matchK(w))
   if (g.sourceMode === 'wrong') {
     const ids = new Set(wrongValid.value.map((w) => String(w.id)))
     list = list.filter((w) => ids.has(String(w.id)))
@@ -133,6 +139,20 @@ const typeFilterOptions = [
   { value: 'phrase', label: '短语' },
   { value: 'sentence', label: '句子' },
 ]
+// 背熟次数筛选：null=全部；输入正整数 N = 只出「背诵次数 < N」的词（count 为已背对次数）
+const masteryLimit = ref(null)
+const draftMasteryLimit = ref('')
+// 规范化背熟次数：空 / 非数字 / 小于 1 一律视为不限（null）
+function normalizeMasteryLimit(v) {
+  const s = String(v ?? '').trim()
+  if (s === '') return null
+  const n = Number(s)
+  if (!Number.isFinite(n) || n < 1) return null
+  return Math.floor(n)
+}
+// 是否满足背熟次数条件
+const matchMastery = (w, limit = masteryLimit.value) =>
+  limit === null || (Number(w?.count) || 0) < limit
 
 // ---- 筛选底部面板（出题来源 + 类型 + 关键字） ----
 const showFilterSheet = ref(false)
@@ -164,11 +184,16 @@ const filterSummary = computed(() => {
   const k = keywordFilters.value.length
     ? keywordFilters.value.map((x) => `"${x}"`).join('、')
     : ''
-  return [s, t, k].filter(Boolean).join(' · ')
+  const m = masteryLimit.value !== null ? `背熟 < ${masteryLimit.value} 次` : ''
+  return [s, t, m, k].filter(Boolean).join(' · ')
 })
 // 是否启用了非默认筛选（用于按钮绿色高亮）
 const hasFilter = computed(
-  () => sourceMode.value !== 'all' || typeFilter.value !== 'all' || keywordFilters.value.length > 0
+  () =>
+    sourceMode.value !== 'all' ||
+    typeFilter.value !== 'all' ||
+    masteryLimit.value !== null ||
+    keywordFilters.value.length > 0
 )
 // 当前生效的筛选条件标签（chips）：仅错题本 / 类型 / 关键字
 const activeFilterChips = computed(() => {
@@ -178,6 +203,7 @@ const activeFilterChips = computed(() => {
     const t = typeFilterOptions.find((o) => o.value === typeFilter.value)?.label
     if (t) chips.push({ key: 'type', label: t })
   }
+  if (masteryLimit.value !== null) chips.push({ key: 'mastery', label: `背熟次数 < ${masteryLimit.value}` })
   if (keywordFilters.value.length) chips.push({ key: 'keyword', label: `关键字：${keywordFilters.value.join('、')}` })
   return chips
 })
@@ -185,6 +211,7 @@ const activeFilterChips = computed(() => {
 function removeFilterChip(key) {
   if (key === 'source') sourceMode.value = 'all'
   else if (key === 'type') typeFilter.value = 'all'
+  else if (key === 'mastery') masteryLimit.value = null
   else if (key === 'keyword') keywordFilters.value = []
   lastIndex.value = -1
   clearAutoTimer()
@@ -193,6 +220,7 @@ function removeFilterChip(key) {
 function openFilterSheet() {
   draftSourceMode.value = sourceMode.value
   draftTypeFilter.value = typeFilter.value
+  draftMasteryLimit.value = masteryLimit.value === null ? '' : String(masteryLimit.value)
   draftKeywords.value = keywordFilters.value.length ? [...keywordFilters.value] : ['']
   showFilterSheet.value = true
 }
@@ -202,9 +230,11 @@ function closeFilterSheet() {
 function resetFilterSheet() {
   draftSourceMode.value = 'all'
   draftTypeFilter.value = 'all'
+  draftMasteryLimit.value = ''
   draftKeywords.value = ['']
   sourceMode.value = 'all'
   typeFilter.value = 'all'
+  masteryLimit.value = null
   keywordFilters.value = []
   showFilterSheet.value = false
   lastIndex.value = -1
@@ -214,6 +244,7 @@ function resetFilterSheet() {
 function applyFilterSheet() {
   sourceMode.value = draftSourceMode.value
   typeFilter.value = draftTypeFilter.value
+  masteryLimit.value = normalizeMasteryLimit(draftMasteryLimit.value)
   keywordFilters.value = draftKeywords.value.map((t) => String(t || '').trim()).filter(Boolean)
   showFilterSheet.value = false
   lastIndex.value = -1
@@ -235,7 +266,7 @@ const filteredTotal = computed(() => {
     return groupStats.value.reduce((sum, g) => sum + (g.size || 0), 0)
   }
   const matchType = (w) => typeFilter.value === 'all' || (w.type || 'word') === typeFilter.value
-  let list = words.value.filter((w) => matchType(w) && matchKeyword(w))
+  let list = words.value.filter((w) => matchType(w) && matchMastery(w) && matchKeyword(w))
   if (sourceMode.value === 'wrong') {
     const ids = new Set(wrongValid.value.map((w) => String(w.id)))
     list = list.filter((w) => ids.has(String(w.id)))
@@ -244,6 +275,8 @@ const filteredTotal = computed(() => {
 })
 function clearTypeFilter() {
   typeFilter.value = 'all'
+  masteryLimit.value = null
+  keywordFilters.value = []
   lastIndex.value = -1
   clearAutoTimer()
   next()
@@ -341,9 +374,9 @@ const available = computed(() => {
     const ids = new Set(base.map((w) => String(w.id)))
     return wrongValid.value
       .map((item) => resolveWord(item))
-      .filter((w) => w && !isMastered(w) && matchType(w) && matchKeyword(w) && ids.has(String(w.id)))
+      .filter((w) => w && !isMastered(w) && matchType(w) && matchMastery(w) && matchKeyword(w) && ids.has(String(w.id)))
   }
-  return base.filter((w) => !isMastered(w) && matchType(w) && matchKeyword(w))
+  return base.filter((w) => !isMastered(w) && matchType(w) && matchMastery(w) && matchKeyword(w))
 })
 const allMastered = computed(() => hasWords.value && available.value.length === 0)
 // 分组模式：尚未设置任何分组
@@ -354,7 +387,9 @@ const groupEmpty = computed(
 )
 // 筛选条件下无可用词句：筛选生效且出题池为空
 const filterEmpty = computed(
-  () => (typeFilter.value !== 'all' || keywordFilters.value.length > 0) && available.value.length === 0
+  () =>
+    (typeFilter.value !== 'all' || masteryLimit.value !== null || keywordFilters.value.length > 0) &&
+    available.value.length === 0
 )
 // 错题本模式空状态：'empty'=错题本为空；'all-mastered'=错题本单词已全部背熟；null=正常
 const wrongState = computed(() => {
@@ -1321,6 +1356,7 @@ function startCreateCondGroup() {
     seq: maxSeq + 1,
     sourceMode: 'all',
     typeFilter: 'all',
+    masteryLimit: null,
     keywords: [''],
   }
   condGroupError.value = ''
@@ -1332,6 +1368,7 @@ function startEditCondGroup(g) {
     seq: g.seq,
     sourceMode: g.sourceMode,
     typeFilter: g.typeFilter,
+    masteryLimit: g.masteryLimit === null || g.masteryLimit === undefined ? null : Number(g.masteryLimit),
     keywords: Array.isArray(g.keywords) && g.keywords.length ? [...g.keywords] : [''],
   }
   condGroupError.value = ''
@@ -1352,6 +1389,7 @@ async function saveCondGroup() {
     seq: Number(e.seq) || 0,
     sourceMode: e.sourceMode,
     typeFilter: e.typeFilter,
+    masteryLimit: normalizeMasteryLimit(e.masteryLimit),
     keywords: e.keywords.map((k) => (k || '').trim()).filter(Boolean),
   }
   if (!payload.name) {
@@ -1831,6 +1869,21 @@ next()
                     @click="draftTypeFilter = opt.value"
                   >{{ opt.label }}</button>
                 </div>
+              </div>
+              <div class="sheet-group">
+                <div class="sheet-group-title">背熟次数</div>
+                <input
+                  v-model="draftMasteryLimit"
+                  class="sheet-keyword-input mastery-input"
+                  type="number"
+                  inputmode="numeric"
+                  min="1"
+                  max="999"
+                  placeholder="留空为全部，只出少于这次数的词"
+                  :readonly="isCondReadonly"
+                  :disabled="isCondReadonly"
+                  @keydown.enter="applyFilterSheet"
+                />
               </div>
               <div class="sheet-group">
                 <div class="sheet-group-title">
@@ -2341,6 +2394,19 @@ next()
                   @click="condEditing.typeFilter = opt.value"
                 >{{ opt.label }}</button>
               </div>
+            </div>
+            <div class="ce-group">
+              <div class="ce-group-title">背熟次数</div>
+              <input
+                class="ce-input mastery-input"
+                type="number"
+                inputmode="numeric"
+                min="1"
+                max="999"
+                placeholder="留空为全部，只出少于这次数的词"
+                :value="condEditing.masteryLimit ?? ''"
+                @input="condEditing.masteryLimit = normalizeMasteryLimit($event.target.value)"
+              />
             </div>
             <div class="ce-group">
               <div class="ce-group-title">
@@ -3086,6 +3152,23 @@ next()
   background: #fff;
   outline: none;
   transition: border-color 0.2s;
+}
+/* 背熟次数输入框：全宽、无右侧清空位；隐藏数字框上下箭头（微信风格） */
+.mastery-input {
+  padding-right: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.mastery-input::-webkit-outer-spin-button,
+.mastery-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.mastery-input::placeholder {
+  color: #b0b0b0;
+  font-size: 13px;
 }
 .sheet-keyword-input:focus {
   border-color: var(--primary);

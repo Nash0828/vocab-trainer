@@ -478,7 +478,14 @@ function normalizeCondGroup(body) {
     .filter(Boolean)
     .slice(0, 20)
   const seq = Number.isFinite(Number(body?.seq)) ? Math.max(0, Math.floor(Number(body.seq))) : 0
-  return { name, sourceMode, typeFilter, keywords, seq }
+  // 背熟次数上限：正整数，NULL=不限（只出 count < 该值的词）
+  let masteryLimit = null
+  const rawMastery = body?.masteryLimit
+  if (rawMastery !== null && rawMastery !== undefined && rawMastery !== '') {
+    const n = Number(rawMastery)
+    if (Number.isFinite(n) && n >= 1) masteryLimit = Math.min(999, Math.floor(n))
+  }
+  return { name, sourceMode, typeFilter, keywords, seq, masteryLimit }
 }
 // 读取条件分组列表
 app.get('/api/cond-groups', (req, res) => {
@@ -496,6 +503,7 @@ app.get('/api/cond-groups', (req, res) => {
         sourceMode: g.source_mode,
         typeFilter: g.type_filter,
         keywords: Array.isArray(keywords) ? keywords : [],
+        masteryLimit: g.mastery_limit === null || g.mastery_limit === undefined ? null : Number(g.mastery_limit),
       }
     })
   res.json({ groups })
@@ -507,9 +515,9 @@ app.post('/api/cond-groups', (req, res) => {
   if (c.error) return res.status(400).json({ error: c.error })
   const r = db
     .prepare(
-      'INSERT INTO condition_groups (user_id, name, seq, source_mode, type_filter, keywords, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO condition_groups (user_id, name, seq, source_mode, type_filter, keywords, mastery_limit, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
     )
-    .run(uid, c.name, c.seq, c.sourceMode, c.typeFilter, JSON.stringify(c.keywords), Date.now(), Date.now())
+    .run(uid, c.name, c.seq, c.sourceMode, c.typeFilter, JSON.stringify(c.keywords), c.masteryLimit, Date.now(), Date.now())
   res.json({ id: Number(r.lastInsertRowid), ...c })
 })
 // 修改条件分组
@@ -521,8 +529,8 @@ app.put('/api/cond-groups/:id', (req, res) => {
   const c = normalizeCondGroup(req.body)
   if (c.error) return res.status(400).json({ error: c.error })
   db.prepare(
-    'UPDATE condition_groups SET name = ?, seq = ?, source_mode = ?, type_filter = ?, keywords = ?, updated_at = ? WHERE id = ? AND user_id = ?'
-  ).run(c.name, c.seq, c.sourceMode, c.typeFilter, JSON.stringify(c.keywords), Date.now(), id, uid)
+    'UPDATE condition_groups SET name = ?, seq = ?, source_mode = ?, type_filter = ?, keywords = ?, mastery_limit = ?, updated_at = ? WHERE id = ? AND user_id = ?'
+  ).run(c.name, c.seq, c.sourceMode, c.typeFilter, JSON.stringify(c.keywords), c.masteryLimit, Date.now(), id, uid)
   res.json({ id, ...c })
 })
 // 删除条件分组

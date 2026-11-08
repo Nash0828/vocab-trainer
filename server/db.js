@@ -128,6 +128,7 @@ db.exec(`
     source_mode TEXT NOT NULL DEFAULT 'all',
     type_filter TEXT NOT NULL DEFAULT 'all',
     keywords TEXT NOT NULL DEFAULT '[]',
+    mastery_limit INTEGER DEFAULT NULL, -- 背熟次数上限（只出 count < 该值的词；NULL=不限）
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
   );
@@ -161,6 +162,7 @@ tryMigrate("ALTER TABLE wrongbook ADD COLUMN word_id TEXT DEFAULT ''")
 tryMigrate("ALTER TABLE users ADD COLUMN is_disabled INTEGER DEFAULT 0")
 tryMigrate("ALTER TABLE users ADD COLUMN last_login_at INTEGER DEFAULT 0")
 tryMigrate("ALTER TABLE users ADD COLUMN last_login_ip TEXT DEFAULT ''")
+tryMigrate("ALTER TABLE condition_groups ADD COLUMN mastery_limit INTEGER DEFAULT NULL") // 背熟次数筛选
 
 // 旧 settings 表结构迁移：如果还是老的 (key, value) 结构，迁移到 (user_id, key, value)
 try {
