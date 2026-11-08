@@ -295,7 +295,13 @@ async function applyFilterSheet() {
   clearAutoTimer()
   // 条件背：面板改动直接写回当前条件分组，保持「组条件 = 当前筛选」一致
   if (practiceMode.value === 'condgroup' && selectedCondGroup.value) {
-    await persistCondGroupFromFilters()
+    const saved = await persistCondGroupFromFilters()
+    if (!saved) {
+      // 写回失败：重新弹出面板并把错误顶到面板里，避免用户以为点一次没生效
+      filterError.value = condGroupError.value || '保存到条件分组失败'
+      showFilterSheet.value = true
+      return
+    }
     lastIndex.value = -1
     clearAutoTimer()
     if (current.value && !available.value.some((w) => String(w.id) === String(current.value.id))) {
@@ -2008,8 +2014,8 @@ next()
               </div>
             </div>
             <div class="sheet-foot">
-              <button class="sheet-btn ghost" @click="resetFilterSheet">重置</button>
-              <button class="sheet-btn primary" @click="applyFilterSheet">确定</button>
+              <button class="sheet-btn ghost" @mousedown.prevent @click="resetFilterSheet">重置</button>
+              <button class="sheet-btn primary" @mousedown.prevent @click="applyFilterSheet">确定</button>
             </div>
           </div>
         </div>
