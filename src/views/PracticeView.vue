@@ -278,11 +278,10 @@ function onLayerMaskTouchmove(e) {
 }
 
 const current = ref(null)
-// 中文释义显示/隐藏（切题后保持，localStorage 记忆）
-const showChinese = ref(localStorage.getItem('vt_show_chinese') !== '0')
+// 中文释义显示/隐藏（仅当前页面会话内跨题保持，刷新页面恢复显示）
+const showChinese = ref(true)
 function toggleChinese() {
   showChinese.value = !showChinese.value
-  localStorage.setItem('vt_show_chinese', showChinese.value ? '1' : '0')
 }
 // 中文为短语/句子时自适应缩小字号
 const quizWordClass = computed(() => {
