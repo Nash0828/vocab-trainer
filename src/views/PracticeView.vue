@@ -245,6 +245,21 @@ function openFilterSheet() {
   draftKeywords.value = keywordFilters.value.length ? [...keywordFilters.value] : ['']
   showFilterSheet.value = true
 }
+// 微信风格确认框（替代 window.confirm）
+const confirmDialog = ref(null)
+let confirmResolver = null
+function openConfirm(text) {
+  if (confirmDialog.value) return Promise.resolve(false)
+  confirmDialog.value = { text }
+  return new Promise((resolve) => { confirmResolver = resolve })
+}
+function answerConfirm(ok) {
+  const r = confirmResolver
+  confirmResolver = null
+  confirmDialog.value = null
+  if (r) r(ok)
+}
+
 function closeFilterSheet() {
   // 刚打开的一瞬间，同一次触摸产生的 click 会落到新出现的遮罩上，忽略它
   if (Date.now() - lastOpenSheetAt < 350) return
@@ -255,7 +270,7 @@ async function resetFilterSheet() {
   if (practiceMode.value === 'condgroup' && selectedCondGroup.value) {
     if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur()
     const gname = selectedCondGroup.value.name || '当前条件分组'
-    const ok = window.confirm(`重置后「${gname}」的出题来源、类型、背熟次数和关键字都会清空，并保存到这个分组。确定重置吗？`)
+    const ok = await openConfirm(`重置后「${gname}」的出题来源、类型、背熟次数和关键字都会清空，并保存到这个分组。确定重置吗？`)
     if (!ok) return
   }
   filterError.value = ''
@@ -2170,6 +2185,23 @@ next()
         </div>
       </div>
     </transition>
+
+    <!-- 微信风格确认框 -->
+    <div
+      v-if="confirmDialog"
+      class="wx-confirm-mask"
+      @click.self="answerConfirm(false)"
+      @touchstart.stop
+      @touchmove.stop.prevent
+    >
+      <div class="wx-confirm">
+        <div class="wx-confirm-text">{{ confirmDialog.text }}</div>
+        <div class="wx-confirm-actions">
+          <button class="wx-confirm-btn" type="button" @click="answerConfirm(false)">取消</button>
+          <button class="wx-confirm-btn primary" type="button" @click="answerConfirm(true)">确定</button>
+        </div>
+      </div>
+    </div>
   </div>
 
     <!-- 今日记录弹窗 -->
@@ -3429,6 +3461,60 @@ next()
 .sheet-btn.primary {
   background: var(--primary);
   color: #fff;
+}
+/* 微信风格确认框 */
+.wx-confirm-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 44px;
+}
+.wx-confirm {
+  width: 100%;
+  max-width: 300px;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  animation: wxConfirmPop 0.16s ease;
+}
+.wx-confirm-text {
+  padding: 24px 20px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: #333;
+  text-align: center;
+  word-break: break-word;
+}
+.wx-confirm-actions {
+  display: flex;
+  border-top: 1px solid #eeeeee;
+}
+.wx-confirm-btn {
+  flex: 1;
+  height: 50px;
+  border: none;
+  background: #fff;
+  font-size: 16px;
+  color: #666;
+  border-radius: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.wx-confirm-btn + .wx-confirm-btn {
+  border-left: 1px solid #eeeeee;
+}
+.wx-confirm-btn.primary {
+  color: #07c160;
+}
+.wx-confirm-btn:active {
+  background: #f2f2f2;
+}
+@keyframes wxConfirmPop {
+  from { transform: scale(0.94); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 .sheet-btn.ghost {
   background: #f2f2f2;
