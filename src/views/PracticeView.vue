@@ -231,7 +231,13 @@ function removeFilterChip(key) {
   clearAutoTimer()
   next()
 }
+let lastOpenSheetAt = 0
 function openFilterSheet() {
+  // 触摸按下与点击会各触发一次，400ms 内去重
+  const now = Date.now()
+  if (now - lastOpenSheetAt < 400) return
+  lastOpenSheetAt = now
+  if (showFilterSheet.value) return
   filterError.value = ''
   draftSourceMode.value = sourceMode.value
   draftTypeFilter.value = typeFilter.value
@@ -1820,6 +1826,8 @@ next()
         class="filter-icon-btn"
         :class="{ active: hasFilter }"
         title="筛选"
+        @touchstart.prevent="openFilterSheet"
+        @mousedown.prevent
         @click="openFilterSheet"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
