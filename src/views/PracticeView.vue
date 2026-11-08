@@ -246,6 +246,8 @@ function openFilterSheet() {
   showFilterSheet.value = true
 }
 function closeFilterSheet() {
+  // 刚打开的一瞬间，同一次触摸产生的 click 会落到新出现的遮罩上，忽略它
+  if (Date.now() - lastOpenSheetAt < 350) return
   showFilterSheet.value = false
 }
 async function resetFilterSheet() {
@@ -2678,8 +2680,11 @@ next()
 /* 筛选图标按钮：白底圆角，与模式条同高；有筛选时绿色 */
 .filter-icon-btn {
   flex-shrink: 0;
-  width: 38px;
+  width: 40px;
   height: 38px;
+  touch-action: manipulation;
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
