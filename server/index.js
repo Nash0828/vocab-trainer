@@ -478,12 +478,12 @@ function normalizeCondGroup(body) {
     .filter(Boolean)
     .slice(0, 20)
   const seq = Number.isFinite(Number(body?.seq)) ? Math.max(0, Math.floor(Number(body.seq))) : 0
-  // 背熟次数上限：正整数，NULL=不限（只出 count < 该值的词）
+  // 背熟次数上限：0 或正整数，NULL=不限（只出 count <= 该值的词）
   let masteryLimit = null
   const rawMastery = body?.masteryLimit
   if (rawMastery !== null && rawMastery !== undefined && rawMastery !== '') {
     const n = Number(rawMastery)
-    if (Number.isFinite(n) && n >= 1) masteryLimit = Math.min(999, Math.floor(n))
+    if (Number.isFinite(n) && n >= 0) masteryLimit = Math.min(999, Math.floor(n))
   }
   return { name, sourceMode, typeFilter, keywords, seq, masteryLimit }
 }

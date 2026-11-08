@@ -150,14 +150,14 @@ function normalizeMasteryLimit(v) {
   if (!Number.isFinite(n) || n < 1) return null
   return Math.floor(n)
 }
-// 背熟次数校验：空=不限；必须是 1..背熟阈值 的整数
+// 背熟次数校验：空=不限；必须是 0..背熟阈值 的整数（0 = 只出从未背对的词）
 function validateMastery(v) {
   const s = String(v ?? '').trim()
   if (s === '') return { ok: true, value: null, error: '' }
   const n = Number(s)
   const max = Number(settings.value?.masteryThreshold) || 10
-  if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0)
-    return { ok: false, value: null, error: '请输入 1 以上的整数' }
+  if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0)
+    return { ok: false, value: null, error: '请输入 0 或更大的整数' }
   if (n > max) return { ok: false, value: null, error: `不能超过背熟阈值（${max}）` }
   return { ok: true, value: n, error: '' }
 }
@@ -242,7 +242,7 @@ function openFilterSheet() {
 function closeFilterSheet() {
   showFilterSheet.value = false
 }
-function resetFilterSheet() {
+async function resetFilterSheet() {
   filterError.value = ''
   draftSourceMode.value = 'all'
   draftTypeFilter.value = 'all'
@@ -255,9 +255,31 @@ function resetFilterSheet() {
   showFilterSheet.value = false
   lastIndex.value = -1
   clearAutoTimer()
+  // 条件背下重置 = 清空当前组的条件并写回
+  if (practiceMode.value === 'condgroup' && selectedCondGroup.value) await persistCondGroupFromFilters()
   next()
 }
-function applyFilterSheet() {
+// 条件背：把当前筛选写回所选条件分组（保证「组条件 = 当前筛选」一致）
+async function persistCondGroupFromFilters() {
+  if (practiceMode.value !== 'condgroup' || !selectedCondGroup.value) return false
+  const g = selectedCondGroup.value
+  try {
+    await api.updateCondGroup(g.id, {
+      name: g.name,
+      seq: g.seq,
+      sourceMode: sourceMode.value,
+      typeFilter: typeFilter.value,
+      masteryLimit: masteryLimit.value,
+      keywords: keywordFilters.value,
+    })
+    await loadCondGroups()
+    return true
+  } catch (err) {
+    condGroupError.value = err?.message || '保存到条件分组失败'
+    return false
+  }
+}
+async function applyFilterSheet() {
   const mv = validateMastery(draftMasteryLimit.value)
   if (!mv.ok) {
     filterError.value = mv.error
@@ -271,6 +293,15 @@ function applyFilterSheet() {
   showFilterSheet.value = false
   lastIndex.value = -1
   clearAutoTimer()
+  // 条件背：面板改动直接写回当前条件分组，保持「组条件 = 当前筛选」一致
+  if (practiceMode.value === 'condgroup' && selectedCondGroup.value) {
+    await persistCondGroupFromFilters()
+    lastIndex.value = -1
+    clearAutoTimer()
+    if (current.value && !available.value.some((w) => String(w.id) === String(current.value.id))) {
+      answeredLock.value = false
+    }
+  }
   next()
 }
 // 关键字匹配：组合搜索（OR）——任一关键字命中中文/英文/备注任一字段即匹配
@@ -1763,8 +1794,7 @@ next()
       <button
         v-if="hasWords"
         class="filter-icon-btn"
-        :class="{ active: hasFilter && !isCondReadonly }"
-        :disabled="isCondReadonly"
+        :class="{ active: hasFilter }"
         title="筛选"
         @click="openFilterSheet"
       >
@@ -1877,7 +1907,7 @@ next()
       <transition name="sheet">
         <div v-if="showFilterSheet" class="sheet-mask" @click.self="closeFilterSheet" @touchstart="onLayerTouchStart" @touchmove="onLayerMaskTouchmove">
           <div class="sheet">
-            <div class="sheet-title">筛选<span v-if="isCondReadonly" class="sheet-readonly-tip">（当前为条件分组，只读）</span></div>
+            <div class="sheet-title">筛选<span v-if="isCondReadonly" class="sheet-readonly-tip">（修改将保存到当前条件分组）</span></div>
             <div class="sheet-body">
               <div class="sheet-group">
                 <div class="sheet-group-title">出题来源</div>
@@ -1886,8 +1916,7 @@ next()
                     v-for="opt in sourceOptions"
                     :key="opt.value"
                     class="sheet-opt"
-                    :class="{ active: draftSourceMode === opt.value, readonly: isCondReadonly }"
-                    :disabled="isCondReadonly"
+                     :class="{ active: draftSourceMode === opt.value }"
                     @click="draftSourceMode = opt.value"
                   >{{ opt.label }}</button>
                 </div>
@@ -1899,8 +1928,7 @@ next()
                     v-for="opt in typeFilterOptions"
                     :key="opt.value"
                     class="sheet-opt"
-                    :class="{ active: draftTypeFilter === opt.value, readonly: isCondReadonly }"
-                    :disabled="isCondReadonly"
+                     :class="{ active: draftTypeFilter === opt.value }"
                     @click="draftTypeFilter = opt.value"
                   >{{ opt.label }}</button>
                 </div>
@@ -1913,17 +1941,17 @@ next()
                     class="sheet-keyword-input mastery-input"
                     type="number"
                     inputmode="numeric"
-                    min="1"
+                    min="0"
                     max="999"
+                    :max="threshold"
                     placeholder="留空为全部，只出不超过这次数的词"
-                    :readonly="isCondReadonly"
-                    :disabled="isCondReadonly"
+                    @input="filterError = ''"
                     @focus="masteryFocus = true"
                     @blur="masteryFocus = false"
                     @keydown.enter="applyFilterSheet"
                   />
                   <button
-                    v-if="draftMasteryLimit && masteryFocus && !isCondReadonly"
+                    v-if="draftMasteryLimit && masteryFocus"
                     class="kw-clear"
                     type="button"
                     @mousedown.prevent
@@ -1949,14 +1977,12 @@ next()
                       type="text"
                       placeholder="按备注 / 中文 / 英文过滤"
                       maxlength="50"
-                      :readonly="isCondReadonly"
-                      :disabled="isCondReadonly"
                       @focus="kwFocusIdx = i"
                       @blur="kwFocusIdx = -1"
                       @keydown.enter="applyFilterSheet"
                     />
                     <button
-                      v-if="draftKeywords[i] && kwFocusIdx === i && !isCondReadonly"
+                      v-if="draftKeywords[i] && kwFocusIdx === i"
                       class="kw-clear"
                       type="button"
                       @mousedown.prevent
@@ -1968,7 +1994,7 @@ next()
                     </button>
                   </div>
                   <button
-                    v-if="draftKeywords.length > 1 && !isCondReadonly"
+                    v-if="draftKeywords.length > 1"
                     class="kw-del"
                     type="button"
                     @click="removeKeywordRow(i)"
@@ -1978,17 +2004,12 @@ next()
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                   </button>
                 </div>
-                <button v-if="draftKeywords.length < 20 && !isCondReadonly" type="button" class="kw-add" @click="addKeywordRow">+ 添加关键字</button>
+                <button v-if="draftKeywords.length < 20" type="button" class="kw-add" @click="addKeywordRow">+ 添加关键字</button>
               </div>
             </div>
             <div class="sheet-foot">
-              <template v-if="isCondReadonly">
-                <button class="sheet-btn primary" @click="closeFilterSheet">关闭</button>
-              </template>
-              <template v-else>
-                <button class="sheet-btn ghost" @click="resetFilterSheet">重置</button>
-                <button class="sheet-btn primary" @click="applyFilterSheet">确定</button>
-              </template>
+              <button class="sheet-btn ghost" @click="resetFilterSheet">重置</button>
+              <button class="sheet-btn primary" @click="applyFilterSheet">确定</button>
             </div>
           </div>
         </div>
@@ -2474,7 +2495,7 @@ next()
                   class="ce-input mastery-input"
                   type="number"
                   inputmode="numeric"
-                  min="1"
+                  min="0"
                   max="999"
                   placeholder="留空为全部，只出不超过这次数的词"
                   :value="condEditing.masteryLimit ?? ''"
@@ -2484,7 +2505,7 @@ next()
                   @input="onCondMasteryInput($event.target.value)"
                 />
                 <button
-                  v-if="condEditing.masteryLimit && masteryFocus"
+                  v-if="condEditing.masteryLimit !== null && condEditing.masteryLimit !== '' && masteryFocus"
                   class="kw-clear"
                   type="button"
                   @mousedown.prevent
