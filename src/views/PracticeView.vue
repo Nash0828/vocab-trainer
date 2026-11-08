@@ -92,7 +92,7 @@ function condSummary(g) {
   const t = g.typeFilter === 'all' ? '' : (typeFilterOptions.find((o) => o.value === g.typeFilter) || {}).label || ''
   const k = Array.isArray(g.keywords) && g.keywords.length ? `关键字：${g.keywords.join('、')}` : ''
   const m =
-    g.masteryLimit === null || g.masteryLimit === undefined ? '' : `背熟 < ${Number(g.masteryLimit)} 次`
+    g.masteryLimit === null || g.masteryLimit === undefined ? '' : `背熟 ≤ ${Number(g.masteryLimit)} 次`
   return [s, t, m, k].filter(Boolean).join(' · ')
 }
 // 条件组实际可背词句数：组条件 ∩ 未背熟（与出题池同口径）
@@ -105,7 +105,7 @@ function condGroupPoolCount(g) {
     )
   const matchT = (w) => g.typeFilter === 'all' || (w.type || 'word') === g.typeFilter
   const mLimit = g.masteryLimit === null || g.masteryLimit === undefined ? null : Number(g.masteryLimit)
-  const matchM = (w) => mLimit === null || (Number(w?.count) || 0) < mLimit
+  const matchM = (w) => mLimit === null || (Number(w?.count) || 0) <= mLimit
   let list = words.value.filter((w) => !isMastered(w) && matchT(w) && matchM(w) && matchK(w))
   if (g.sourceMode === 'wrong') {
     const ids = new Set(wrongValid.value.map((w) => String(w.id)))
@@ -150,9 +150,20 @@ function normalizeMasteryLimit(v) {
   if (!Number.isFinite(n) || n < 1) return null
   return Math.floor(n)
 }
+// 背熟次数校验：空=不限；必须是 1..背熟阈值 的整数
+function validateMastery(v) {
+  const s = String(v ?? '').trim()
+  if (s === '') return { ok: true, value: null, error: '' }
+  const n = Number(s)
+  const max = Number(settings.value?.masteryThreshold) || 10
+  if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0)
+    return { ok: false, value: null, error: '请输入 1 以上的整数' }
+  if (n > max) return { ok: false, value: null, error: `不能超过背熟阈值（${max}）` }
+  return { ok: true, value: n, error: '' }
+}
 // 是否满足背熟次数条件
 const matchMastery = (w, limit = masteryLimit.value) =>
-  limit === null || (Number(w?.count) || 0) < limit
+  limit === null || (Number(w?.count) || 0) <= limit
 
 // ---- 筛选底部面板（出题来源 + 类型 + 关键字） ----
 const showFilterSheet = ref(false)
@@ -162,6 +173,7 @@ const keywordFilters = ref([]) // 生效关键字（多个 = 组合搜索，命�
 const draftKeywords = ref(['']) // 草稿关键字输入框，默认 1 个，最多 20 个
 const kwFocusIdx = ref(-1) // 关键字输入框聚焦索引（用于显示清空按钮）
 const masteryFocus = ref(false) // 背熟次数输入框聚焦态（用于显示清空按钮）
+const filterError = ref('') // 筛选面板背熟次数校验提示
 const nameFocus = ref(false) // 条件分组名称输入框聚焦态
 const sourceOptions = [
   { value: 'all', label: '全部' },
@@ -186,7 +198,7 @@ const filterSummary = computed(() => {
   const k = keywordFilters.value.length
     ? keywordFilters.value.map((x) => `"${x}"`).join('、')
     : ''
-  const m = masteryLimit.value !== null ? `背熟 < ${masteryLimit.value} 次` : ''
+  const m = masteryLimit.value !== null ? `背熟 ≤ ${masteryLimit.value} 次` : ''
   return [s, t, m, k].filter(Boolean).join(' · ')
 })
 // 是否启用了非默认筛选（用于按钮绿色高亮）
@@ -205,7 +217,7 @@ const activeFilterChips = computed(() => {
     const t = typeFilterOptions.find((o) => o.value === typeFilter.value)?.label
     if (t) chips.push({ key: 'type', label: t })
   }
-  if (masteryLimit.value !== null) chips.push({ key: 'mastery', label: `背熟次数 < ${masteryLimit.value}` })
+  if (masteryLimit.value !== null) chips.push({ key: 'mastery', label: `背熟次数 ≤ ${masteryLimit.value}` })
   if (keywordFilters.value.length) chips.push({ key: 'keyword', label: `关键字：${keywordFilters.value.join('、')}` })
   return chips
 })
@@ -220,6 +232,7 @@ function removeFilterChip(key) {
   next()
 }
 function openFilterSheet() {
+  filterError.value = ''
   draftSourceMode.value = sourceMode.value
   draftTypeFilter.value = typeFilter.value
   draftMasteryLimit.value = masteryLimit.value === null ? '' : String(masteryLimit.value)
@@ -230,6 +243,7 @@ function closeFilterSheet() {
   showFilterSheet.value = false
 }
 function resetFilterSheet() {
+  filterError.value = ''
   draftSourceMode.value = 'all'
   draftTypeFilter.value = 'all'
   draftMasteryLimit.value = ''
@@ -244,9 +258,15 @@ function resetFilterSheet() {
   next()
 }
 function applyFilterSheet() {
+  const mv = validateMastery(draftMasteryLimit.value)
+  if (!mv.ok) {
+    filterError.value = mv.error
+    return
+  }
+  filterError.value = ''
   sourceMode.value = draftSourceMode.value
   typeFilter.value = draftTypeFilter.value
-  masteryLimit.value = normalizeMasteryLimit(draftMasteryLimit.value)
+  masteryLimit.value = mv.value
   keywordFilters.value = draftKeywords.value.map((t) => String(t || '').trim()).filter(Boolean)
   showFilterSheet.value = false
   lastIndex.value = -1
@@ -1377,6 +1397,12 @@ function startEditCondGroup(g) {
   }
   condGroupError.value = ''
 }
+// 条件组背熟次数输入：保留原值（负数/超阈值留到保存时明确提示，不静默清空）
+function onCondMasteryInput(v) {
+  const raw = String(v ?? '').trim()
+  condEditing.value.masteryLimit = raw === '' ? null : raw
+  condGroupError.value = ''
+}
 function addCondKwRow() {
   if (condEditing.value.keywords.length >= 20) return
   condEditing.value.keywords.push('')
@@ -1388,12 +1414,17 @@ function removeCondKwRow(i) {
 async function saveCondGroup() {
   const e = condEditing.value
   if (!e) return
+  const mv = validateMastery(e.masteryLimit)
+  if (!mv.ok) {
+    condGroupError.value = mv.error
+    return
+  }
   const payload = {
     name: e.name.trim(),
     seq: Number(e.seq) || 0,
     sourceMode: e.sourceMode,
     typeFilter: e.typeFilter,
-    masteryLimit: normalizeMasteryLimit(e.masteryLimit),
+    masteryLimit: mv.value,
     keywords: e.keywords.map((k) => (k || '').trim()).filter(Boolean),
   }
   if (!payload.name) {
@@ -1884,7 +1915,7 @@ next()
                     inputmode="numeric"
                     min="1"
                     max="999"
-                    placeholder="留空为全部，只出少于这次数的词"
+                    placeholder="留空为全部，只出不超过这次数的词"
                     :readonly="isCondReadonly"
                     :disabled="isCondReadonly"
                     @focus="masteryFocus = true"
@@ -1903,6 +1934,7 @@ next()
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   </button>
                 </div>
+                <p v-if="filterError" class="mastery-error">{{ filterError }}</p>
               </div>
               <div class="sheet-group">
                 <div class="sheet-group-title">
@@ -2444,11 +2476,12 @@ next()
                   inputmode="numeric"
                   min="1"
                   max="999"
-                  placeholder="留空为全部，只出少于这次数的词"
+                  placeholder="留空为全部，只出不超过这次数的词"
                   :value="condEditing.masteryLimit ?? ''"
+                  :max="threshold"
                   @focus="masteryFocus = true"
                   @blur="masteryFocus = false"
-                  @input="condEditing.masteryLimit = normalizeMasteryLimit($event.target.value)"
+                  @input="onCondMasteryInput($event.target.value)"
                 />
                 <button
                   v-if="condEditing.masteryLimit && masteryFocus"
@@ -2508,7 +2541,7 @@ next()
           </div>
           <div class="group-modal-foot">
             <button class="btn ghost group-cancel" @click="condEditing = null">取消</button>
-            <button class="btn primary group-save" @click="saveCondGroup">保存</button>
+            <button class="btn primary group-save" @mousedown.prevent @click="saveCondGroup">保存</button>
           </div>
         </template>
       </div>
@@ -3212,6 +3245,12 @@ next()
 .mastery-wrap {
   width: 100%;
   flex: none;
+}
+.mastery-error {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #fa5151;
 }
 /* wrap 内的条件弹框输入框保持占满整行 */
 .kw-input-wrap > .ce-input {
