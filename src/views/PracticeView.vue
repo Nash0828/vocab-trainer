@@ -2452,12 +2452,12 @@ next()
             <button class="modal-close" @click="condEditing = null">✕</button>
           </div>
           <div class="modal-body cond-modal-body">
-            <div class="ce-row">
-              <span class="ce-label">序号</span>
+            <div class="ce-group ce-group-first">
+              <div class="ce-group-title">序号</div>
               <input class="ce-input ce-seq" type="number" min="1" v-model.number="condEditing.seq" />
             </div>
-            <div class="ce-row">
-              <span class="ce-label">名称</span>
+            <div class="ce-group">
+              <div class="ce-group-title">名称</div>
               <div class="kw-input-wrap">
                 <input
                   class="ce-input"
@@ -3189,10 +3189,14 @@ next()
   margin-top: 12px;
 }
 .ce-group-title {
-  font-size: 14px;
-  color: var(--text-main);
-  margin-bottom: 8px;
-  font-weight: 500;
+  font-size: 13px;
+  color: var(--text-sub);
+  margin-bottom: 10px;
+  font-weight: normal;
+}
+/* 弹框首项不需要额外上间距 */
+.ce-group-first {
+  margin-top: 0;
 }
 /* 筛选只读提示（条件分组模式） */
 .sheet-readonly-tip {
