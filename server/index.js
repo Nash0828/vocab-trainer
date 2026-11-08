@@ -12,6 +12,7 @@ import db from './db.js'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const req = createRequire(import.meta.url)
+const { moderateUsername } = req('./moderation.cjs')
 const DIST_DIR = join(__dirname, '..', 'dist')
 
 const app = express()
@@ -215,13 +216,16 @@ function auth(req, res, next) {
 app.use(auth)
 
 // ============ 认证 API ============
-app.post('/api/register', (req, res) => {
+app.post('/api/register', async (req, res) => {
   const { username, password } = req.body || {}
   const u = (username || '').trim(), p = password || ''
   if (u.length < 2 || u.length > 20) return res.status(400).json({ error: '用户名长度需 2-20 个字符' })
   if (p.length < 6) return res.status(400).json({ error: '密码至少 6 位' })
   if (!/^[a-zA-Z0-9_]+$/.test(u)) return res.status(400).json({ error: '用户名仅限字母数字下划线' })
   if (db.prepare("SELECT id FROM users WHERE username = ?").get(u)) return res.status(400).json({ error: '用户名已被占用' })
+  // 用户名内容安全审核（腾讯云天御，失败降级放行，不阻塞注册）
+  const verdict = await moderateUsername(u)
+  if (verdict === 'block' || verdict === 'review') return res.status(400).json({ error: '用户名不符合平台规范，请更换后重试' })
 
   const hash = bcrypt.hashSync(p, 10)
   const info = db.prepare("INSERT INTO users (username, password_hash, is_admin, created_at) VALUES (?, ?, 0, ?)").run(u, hash, Date.now())
