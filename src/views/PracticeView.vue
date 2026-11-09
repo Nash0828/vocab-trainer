@@ -313,7 +313,6 @@ async function submitSaveGroup() {
     await loadCondGroups()
     if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur()
     saveGroupDialog.value = null
-    showFilterSheet.value = false
     showToast(`已保存为「${name}」`)
   } catch (err) {
     d.error = err?.message || '保存失败，请重试'
