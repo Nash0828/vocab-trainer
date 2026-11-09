@@ -319,6 +319,11 @@ async function submitSaveGroup() {
   }
 }
 
+// 右上角关闭按钮：主动点击直接关闭（不走同一次触摸的 350ms 守卫）
+function dismissFilterSheet() {
+  if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur()
+  showFilterSheet.value = false
+}
 function closeFilterSheet() {
   // 刚打开的一瞬间，同一次触摸产生的 click 会落到新出现的遮罩上，忽略它
   if (Date.now() - lastOpenSheetAt < 350) return
@@ -2137,7 +2142,12 @@ next()
     <transition name="sheet">
       <div v-if="showFilterSheet" class="sheet-mask" @click.self="closeFilterSheet" @touchstart="onLayerTouchStart" @touchmove="onLayerMaskTouchmove">
         <div class="sheet">
-          <div class="sheet-title">筛选<span v-if="isCondReadonly" class="sheet-readonly-tip">（修改将保存到当前条件分组）</span></div>
+          <div class="sheet-title">
+            <span>筛选<span v-if="isCondReadonly" class="sheet-readonly-tip">（修改将保存到当前条件分组）</span></span>
+            <button class="sheet-close" type="button" aria-label="关闭筛选" @mousedown.prevent @click="dismissFilterSheet">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
           <div class="sheet-body">
             <div class="sheet-group">
               <div class="sheet-group-title">出题来源</div>
@@ -3383,12 +3393,33 @@ next()
   touch-action: pan-y;
 }
 .sheet-title {
+  position: relative;
   text-align: center;
-  padding: 14px;
+  padding: 14px 44px;
   font-size: 16px;
   font-weight: 500;
   background: #fff;
   border-bottom: 1px solid #e5e5e5;
+}
+.sheet-close {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #f2f2f2;
+  color: #999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.sheet-close:active {
+  background: #e5e5e5;
 }
 .sheet-body {
   background: #fff;
