@@ -260,6 +260,62 @@ function answerConfirm(ok) {
   if (r) r(ok)
 }
 
+// 保存当前筛选条件为新条件组（仅随机背 / 分组背）
+const saveGroupDialog = ref(null) // { name, error }
+const toastText = ref('')
+let toastTimer = null
+let lastSaveGroupAt = 0
+function showToast(text) {
+  toastText.value = text
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => { toastText.value = '' }, 1800)
+}
+function openSaveGroupDialog() {
+  if (practiceMode.value === 'condgroup') return
+  if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur()
+  let n = condGroups.value.length + 1
+  while (condGroups.value.some((g) => g.name === `条件组 ${n}`)) n += 1
+  saveGroupDialog.value = { name: `条件组 ${n}`, error: '' }
+  setTimeout(() => {
+    const el = document.querySelector('.wx-prompt-input')
+    if (el && typeof el.focus === 'function') el.focus()
+  }, 60)
+}
+function closeSaveGroupDialog() {
+  saveGroupDialog.value = null
+}
+async function submitSaveGroup() {
+  const now = Date.now()
+  if (now - lastSaveGroupAt < 400) return
+  lastSaveGroupAt = now
+  const d = saveGroupDialog.value
+  if (!d) return
+  const name = String(d.name || '').trim()
+  if (!name) { d.error = '请填写分组名称'; return }
+  if (name.length > 20) { d.error = '名称不能超过 20 个字'; return }
+  const mv = validateMastery(draftMasteryLimit.value)
+  if (!mv.ok) { d.error = mv.error; return }
+  const maxSeq = condGroups.value.reduce((a, g) => Math.max(a, Number(g.seq) || 0), 0)
+  const payload = {
+    name,
+    seq: maxSeq + 1,
+    sourceMode: draftSourceMode.value,
+    typeFilter: draftTypeFilter.value,
+    masteryLimit: mv.value,
+    keywords: draftKeywords.value.map((k) => (k || '').trim()).filter(Boolean),
+  }
+  try {
+    await api.createCondGroup(payload)
+    await loadCondGroups()
+    if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur()
+    saveGroupDialog.value = null
+    showFilterSheet.value = false
+    showToast(`已保存为「${name}」`)
+  } catch (err) {
+    d.error = err?.message || '保存失败，请重试'
+  }
+}
+
 function closeFilterSheet() {
   // 刚打开的一瞬间，同一次触摸产生的 click 会落到新出现的遮罩上，忽略它
   if (Date.now() - lastOpenSheetAt < 350) return
@@ -2178,12 +2234,53 @@ next()
               <button v-if="draftKeywords.length < 20" type="button" class="kw-add" @click="addKeywordRow">+ 添加关键字</button>
             </div>
           </div>
+          <button
+            v-if="practiceMode !== 'condgroup'"
+            type="button"
+            class="sheet-save-group"
+            @mousedown.prevent
+            @click="openSaveGroupDialog"
+          >保存为条件组</button>
           <div class="sheet-foot">
             <button class="sheet-btn ghost" @mousedown.prevent @click="resetFilterSheet">重置</button>
             <button class="sheet-btn primary" @touchstart.prevent="applyFilterSheet" @mousedown.prevent @click="applyFilterSheet">确定</button>
           </div>
         </div>
       </div>
+    </transition>
+
+    <!-- 保存为条件组：名称输入弹框 -->
+    <div
+      v-if="saveGroupDialog"
+      class="wx-confirm-mask"
+      @click.self="closeSaveGroupDialog"
+      @touchstart.stop
+      @touchmove.stop.prevent
+    >
+      <div class="wx-confirm wx-prompt">
+        <div class="wx-prompt-title">保存为条件组</div>
+        <div class="wx-prompt-body">
+          <input
+            v-model="saveGroupDialog.name"
+            class="wx-prompt-input"
+            type="text"
+            placeholder="请输入条件组名称"
+            maxlength="20"
+            @input="saveGroupDialog.error = ''"
+            @keydown.enter="submitSaveGroup"
+          />
+          <p v-if="saveGroupDialog.error" class="wx-prompt-error">{{ saveGroupDialog.error }}</p>
+        </div>
+        <div class="wx-confirm-actions">
+          <button class="wx-confirm-btn" type="button" @click="closeSaveGroupDialog">取消</button>
+          <button class="wx-confirm-btn primary" type="button" @touchstart.prevent="submitSaveGroup" @mousedown.prevent @click="submitSaveGroup">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 轻提示 -->
+    <transition name="fade">
+      <div v-if="toastText" class="vt-toast">{{ toastText }}</div>
     </transition>
 
     <!-- 微信风格确认框 -->
@@ -3462,6 +3559,69 @@ next()
   background: var(--primary);
   color: #fff;
 }
+/* 保存为条件组：文字按钮 */
+.sheet-save-group {
+  width: 100%;
+  border: none;
+  border-top: 1px solid #f0f0f0;
+  background: #fff;
+  padding: 12px 0;
+  font-size: 15px;
+  color: #576b95;
+  -webkit-tap-highlight-color: transparent;
+}
+.sheet-save-group:active {
+  background: #f2f2f2;
+}
+
+/* 名称输入弹框 */
+.wx-prompt-title {
+  padding: 22px 20px 0;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+}
+.wx-prompt-body {
+  padding: 14px 20px 20px;
+}
+.wx-prompt-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  font-size: 15px;
+  color: #333;
+  outline: none;
+  background: #fff;
+}
+.wx-prompt-input:focus {
+  border-color: #e5e5e5;
+}
+.wx-prompt-error {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #e54b4b;
+}
+
+/* 轻提示 */
+.vt-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 96px;
+  transform: translateX(-50%);
+  z-index: 3100;
+  max-width: 72vw;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  font-size: 14px;
+  text-align: center;
+}
+
 /* 微信风格确认框 */
 .wx-confirm-mask {
   position: fixed;
