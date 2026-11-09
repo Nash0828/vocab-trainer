@@ -265,12 +265,16 @@ const saveGroupDialog = ref(null) // { name, error }
 const toastText = ref('')
 let toastTimer = null
 let lastSaveGroupAt = 0
+let lastOpenSaveAt = 0
 function showToast(text) {
   toastText.value = text
   if (toastTimer) clearTimeout(toastTimer)
   toastTimer = setTimeout(() => { toastText.value = '' }, 1800)
 }
 function openSaveGroupDialog() {
+  const ts = Date.now()
+  if (ts - lastOpenSaveAt < 400) return
+  lastOpenSaveAt = ts
   if (practiceMode.value === 'condgroup') return
   if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur()
   let n = condGroups.value.length + 1
@@ -2234,15 +2238,16 @@ next()
               <button v-if="draftKeywords.length < 20" type="button" class="kw-add" @click="addKeywordRow">+ 添加关键字</button>
             </div>
           </div>
-          <button
-            v-if="practiceMode !== 'condgroup'"
-            type="button"
-            class="sheet-save-group"
-            @mousedown.prevent
-            @click="openSaveGroupDialog"
-          >保存为条件组</button>
           <div class="sheet-foot">
             <button class="sheet-btn ghost" @mousedown.prevent @click="resetFilterSheet">重置</button>
+            <button
+              v-if="practiceMode !== 'condgroup'"
+              type="button"
+              class="sheet-btn save"
+              @touchstart.prevent="openSaveGroupDialog"
+              @mousedown.prevent
+              @click="openSaveGroupDialog"
+            >保存为条件组</button>
             <button class="sheet-btn primary" @touchstart.prevent="applyFilterSheet" @mousedown.prevent @click="applyFilterSheet">确定</button>
           </div>
         </div>
@@ -3466,7 +3471,7 @@ next()
   font-size: 13px;
 }
 .sheet-keyword-input:focus {
-  border-color: var(--primary);
+  border-color: #e5e5e5;
 }
 .sheet-keyword-input::placeholder {
   color: #b2b2b2;
@@ -3559,18 +3564,16 @@ next()
   background: var(--primary);
   color: #fff;
 }
-/* 保存为条件组：文字按钮 */
-.sheet-save-group {
-  width: 100%;
-  border: none;
-  border-top: 1px solid #f0f0f0;
+/* 保存为条件组：底部中间按钮（白底灰边，微信次级按钮） */
+.sheet-btn.save {
   background: #fff;
-  padding: 12px 0;
-  font-size: 15px;
+  border: 1px solid #e5e5e5;
   color: #576b95;
+  font-size: 14px;
+  padding: 10px 0;
   -webkit-tap-highlight-color: transparent;
 }
-.sheet-save-group:active {
+.sheet-btn.save:active {
   background: #f2f2f2;
 }
 
