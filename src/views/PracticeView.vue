@@ -1587,7 +1587,7 @@ async function saveCondGroup() {
   }
 }
 async function deleteCondGroup(g) {
-  if (!window.confirm(`确定删除条件分组「${g.name}」吗？`)) return
+  if (!(await openConfirm(`确定删除条件分组「${g.name}」吗？`))) return
   try {
     await api.deleteCondGroup(g.id)
     await loadCondGroups()
