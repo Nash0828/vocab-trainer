@@ -2256,7 +2256,7 @@ next()
               @touchstart.prevent="openSaveGroupDialog"
               @mousedown.prevent
               @click="openSaveGroupDialog"
-            >保存为条件组</button>
+            >存为条件组</button>
             <button class="sheet-btn primary" @touchstart.prevent="applyFilterSheet" @mousedown.prevent @click="applyFilterSheet">确定</button>
           </div>
         </div>
@@ -3598,7 +3598,7 @@ next()
 .sheet-btn.save {
   background: #fff;
   border: 1px solid #e5e5e5;
-  color: #576b95;
+  color: #333333;
   font-size: 14px;
   padding: 10px 0;
   -webkit-tap-highlight-color: transparent;
