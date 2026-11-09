@@ -1799,7 +1799,7 @@ function formatTime(ts) {
 .cell-input {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid #ddd;
+  border: 1px solid #e5e5e5;
   border-radius: 6px;
   font-size: 14px;
   outline: none;
@@ -1874,7 +1874,7 @@ function formatTime(ts) {
   height: 36px;
   min-height: 36px;
   padding: 8px 10px;
-  border: 1px solid #ddd;
+  border: 1px solid #e5e5e5;
   border-radius: 6px;
   font-size: 14px;
   line-height: 1.4;
@@ -1889,7 +1889,7 @@ function formatTime(ts) {
   min-height: 76px;
 }
 .remark-area:focus {
-  border-color: var(--primary);
+  border-color: #e5e5e5;
 }
 .cell-plus {
   font-size: 14px;
@@ -1898,7 +1898,7 @@ function formatTime(ts) {
 }
 
 .cell-input:focus {
-  border-color: var(--primary);
+  border-color: #e5e5e5;
 }
 
 /* 清除内容按钮：微信风格（输入框内右侧圆形灰底 ×），仅在有内容时显示 */
@@ -2307,7 +2307,7 @@ function formatTime(ts) {
   width: 100%;
   min-width: 90px;
   padding: 7px 10px;
-  border: 1.5px solid var(--primary);
+  border: 1px solid #e5e5e5;
   border-radius: 8px;
   font-size: 14px;
   outline: none;
