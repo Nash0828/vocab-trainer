@@ -85,6 +85,10 @@ async function loadCondGroups() {
 function onDataRefreshed() {
   if (practiceMode.value === 'condgroup') loadCondGroups()
 }
+// 背熟次数文案：0 = 一次都没背对过，语义是「等于 0」；N>0 才是「不超过 N」
+function masteryText(n) {
+  return Number(n) === 0 ? '= 0' : `≤ ${Number(n)}`
+}
 // 条件摘要：如 "仅错题本 · 单词 · 关键字：B1L111、B1L112"
 function condSummary(g) {
   const s = g.sourceMode === 'wrong' ? '仅错题本' : '全部'
@@ -92,7 +96,7 @@ function condSummary(g) {
   const t = g.typeFilter === 'all' ? '' : (typeFilterOptions.find((o) => o.value === g.typeFilter) || {}).label || ''
   const k = Array.isArray(g.keywords) && g.keywords.length ? `关键字：${g.keywords.join('、')}` : ''
   const m =
-    g.masteryLimit === null || g.masteryLimit === undefined ? '' : `背熟 ≤ ${Number(g.masteryLimit)} 次`
+    g.masteryLimit === null || g.masteryLimit === undefined ? '' : `背熟 ${masteryText(g.masteryLimit)} 次`
   return [s, t, m, k].filter(Boolean).join(' · ')
 }
 // 条件组实际可背词句数：组条件 ∩ 未背熟（与出题池同口径）
@@ -198,7 +202,7 @@ const filterSummary = computed(() => {
   const k = keywordFilters.value.length
     ? keywordFilters.value.map((x) => `"${x}"`).join('、')
     : ''
-  const m = masteryLimit.value !== null ? `背熟 ≤ ${masteryLimit.value} 次` : ''
+  const m = masteryLimit.value !== null ? `背熟 ${masteryText(masteryLimit.value)} 次` : ''
   return [s, t, m, k].filter(Boolean).join(' · ')
 })
 // 是否启用了非默认筛选（用于按钮绿色高亮）
@@ -217,7 +221,7 @@ const activeFilterChips = computed(() => {
     const t = typeFilterOptions.find((o) => o.value === typeFilter.value)?.label
     if (t) chips.push({ key: 'type', label: t })
   }
-  if (masteryLimit.value !== null) chips.push({ key: 'mastery', label: `背熟次数 ≤ ${masteryLimit.value}` })
+  if (masteryLimit.value !== null) chips.push({ key: 'mastery', label: `背熟次数 ${masteryText(masteryLimit.value)}` })
   if (keywordFilters.value.length) chips.push({ key: 'keyword', label: `关键字：${keywordFilters.value.join('、')}` })
   return chips
 })
