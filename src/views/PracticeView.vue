@@ -320,8 +320,14 @@ const DRAG_LONG_PRESS = 350 // 长按多久进入拖动
 const DRAG_MOVE_TOLERANCE = 8 // 长按期间移动超过该距离视为滚动，取消拖动
 const drag = reactive({ kind: null, from: -1, to: -1, startX: 0, startY: 0, dy: 0, active: false, heights: [], timer: null })
 
+function beginDragActive() {
+  drag.active = true
+  drag.heights = measureDragItems(drag.kind)
+  try { if (navigator.vibrate) navigator.vibrate(10) } catch (err) {}
+}
+
 function onDragStart(e, i, kind) {
-  if (e.touches.length !== 1) return
+  if (!e.touches || e.touches.length !== 1) return
   // 操作按钮（编辑/删除）上的长按不进入拖动
   if (e.target && e.target.closest && e.target.closest('.cond-card-ops, .g-del')) return
   const t = e.touches[0]
@@ -333,11 +339,16 @@ function onDragStart(e, i, kind) {
   drag.dy = 0
   drag.active = false
   if (drag.timer) clearTimeout(drag.timer)
+  drag.timer = null
+  // 1) 拖动把手上按下即可拖（手机上也不用等长按）2) PC 浏览器“设备模拟”模式：鼠标被当成触摸，
+  //    这时不用长按，立即进入拖动，否则快速拖会先被判定成滚动而取消
+  const sc = e.sourceCapabilities
+  const mouseLike = !!(sc && sc.firesTouchEvents === false)
+  const onHandle = !!(e.target && e.target.closest && e.target.closest('.drag-handle'))
+  if (mouseLike || onHandle) { beginDragActive(); return }
   drag.timer = setTimeout(() => {
     drag.timer = null
-    drag.active = true
-    drag.heights = measureDragItems(kind)
-    try { if (navigator.vibrate) navigator.vibrate(10) } catch (err) {}
+    beginDragActive()
   }, DRAG_LONG_PRESS)
 }
 // 每项高度（含间距），用于让位位移与目标位置换算
@@ -390,16 +401,27 @@ function onDragMove(e) {
 
 // PC 鼠标拖拽：按下即可拖（不需要长按），输入框与按钮上按下不触发
 function onMouseDragStart(e, i, kind) {
-  if (e.button !== 0 || drag.kind) return
+  if (e.button !== 0) return
   if (e.target && e.target.closest && e.target.closest('input, textarea, select, button, .cond-card-ops, .g-del')) return
+  // 设备模拟下 touchstart 可能已先占位：接管成鼠标拖动，不等长按
+  if (drag.kind) {
+    if (drag.kind === kind && drag.from === i && !drag.active) {
+      if (drag.timer) { clearTimeout(drag.timer); drag.timer = null }
+      beginDragActive()
+      document.body.style.userSelect = 'none'
+      window.addEventListener('mousemove', onMouseDragMove)
+      window.addEventListener('mouseup', onMouseDragEnd)
+      e.preventDefault()
+    }
+    return
+  }
   drag.kind = kind
   drag.from = i
   drag.to = i
   drag.startX = e.clientX
   drag.startY = e.clientY
   drag.dy = 0
-  drag.active = true
-  drag.heights = measureDragItems(kind)
+  beginDragActive()
   document.body.style.userSelect = 'none'
   window.addEventListener('mousemove', onMouseDragMove)
   window.addEventListener('mouseup', onMouseDragEnd)
