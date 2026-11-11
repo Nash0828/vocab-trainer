@@ -533,6 +533,21 @@ app.put('/api/cond-groups/:id', (req, res) => {
   ).run(c.name, c.seq, c.sourceMode, c.typeFilter, JSON.stringify(c.keywords), c.masteryLimit, Date.now(), id, uid)
   res.json({ id, ...c })
 })
+// 批量调整条件分组顺序（长按拖动后提交，按数组顺序重排 seq）
+app.post('/api/cond-groups/reorder', (req, res) => {
+  const uid = req.userId
+  const ids = Array.isArray(req.body && req.body.ids) ? req.body.ids.map(Number).filter((n) => Number.isInteger(n) && n > 0) : []
+  if (!ids.length) return res.status(400).json({ error: '参数错误' })
+  const own = db.prepare('SELECT id FROM condition_groups WHERE user_id = ?').all(uid).map((r) => r.id)
+  if (ids.some((id) => !own.includes(id))) return res.status(400).json({ error: '参数错误' })
+  const stmt = db.prepare('UPDATE condition_groups SET seq = ?, updated_at = ? WHERE id = ? AND user_id = ?')
+  const now = Date.now()
+  const tx = db.transaction((rows) => {
+    rows.forEach((id, i) => stmt.run(i + 1, now, id, uid))
+  })
+  tx(ids)
+  res.json({ ok: true })
+})
 // 删除条件分组
 app.delete('/api/cond-groups/:id', (req, res) => {
   const uid = req.userId

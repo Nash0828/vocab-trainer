@@ -66,6 +66,7 @@ export const api = {
   createCondGroup: (data) => req('/api/cond-groups', { method: 'POST', body: data }),
   updateCondGroup: (id, data) => req(`/api/cond-groups/${id}`, { method: 'PUT', body: data }),
   deleteCondGroup: (id) => req(`/api/cond-groups/${id}`, { method: 'DELETE' }),
+  reorderCondGroups: (ids) => req('/api/cond-groups/reorder', { method: 'POST', body: { ids } }),
 
   // 背诵记录
   addRecord: (data) => req('/api/records', { method: 'POST', body: data }),

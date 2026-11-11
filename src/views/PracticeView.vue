@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { ref, computed, nextTick, onMounted, onActivated, onBeforeUnmount, watch } from 'vue'
+import { ref, reactive, computed, nextTick, onMounted, onActivated, onBeforeUnmount, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useWords, loadState, weightedPickIndex } from '../composables/useWords'
 import { useHistory } from '../composables/useHistory'
@@ -274,6 +274,125 @@ function showToast(text) {
   toastText.value = text
   if (toastTimer) clearTimeout(toastTimer)
   toastTimer = setTimeout(() => { toastText.value = '' }, 1800)
+}
+
+// ===== 长按拖动排序（条件分组列表 / 分组背列表 共用） =====
+const DRAG_LONG_PRESS = 350 // 长按多久进入拖动
+const DRAG_MOVE_TOLERANCE = 8 // 长按期间移动超过该距离视为滚动，取消拖动
+const drag = reactive({ kind: null, from: -1, to: -1, startX: 0, startY: 0, dy: 0, active: false, heights: [], timer: null })
+
+function onDragStart(e, i, kind) {
+  if (e.touches.length !== 1) return
+  // 操作按钮（编辑/删除）上的长按不进入拖动
+  if (e.target && e.target.closest && e.target.closest('.cond-card-ops, .g-del')) return
+  const t = e.touches[0]
+  drag.kind = kind
+  drag.from = i
+  drag.to = i
+  drag.startX = t.clientX
+  drag.startY = t.clientY
+  drag.dy = 0
+  drag.active = false
+  if (drag.timer) clearTimeout(drag.timer)
+  drag.timer = setTimeout(() => {
+    drag.timer = null
+    drag.active = true
+    drag.heights = measureDragItems(kind)
+    try { if (navigator.vibrate) navigator.vibrate(10) } catch (err) {}
+  }, DRAG_LONG_PRESS)
+}
+// 每项高度（含间距），用于让位位移与目标位置换算
+function measureDragItems(kind) {
+  const sel = kind === 'cond' ? '.cond-card' : '.group-card'
+  const gap = kind === 'cond' ? 8 : 14
+  return Array.from(document.querySelectorAll(sel)).map((el) => el.getBoundingClientRect().height + gap)
+}
+function cancelDragPress() {
+  if (drag.timer) { clearTimeout(drag.timer); drag.timer = null }
+  drag.kind = null
+  drag.from = -1
+  drag.to = -1
+  drag.dy = 0
+  drag.active = false
+  drag.heights = []
+}
+function onDragMove(e) {
+  if (!drag.kind) return
+  const t = e.touches[0]
+  const dy = t.clientY - drag.startY
+  if (!drag.active) {
+    if (Math.abs(dy) > DRAG_MOVE_TOLERANCE || Math.abs(t.clientX - drag.startX) > DRAG_MOVE_TOLERANCE) cancelDragPress()
+    return
+  }
+  if (e.cancelable) e.preventDefault() // 拖动中阻止列表滚动
+  // 限制在本列表范围内，避免拖出边界
+  let minDy = 0
+  let maxDy = 0
+  drag.heights.forEach((h, i) => { if (i < drag.from) minDy -= h; if (i > drag.from) maxDy += h })
+  drag.dy = Math.max(minDy, Math.min(maxDy, dy))
+  let to = drag.from
+  let acc = 0
+  if (drag.dy > 0) {
+    for (let k = drag.from + 1; k < drag.heights.length; k++) {
+      if (drag.dy - acc > drag.heights[k] / 2) { acc += drag.heights[k]; to = k } else break
+    }
+  } else {
+    for (let k = drag.from - 1; k >= 0; k--) {
+      if (-drag.dy - acc > drag.heights[k] / 2) { acc += drag.heights[k]; to = k } else break
+    }
+  }
+  drag.to = to
+}
+function onDragEnd() {
+  if (!drag.kind) return
+  const kind = drag.kind
+  const from = drag.from
+  const to = drag.to
+  const active = drag.active
+  cancelDragPress()
+  if (!active || from < 0 || to < 0 || from === to) return
+  if (kind === 'cond') moveCondGroup(from, to)
+  else moveDraftGroup(from, to)
+}
+// 其它卡片让位位移
+function dragShiftOf(i) {
+  if (!drag.kind || !drag.active) return 0
+  const { from, to, heights } = drag
+  if (i === from) return 0
+  if (i > from && i <= to) { let s = 0; for (let k = from; k < i; k++) s += heights[k]; return -s }
+  if (i < from && i >= to) { let s = 0; for (let k = i + 1; k <= from; k++) s += heights[k]; return s }
+  return 0
+}
+function dragItemStyle(kind, i) {
+  if (drag.kind !== kind || !drag.active) return null
+  if (i === drag.from) {
+    return { transform: `translateY(${drag.dy}px) scale(1.02)`, zIndex: 20, transition: 'none', boxShadow: '0 8px 22px rgba(0, 0, 0, 0.14)' }
+  }
+  const shift = dragShiftOf(i)
+  return shift ? { transform: `translateY(${shift}px)`, transition: 'transform .18s ease' } : null
+}
+function isDragSource(kind, i) {
+  return drag.kind === kind && drag.active && drag.from === i
+}
+async function moveCondGroup(from, to) {
+  const arr = [...condGroups.value]
+  const [item] = arr.splice(from, 1)
+  arr.splice(to, 0, item)
+  arr.forEach((g, i) => (g.seq = i + 1))
+  condGroups.value = arr
+  try {
+    await api.reorderCondGroups(arr.map((g) => g.id))
+  } catch (e) {
+    showToast('排序保存失败')
+    loadCondGroups()
+  }
+}
+function moveDraftGroup(from, to) {
+  const arr = [...draftGroups.value]
+  const [item] = arr.splice(from, 1)
+  arr.splice(to, 0, item)
+  arr.forEach((g, i) => (g.seq = i + 1))
+  draftGroups.value = arr
 }
 function openSaveGroupDialog() {
   const ts = Date.now()
@@ -2520,11 +2639,20 @@ next()
         </div>
         <div class="modal-body group-modal-body">
           <div v-if="!draftGroups.length" class="empty-tip">还没有分组，点击下方「添加一组」开始</div>
-          <div v-for="(g, i) in draftGroups" :key="i" class="group-card">
+          <div
+            v-for="(g, i) in draftGroups"
+            :key="i"
+            class="group-card"
+            :class="{ 'is-drag-src': isDragSource('group', i) }"
+            :style="dragItemStyle('group', i)"
+            @touchstart="onDragStart($event, i, 'group')"
+            @touchmove="onDragMove"
+            @touchend="onDragEnd"
+            @touchcancel="onDragEnd"
+          >
             <div class="g-inputs">
-              <div class="g-cell">
-                <span class="g-cell-label">序号</span>
-                <input class="g-cell-input" type="number" min="1" v-model.number="g.seq" />
+              <div class="drag-handle" title="长按拖动排序">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="7" x2="19" y2="7"/><line x1="5" y1="12" x2="19" y2="12"/><line x1="5" y1="17" x2="19" y2="17"/></svg>
               </div>
               <div class="g-cell g-cell-name">
                 <span class="g-cell-label">名称</span>
@@ -2583,10 +2711,22 @@ next()
           </div>
           <div class="modal-body cond-modal-body">
             <div v-if="!condGroups.length" class="empty-tip">还没有条件分组，点击下方「新增条件分组」开始</div>
-            <div v-for="g in condGroups" :key="g.id" class="cond-card">
+            <div
+              v-for="(g, i) in condGroups"
+              :key="g.id"
+              class="cond-card"
+              :class="{ 'is-drag-src': isDragSource('cond', i) }"
+              :style="dragItemStyle('cond', i)"
+              @touchstart="onDragStart($event, i, 'cond')"
+              @touchmove="onDragMove"
+              @touchend="onDragEnd"
+              @touchcancel="onDragEnd"
+            >
+              <div class="drag-handle" title="长按拖动排序">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="7" x2="19" y2="7"/><line x1="5" y1="12" x2="19" y2="12"/><line x1="5" y1="17" x2="19" y2="17"/></svg>
+              </div>
               <div class="cond-card-main">
                 <div class="cond-card-title">
-                  <span class="cond-seq">#{{ g.seq }}</span>
                   <span class="cond-name">{{ g.name }}</span>
                 </div>
                 <div class="cond-summary">{{ condSummary(g) }}</div>
@@ -2618,10 +2758,6 @@ next()
           </div>
           <div class="modal-body cond-modal-body">
             <div class="ce-group ce-group-first">
-              <div class="ce-group-title">序号</div>
-              <input class="ce-input ce-seq" type="number" min="1" v-model.number="condEditing.seq" />
-            </div>
-            <div class="ce-group">
               <div class="ce-group-title">名称</div>
               <div class="kw-input-wrap">
                 <input
@@ -3116,6 +3252,11 @@ next()
   margin-bottom: 14px;
   border: 0.5px solid #e5e5e5;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  position: relative;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /* 输入行：三个轻量字段 + 删除一行 */
@@ -3258,6 +3399,28 @@ next()
   border-radius: 10px;
   padding: 10px 12px;
   margin-bottom: 8px;
+  position: relative;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+/* 拖动把手（长按整卡可拖，把手只是提示） */
+.drag-handle {
+  flex: none;
+  width: 18px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c9c9c9;
+  cursor: grab;
+}
+.drag-handle:active {
+  color: #999;
+}
+.is-drag-src {
+  border-color: #d9d9d9;
 }
 .cond-card-main {
   flex: 1;
