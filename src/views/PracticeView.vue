@@ -28,6 +28,14 @@ const showGroupModal = ref(false) // 分组设置弹框
 const draftGroups = ref([]) // 弹框编辑副本
 const groupError = ref('')
 const reshuffling = ref(false)
+// 重新分配后的短暂提示：列表数量不变，但组内词句已换过
+const reshuffleFlash = ref(false)
+let reshuffleTimer = null
+function flashReshuffled() {
+  reshuffleFlash.value = true
+  if (reshuffleTimer) clearTimeout(reshuffleTimer)
+  reshuffleTimer = setTimeout(() => { reshuffleFlash.value = false }, 4000)
+}
 // 条件分组：每个组 = 一组保存的筛选条件（出题来源 + 类型 + 关键字），作为题源
 const condGroups = ref([]) // { id, name, seq, sourceMode, typeFilter, keywords }
 // 条件分组可多选：出题池 = 各选中组命中的词句并集
@@ -1942,7 +1950,8 @@ async function reshuffleGroups() {
     lastIndex.value = -1
     clearAutoTimer()
     next()
-    showToast('已重新分配，出题已按新分组刷新')
+    flashReshuffled()
+    showToast(`已重新分配 ${r.total || 0} 条词句到 ${(r.groups || []).length} 个组（各组数量不变，组内内容已打散）`)
   } catch (e) {
     groupError.value = e.message || '重新分配失败'
     showToast(e.message || '重新分配失败')
@@ -2782,6 +2791,7 @@ next()
         <div class="group-modal-tip">
           <span :class="{ over: draftAssigned !== groupTotal }">已分配 {{ draftAssigned }} / 总词数 {{ groupTotal }}</span>
           <span v-if="draftAssigned !== groupTotal" class="group-tip-diff">还需 {{ groupTotal - draftAssigned }} 词才能保存</span>
+          <span v-else-if="reshuffleFlash" class="group-tip-flash">· 已重新分配，组内内容已更新（数量不变）</span>
         </div>
         <div class="modal-body group-modal-body">
           <div v-if="!draftGroups.length" class="empty-tip">还没有分组，点击下方「添加一组」开始</div>
@@ -3538,6 +3548,11 @@ next()
 .g-reshuffle[disabled] {
   opacity: 0.6;
   cursor: default;
+}
+
+.group-tip-flash {
+  font-size: 12px;
+  color: var(--primary);
 }
 
 .group-error {
