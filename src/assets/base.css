@@ -172,6 +172,8 @@
 html,
 body {
   min-height: 100%;
+  /* iOS 双击缩放抑制：manipulation 只保留平移/双指缩放，禁用双击放大 */
+  touch-action: manipulation;
 }
 
 body {
@@ -182,6 +184,9 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
+  /* iOS 横竖屏切换/缩放时不要自动加粗放大字体 */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 #app {
