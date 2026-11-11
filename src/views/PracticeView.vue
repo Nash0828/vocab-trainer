@@ -355,15 +355,11 @@ function cancelDragPress() {
   drag.active = false
   drag.heights = []
 }
-function onDragMove(e) {
-  if (!drag.kind) return
-  const t = e.touches[0]
-  const dy = t.clientY - drag.startY
-  if (!drag.active) {
-    if (Math.abs(dy) > DRAG_MOVE_TOLERANCE || Math.abs(t.clientX - drag.startX) > DRAG_MOVE_TOLERANCE) cancelDragPress()
-    return
-  }
-  if (e.cancelable) e.preventDefault() // 拖动中阻止列表滚动
+// 根据当前纵向位置算目标下标（触摸/鼠标共用）
+function applyDragPos(clientY, e) {
+  const dy = clientY - drag.startY
+  if (!drag.active) return
+  if (e && e.cancelable) e.preventDefault() // 拖动中阻止列表滚动
   // 限制在本列表范围内，避免拖出边界
   let minDy = 0
   let maxDy = 0
@@ -382,6 +378,44 @@ function onDragMove(e) {
   }
   drag.to = to
 }
+function onDragMove(e) {
+  if (!drag.kind) return
+  if (!drag.active) {
+    const t = e.touches[0]
+    if (Math.abs(t.clientY - drag.startY) > DRAG_MOVE_TOLERANCE || Math.abs(t.clientX - drag.startX) > DRAG_MOVE_TOLERANCE) cancelDragPress()
+    return
+  }
+  applyDragPos(e.touches[0].clientY, e)
+}
+
+// PC 鼠标拖拽：按下即可拖（不需要长按），输入框与按钮上按下不触发
+function onMouseDragStart(e, i, kind) {
+  if (e.button !== 0 || drag.kind) return
+  if (e.target && e.target.closest && e.target.closest('input, textarea, select, button, .cond-card-ops, .g-del')) return
+  drag.kind = kind
+  drag.from = i
+  drag.to = i
+  drag.startX = e.clientX
+  drag.startY = e.clientY
+  drag.dy = 0
+  drag.active = true
+  drag.heights = measureDragItems(kind)
+  document.body.style.userSelect = 'none'
+  window.addEventListener('mousemove', onMouseDragMove)
+  window.addEventListener('mouseup', onMouseDragEnd)
+  e.preventDefault()
+}
+function onMouseDragMove(e) {
+  if (!drag.kind) return
+  applyDragPos(e.clientY, e)
+}
+function onMouseDragEnd() {
+  window.removeEventListener('mousemove', onMouseDragMove)
+  window.removeEventListener('mouseup', onMouseDragEnd)
+  document.body.style.userSelect = ''
+  onDragEnd()
+}
+
 function onDragEnd() {
   if (!drag.kind) return
   const kind = drag.kind
@@ -2800,6 +2834,7 @@ next()
             :class="{ 'is-drag-src': isDragSource('group', i) }"
             :style="dragItemStyle('group', i)"
             @touchstart="onDragStart($event, i, 'group')"
+            @mousedown="onMouseDragStart($event, i, 'group')"
             @touchmove="onDragMove"
             @touchend="onDragEnd"
             @touchcancel="onDragEnd"
@@ -2874,6 +2909,7 @@ next()
               :class="{ 'is-drag-src': isDragSource('cond', i) }"
               :style="dragItemStyle('cond', i)"
               @touchstart="onDragStart($event, i, 'cond')"
+              @mousedown="onMouseDragStart($event, i, 'cond')"
               @touchmove="onDragMove"
               @touchend="onDragEnd"
               @touchcancel="onDragEnd"
@@ -3396,6 +3432,18 @@ next()
 
 .group-set-btn:active {
   background: #f5f5f5;
+}
+
+/* PC 端列表可拖动提示（触摸设备不显示） */
+@media (hover: hover) and (pointer: fine) {
+  .group-card,
+  .cond-card {
+    cursor: grab;
+  }
+  .group-card.is-drag-src,
+  .cond-card.is-drag-src {
+    cursor: grabbing;
+  }
 }
 
 /* 分组设置弹框 */
