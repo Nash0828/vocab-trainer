@@ -688,7 +688,14 @@ function onLayerMaskTouchmove(e) {
   const delta = layerTouchY === null ? 0 : y - layerTouchY
   layerTouchY = y
   const el = e.target
-  const scroller = el && el.closest ? el.closest('.dict-body, .modal-body, .sheet-body') : null
+  // 找最近的可滚动祖先（弹层里的列表各不相同，用通用判断，避免漏掉某个列表把滚动口罩死）
+  let scroller = null
+  let node = el
+  while (node && node !== document.body) {
+    const cs = getComputedStyle(node)
+    if ((cs.overflowY === 'auto' || cs.overflowY === 'scroll') && node.scrollHeight > node.clientHeight + 1) { scroller = node; break }
+    node = node.parentElement
+  }
   if (scroller) {
     const st = scroller.scrollTop
     const sh = scroller.scrollHeight
