@@ -2071,7 +2071,7 @@ next()
     <div v-if="practiceMode === 'group'" class="group-row">
       <button v-if="groups.length" class="group-select" @click="showGroupPicker = true">
         <span class="group-select-name">{{ selectedGroup?.name }}</span>
-        <span class="group-select-progress">已背熟 {{ selectedGroupStats?.mastered }}/{{ selectedGroupStats?.size }}</span>
+        <span class="group-select-progress">{{ selectedGroupStats?.size }} 条</span>
         <svg class="group-select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
       <span v-else class="group-empty-hint">尚未设置分组</span>
@@ -2636,7 +2636,7 @@ next()
         <div class="picker-list">
           <button v-for="g in groupStats" :key="g.id" class="picker-item" @click="pickGroup(g)">
             <span class="picker-name">{{ g.name }}</span>
-            <span class="picker-progress">已背熟 {{ g.mastered }}/{{ g.size }}</span>
+            <span class="picker-progress">{{ g.size }} 条</span>
             <svg v-if="g.id === selectedGroupId" class="picker-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </button>
         </div>
@@ -2684,7 +2684,6 @@ next()
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
               </button>
             </div>
-            <div class="g-progress">已背熟 {{ g.mastered }}</div>
           </div>
           <button class="g-add" @click="addGroupDraft">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
