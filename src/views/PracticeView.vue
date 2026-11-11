@@ -3314,6 +3314,9 @@ next()
 
 .picker-sheet {
   width: 100%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
   background: #ededed;
   border-radius: 12px 12px 0 0;
   overflow: hidden;
@@ -3332,6 +3335,7 @@ next()
 }
 
 .picker-head {
+  flex: none;
   background: #fff;
   text-align: center;
   padding: 13px 16px;
@@ -3340,6 +3344,11 @@ next()
 }
 
 .picker-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   background: #fff;
 }
 
@@ -3387,6 +3396,7 @@ next()
 }
 
 .picker-cancel {
+  flex: none;
   width: calc(100% - 16px);
   margin: 8px;
   padding: 13px;
@@ -3403,6 +3413,7 @@ next()
 }
 
 .picker-actions {
+  flex: none;
   display: flex;
   gap: 8px;
   padding: 8px;
