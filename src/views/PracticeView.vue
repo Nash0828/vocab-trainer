@@ -1199,65 +1199,84 @@ function highlightWord(word, sentence) {
 
 // 把英文单词拆成可点击的词链接；hlWord 匹配的词额外高亮（短语按词根逐词匹配）
 function wordify(text, hlWord, extraHl) {
-  const esc = escapeHtml(text)
   const bases = String(hlWord || '').trim().toLowerCase().split(/[^a-z0-9']+/).filter(Boolean)
-  // extraHl 可能是 AI 返回的变形词（含整体短语），统一拆成 token 集合
+  // extraHl：AI 返回的变体。单个词进 token 集合；多个词的片段整体高亮（如 "afraid of going out"）
   const extra = new Set()
+  const phrases = []
   ;(Array.isArray(extraHl) ? extraHl : []).forEach((x) => {
-    String(x).toLowerCase().split(/[^a-z0-9']+/).forEach((t) => { if (t) extra.add(t) })
+    const raw = String(x || '').trim().toLowerCase()
+    if (!raw) return
+    if (/\s/.test(raw)) { if (!phrases.includes(raw)) phrases.push(raw); return }
+    raw.split(/[^a-z0-9']+/).forEach((t) => { if (t) extra.add(t) })
   })
-  try {
-    return esc.replace(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g, (m) => {
-      const low = m.toLowerCase()
-      const hitBase = (t) => bases.some((b) => isFlection(t, b)) || extra.has(t)
-      if (hitBase(low)) {
-        return `<span class="word-link sent-hl" data-word="${m}">${m}</span>`
-      }
-      // 复合词（English-Nigerian 等）：整体未命中时拆子词，命中段单独高亮（整词仍可点击查词）
-      const pieces = m.split(/(['’-])/)
-      if (!pieces.some((p) => /^[A-Za-z]+$/.test(p) && hitBase(p.toLowerCase()))) {
-        return `<span class="word-link" data-word="${m}">${m}</span>`
-      }
-      let rebuilt = ''
-      for (const p of pieces) {
-        if (/^[A-Za-z]+$/.test(p)) {
-          rebuilt += hitBase(p.toLowerCase()) ? `<span class="sent-hl">${p}</span>` : p
-        } else {
-          rebuilt += p
+  // 逐词渲染（原逻辑）
+  const renderWords = (segText) => {
+    const esc = escapeHtml(segText)
+    try {
+      return esc.replace(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g, (m) => {
+        const low = m.toLowerCase()
+        const hitBase = (t) => bases.some((b) => isFlection(t, b)) || extra.has(t)
+        if (hitBase(low)) {
+          return `<span class="word-link sent-hl" data-word="${m}">${m}</span>`
         }
-      }
-      return `<span class="word-link" data-word="${m}">${rebuilt}</span>`
-    })
-  } catch (e) { return esc }
+        // 复合词（English-Nigerian 等）：整体未命中时拆子词，命中段单独高亮（整词仍可点击查词）
+        const pieces = m.split(/(['’-])/)
+        if (!pieces.some((p) => /^[A-Za-z]+$/.test(p) && hitBase(p.toLowerCase()))) {
+          return `<span class="word-link" data-word="${m}">${m}</span>`
+        }
+        let rebuilt = ''
+        for (const p of pieces) {
+          if (/^[A-Za-z]+$/.test(p)) {
+            rebuilt += hitBase(p.toLowerCase()) ? `<span class="sent-hl">${p}</span>` : p
+          } else {
+            rebuilt += p
+          }
+        }
+        return `<span class="word-link" data-word="${m}">${rebuilt}</span>`
+      })
+    } catch (e) { return esc }
+  }
+  // 先把 AI 识别出的短语片段整体切出，整体高亮（内部不再拆成单字）
+  if (!phrases.length) return renderWords(text)
+  const pattern = phrases
+    .map((p) => p.split(/\s+/).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+'))
+    .join('|')
+  const re = new RegExp(pattern, 'gi')
+  let out = ''
+  let last = 0
+  let mm
+  while ((mm = re.exec(text)) !== null) {
+    if (mm.index > last) out += renderWords(text.slice(last, mm.index))
+    out += `<span class="word-link sent-hl" data-word="${escapeHtml(mm[0])}">${escapeHtml(mm[0])}</span>`
+    last = mm.index + mm[0].length
+    if (mm.index === re.lastIndex) re.lastIndex++
+  }
+  if (last < text.length) out += renderWords(text.slice(last))
+  return out
 }
 
-// AI 词形补全：本地规则未命中且例句含目标词根时才调 AI 判断变形词（内存缓存，失败静默不高亮）；短语按词根逐个判断
+// AI 词形补全：单词语境本地未命中才调 AI；短语逐词命中不等于短语成立（be afraid of doing → afraid of going out），一律交给 AI 识别片段
 const flectionCache = new Map()
 function fillAiFlections(data, word) {
   if (!data || !Array.isArray(data.sentences) || !data.sentences.length || !word) return
   const bases = String(word).trim().toLowerCase().split(/[^a-z0-9']+/).filter(Boolean)
   if (!bases.length) return
+  const isPhrase = bases.length > 1
   for (const s of data.sentences) {
     if (s.aiHlDone || s.aiHl) continue
     s.aiHlDone = true
     const toks = String(s.en || '').match(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g) || []
-    // 本地规则已命中（任一词根） → 不需要 AI
-    if (toks.some((m) => bases.some((b) => isFlection(m.toLowerCase(), b)))) continue
+    // 单个单词：本地规则已命中就不需要 AI
+    if (!isPhrase && toks.some((m) => bases.some((b) => isFlection(m.toLowerCase(), b)))) continue
     const key = String(word).trim().toLowerCase() + '|' + s.en
     const cached = flectionCache.get(key)
     if (cached) { s.aiHl = cached; continue }
     api.matchFlection(String(word).trim(), s.en)
       .then((j) => {
-        const matched = Array.isArray(j && j.matched) ? j.matched : []
-        // 拆词存入（兼容 AI 返回 "dresses up" 等整体短语）
-        const flat = []
-        matched.forEach((x) => {
-          String(x).toLowerCase().split(/[^a-z0-9']+/).forEach((t) => {
-            if (t && !flat.includes(t)) flat.push(t)
-          })
-        })
-        flectionCache.set(key, flat)
-        s.aiHl = flat
+        // 保留 AI 返回的原始片段（可能是 "afraid of going out" 这样的多词短语）
+        const matched = (Array.isArray(j && j.matched) ? j.matched : []).map((x) => String(x).trim()).filter(Boolean)
+        flectionCache.set(key, matched)
+        s.aiHl = matched
       })
       .catch(() => {})
   }
