@@ -29,7 +29,11 @@ const draftGroups = ref([]) // 弹框编辑副本
 const groupError = ref('')
 // 条件分组：每个组 = 一组保存的筛选条件（出题来源 + 类型 + 关键字），作为题源
 const condGroups = ref([]) // { id, name, seq, sourceMode, typeFilter, keywords }
-const selectedCondGroupId = ref(null) // 当前选中条件分组：同样由后端记忆
+// 条件分组可多选：出题池 = 各选中组命中的词句并集
+const selectedCondGroupIds = ref([])
+const draftCondIds = ref([]) // 选择弹层的草稿（点完成后才生效）
+const selectedCondGroupId = computed(() => (selectedCondGroupIds.value.length === 1 ? selectedCondGroupIds.value[0] : null))
+const isMultiCond = computed(() => selectedCondGroupIds.value.length > 1)
 const showCondGroupModal = ref(false) // 条件分组设置弹框
 const condGroupError = ref('')
 // 条件分组设置弹框的编辑器状态：null=列表视图；对象=编辑中（id 为 null 表示新增）
@@ -43,7 +47,11 @@ async function loadSelection() {
   try {
     const r = await api.getSelection()
     if (r && r.groupId) selectedGroupId.value = Number(r.groupId)
-    if (r && r.condGroupId) selectedCondGroupId.value = Number(r.condGroupId)
+    if (r && Array.isArray(r.condGroupIds) && r.condGroupIds.length) {
+      selectedCondGroupIds.value = r.condGroupIds.map((x) => Number(x)).filter((n) => n > 0)
+    } else if (r && r.condGroupId) {
+      selectedCondGroupIds.value = [Number(r.condGroupId)]
+    }
   } catch (e) {}
 }
 
@@ -73,12 +81,19 @@ async function loadCondGroups() {
     const r = await api.getCondGroups()
     condGroups.value = r.groups || []
     if (practiceMode.value === 'condgroup') {
-      if (!selectedCondGroupId.value || !condGroups.value.some((g) => g.id === selectedCondGroupId.value)) {
-        selectedCondGroupId.value = condGroups.value[0]?.id || null
+      const validIds = selectedCondGroupIds.value.filter((id) => condGroups.value.some((g) => Number(g.id) === Number(id)))
+      selectedCondGroupIds.value = validIds.length ? validIds : (condGroups.value[0] ? [condGroups.value[0].id] : [])
+      api.saveSelection({ condGroupIds: selectedCondGroupIds.value }).catch(() => {})
+      if (selectedCondGroupIds.value.length === 1) {
+        const g = condGroups.value.find((x) => Number(x.id) === Number(selectedCondGroupIds.value[0]))
+        if (g) applyCondGroupFilters(g)
+      } else {
+        // 多选时筛选由各组条件决定，清空 UI 筛选避免叠加
+        sourceMode.value = 'all'
+        typeFilter.value = 'all'
+        masteryLimit.value = null
+        keywordFilters.value = []
       }
-      api.saveSelection({ condGroupId: selectedCondGroupId.value || null }).catch(() => {})
-      const g = condGroups.value.find((x) => x.id === selectedCondGroupId.value)
-      if (g) applyCondGroupFilters(g)
       // 当前题不在本组出题池时强制重出：覆盖刷新/补数时序竞态——words 先到位、组条件后应用，
       // 期间自动出题 watch 可能先按未过滤的全库抽了题（如 festival），组条件应用后旧题不在池内必须换掉
       if (
@@ -252,6 +267,10 @@ function openFilterSheet() {
   const now = Date.now()
   if (now - lastOpenSheetAt < 400) return
   lastOpenSheetAt = now
+  if (practiceMode.value === 'condgroup' && isMultiCond.value) {
+    showToast(`已选 ${selectedCondGroupIds.value.length} 个条件分组，出题范围由分组条件决定`)
+    return
+  }
   if (showFilterSheet.value) return
   filterError.value = ''
   draftSourceMode.value = sourceMode.value
@@ -666,8 +685,39 @@ function resolveWord(item) {
     words.value.find((x) => x.english.trim().toLowerCase() === item.english.trim().toLowerCase()) || null
   )
 }
+// 条件组匹配（含来源/类型/关键字/背熟上限），用于多选并集
+function condGroupMatches(g, w, wrongIds) {
+  if (g.sourceMode === 'wrong' && !wrongIds.has(String(w.id))) return false
+  if ((g.typeFilter || 'all') !== 'all' && (w.type || 'word') !== g.typeFilter) return false
+  const kw = (g.keywords || []).map((x) => String(x || '').trim()).filter(Boolean)
+  if (kw.length) {
+    const fields = [w.english, w.chinese, w.remark || '']
+    if (!kw.some((k) => fields.some((f) => String(f || '').toLowerCase().includes(k.toLowerCase())))) return false
+  }
+  if (g.masteryLimit !== null && g.masteryLimit !== undefined && Number(w.count || 0) > Number(g.masteryLimit)) return false
+  return true
+}
+// 多选条件组：各组的「条件命中 ∩ 未背熟」并集
+const condUnionPool = computed(() => {
+  if (!isMultiCond.value) return null
+  const wrongIds = new Set(wrongValid.value.map((w) => String(w.id)))
+  const set = new Set()
+  for (const g of selectedCondGroups.value) {
+    for (const w of words.value) {
+      if (isMastered(w)) continue
+      if (!condGroupMatches(g, w, wrongIds)) continue
+      set.add(String(w.id))
+    }
+  }
+  return set
+})
+const selectedCondPoolCount = computed(() => (condUnionPool.value ? condUnionPool.value.size : 0))
 // 出题池：随机模式 = 未背熟单词 ∩ 类型/关键字筛选；分组模式 = 所选组内未背熟 ∩ 类型/关键字筛选；错题本模式 = 错题本中且未背熟 ∩ 类型/关键字筛选（组内错题）
 const available = computed(() => {
+  if (practiceMode.value === 'condgroup' && isMultiCond.value) {
+    const pool = condUnionPool.value || new Set()
+    return words.value.filter((w) => pool.has(String(w.id)))
+  }
   const matchType = (w) => typeFilter.value === 'all' || (w.type || 'word') === typeFilter.value
   let base
   if (practiceMode.value === 'group') {
@@ -1602,12 +1652,14 @@ function setMode(m) {
       openCondGroupModal()
       return
     }
-    if (!selectedCondGroupId.value || !condGroups.value.some((g) => g.id === selectedCondGroupId.value)) {
-      selectedCondGroupId.value = condGroups.value[0].id
-      api.saveSelection({ condGroupId: condGroups.value[0].id }).catch(() => {})
+    if (!selectedCondGroupIds.value.length || !selectedCondGroupIds.value.some((id) => condGroups.value.some((g) => Number(g.id) === Number(id)))) {
+      selectedCondGroupIds.value = [condGroups.value[0].id]
+      api.saveSelection({ condGroupIds: selectedCondGroupIds.value }).catch(() => {})
     }
-    const g = condGroups.value.find((x) => x.id === selectedCondGroupId.value)
-    if (g) applyCondGroupFilters(g)
+    if (selectedCondGroupIds.value.length === 1) {
+      const g = condGroups.value.find((x) => Number(x.id) === Number(selectedCondGroupIds.value[0]))
+      if (g) applyCondGroupFilters(g)
+    }
   }
   next()
 }
@@ -1617,14 +1669,44 @@ const selectedGroup = computed(() => groups.value.find((g) => g.id === selectedG
 // 条件分组下拉切换
 const showCondGroupPicker = ref(false)
 const selectedCondGroup = computed(
-  () => condGroups.value.find((g) => g.id === selectedCondGroupId.value) || null
+  () => condGroups.value.find((g) => Number(g.id) === Number(selectedCondGroupId.value)) || null
 )
-function pickCondGroup(g) {
+const selectedCondGroups = computed(() =>
+  condGroups.value.filter((g) => selectedCondGroupIds.value.some((id) => Number(id) === Number(g.id)))
+)
+function openCondGroupPicker() {
+  draftCondIds.value = [...selectedCondGroupIds.value]
+  showCondGroupPicker.value = true
+}
+// 微信风格多选：点一项切换勾选，不关闭面板
+function toggleCondPick(g) {
+  const id = Number(g.id)
+  const i = draftCondIds.value.findIndex((x) => Number(x) === id)
+  if (i >= 0) {
+    if (draftCondIds.value.length === 1) return // 至少保留一个分组
+    draftCondIds.value.splice(i, 1)
+  } else {
+    draftCondIds.value.push(id)
+  }
+}
+function cancelCondPick() {
   showCondGroupPicker.value = false
-  if (!g || g.id === selectedCondGroupId.value) return
-  selectedCondGroupId.value = g.id
-  api.saveSelection({ condGroupId: g.id }).catch(() => {})
-  applyCondGroupFilters(g)
+}
+function confirmCondPick() {
+  if (!draftCondIds.value.length) return
+  showCondGroupPicker.value = false
+  selectedCondGroupIds.value = [...draftCondIds.value]
+  api.saveSelection({ condGroupIds: selectedCondGroupIds.value }).catch(() => {})
+  if (selectedCondGroupIds.value.length === 1) {
+    const g = condGroups.value.find((x) => Number(x.id) === Number(selectedCondGroupIds.value[0]))
+    if (g) applyCondGroupFilters(g)
+  } else {
+    // 多选：出题池按各组条件并集计算，UI 筛选置默认
+    sourceMode.value = 'all'
+    typeFilter.value = 'all'
+    masteryLimit.value = null
+    keywordFilters.value = []
+  }
   lastIndex.value = -1
   clearAutoTimer()
   current.value = null
@@ -1753,7 +1835,7 @@ async function saveCondGroup() {
     }
     await loadCondGroups()
     // 编辑的是当前选中组：同步应用新条件
-    if (selectedCondGroupId.value && String(e.id) === String(selectedCondGroupId.value)) {
+    if (!isMultiCond.value && selectedCondGroupId.value && String(e.id) === String(selectedCondGroupId.value)) {
       const g = condGroups.value.find((x) => String(x.id) === String(selectedCondGroupId.value))
       if (g) applyCondGroupFilters(g)
     }
@@ -1770,17 +1852,17 @@ async function deleteCondGroup(g) {
   try {
     await api.deleteCondGroup(g.id)
     await loadCondGroups()
-    if (String(selectedCondGroupId.value) === String(g.id)) {
-      selectedCondGroupId.value = condGroups.value[0]?.id || null
-      if (selectedCondGroupId.value) {
-        applyCondGroupFilters(condGroups.value[0])
-      } else {
-        sourceMode.value = 'all'
-        typeFilter.value = 'all'
-        keywordFilters.value = []
-      }
-      if (practiceMode.value === 'condgroup' && !current.value) next()
+    selectedCondGroupIds.value = selectedCondGroupIds.value.filter((id) => String(id) !== String(g.id))
+    if (!selectedCondGroupIds.value.length) selectedCondGroupIds.value = condGroups.value[0] ? [condGroups.value[0].id] : []
+    api.saveSelection({ condGroupIds: selectedCondGroupIds.value }).catch(() => {})
+    if (selectedCondGroupIds.value.length === 1) {
+      applyCondGroupFilters(condGroups.value[0])
+    } else {
+      sourceMode.value = 'all'
+      typeFilter.value = 'all'
+      keywordFilters.value = []
     }
+    if (practiceMode.value === 'condgroup' && !current.value) next()
   } catch (err) {
     condGroupError.value = err?.message || '删除失败，请重试'
   }
@@ -2120,9 +2202,9 @@ next()
 
     <!-- 条件分组模式：组下拉选框 + 条件分组设置 -->
     <div v-if="practiceMode === 'condgroup'" class="group-row">
-      <button v-if="condGroups.length" class="group-select" @click="showCondGroupPicker = true">
-        <span class="group-select-name">{{ selectedCondGroup?.name }}</span>
-        <span class="group-select-progress">{{ selectedCondGroup ? condGroupPoolCount(selectedCondGroup) + ' 条' : '' }}</span>
+      <button v-if="condGroups.length" class="group-select" @click="openCondGroupPicker">
+        <span class="group-select-name">{{ isMultiCond ? (selectedCondGroups[0]?.name + ' 等 ' + selectedCondGroups.length + ' 组') : selectedCondGroup?.name }}</span>
+        <span class="group-select-progress">{{ isMultiCond ? selectedCondPoolCount + ' 条' : (selectedCondGroup ? condGroupPoolCount(selectedCondGroup) + ' 条' : '') }}</span>
         <svg class="group-select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
       <span v-else class="group-empty-hint">尚未设置条件分组</span>
@@ -2744,13 +2826,16 @@ next()
       <div class="picker-sheet">
         <div class="picker-head">选择条件分组</div>
         <div class="picker-list">
-          <button v-for="g in condGroups" :key="g.id" class="picker-item" @click="pickCondGroup(g)">
+          <button v-for="g in condGroups" :key="g.id" class="picker-item" @click="toggleCondPick(g)">
             <span class="picker-name">{{ g.name }}</span>
             <span class="picker-progress">{{ condGroupPoolCount(g) }} 条</span>
-            <svg v-if="g.id === selectedCondGroupId" class="picker-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <svg v-if="draftCondIds.some((id) => Number(id) === Number(g.id))" class="picker-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </button>
         </div>
-        <button class="picker-cancel" @click="showCondGroupPicker = false">取消</button>
+        <div class="picker-actions">
+          <button class="picker-cancel" @click="cancelCondPick">取消</button>
+          <button class="picker-confirm" @click="confirmCondPick">完成</button>
+        </div>
       </div>
     </div>
 
@@ -3240,6 +3325,33 @@ next()
 }
 
 .picker-cancel:active {
+  background: #f5f5f5;
+}
+
+.picker-actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+}
+
+.picker-actions .picker-cancel {
+  width: auto;
+  flex: 1;
+  margin: 0;
+}
+
+.picker-confirm {
+  flex: 1;
+  padding: 13px;
+  font-size: 16px;
+  color: var(--primary);
+  background: #fff;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.picker-confirm:active {
   background: #f5f5f5;
 }
 

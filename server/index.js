@@ -1043,10 +1043,21 @@ app.put('/api/settings/sentenceVoice', (req, res) => {
 
 // 背诵页当前选中的分组：存后端 settings（跨设备一致），前端不再用 localStorage 记忆
 app.get('/api/settings/selection', (req, res) => {
-  const rows = db.prepare("SELECT key, value FROM settings WHERE user_id = ? AND key IN ('practiceGroupId','practiceCondGroupId')").all(req.userId)
+  const rows = db.prepare("SELECT key, value FROM settings WHERE user_id = ? AND key IN ('practiceGroupId','practiceCondGroupIds')").all(req.userId)
   const m = {}
   for (const r of rows) m[r.key] = r.value
-  res.json({ groupId: Number(m.practiceGroupId) || null, condGroupId: Number(m.practiceCondGroupId) || null })
+  let condGroupIds = []
+  try {
+    if (m.practiceCondGroupIds) {
+      const arr = JSON.parse(m.practiceCondGroupIds)
+      if (Array.isArray(arr)) condGroupIds = arr.map((x) => Number(x)).filter((n) => n > 0)
+    }
+  } catch (e) {}
+  res.json({
+    groupId: Number(m.practiceGroupId) || null,
+    condGroupIds,
+    condGroupId: condGroupIds.length === 1 ? condGroupIds[0] : null, // 兼容单选读取
+  })
 })
 
 app.put('/api/settings/selection', (req, res) => {
@@ -1059,11 +1070,20 @@ app.put('/api/settings/selection', (req, res) => {
     if (ok) save('practiceGroupId', id)
     else clear('practiceGroupId')
   }
-  if (Object.prototype.hasOwnProperty.call(body, 'condGroupId')) {
-    const id = Number(body.condGroupId)
-    const ok = id && db.prepare('SELECT 1 FROM condition_groups WHERE id = ? AND user_id = ?').get(id, req.userId)
-    if (ok) save('practiceCondGroupId', id)
-    else clear('practiceCondGroupId')
+  // 条件分组支持多选：body.condGroupIds 为数组；旧字段 condGroupId 兼容为单元素数组
+  if (Object.prototype.hasOwnProperty.call(body, 'condGroupIds') || Object.prototype.hasOwnProperty.call(body, 'condGroupId')) {
+    const raw = Object.prototype.hasOwnProperty.call(body, 'condGroupIds')
+      ? (Array.isArray(body.condGroupIds) ? body.condGroupIds : [])
+      : [body.condGroupId]
+    const ids = []
+    for (const x of raw) {
+      const id = Number(x)
+      if (!id || !db.prepare('SELECT 1 FROM condition_groups WHERE id = ? AND user_id = ?').get(id, req.userId)) continue
+      if (!ids.includes(id)) ids.push(id)
+    }
+    if (ids.length) save('practiceCondGroupIds', JSON.stringify(ids))
+    else clear('practiceCondGroupIds')
+    clear('practiceCondGroupId')
   }
   res.json({ ok: true })
 })
