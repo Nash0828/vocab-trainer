@@ -2212,9 +2212,8 @@ next()
         <svg class="group-select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
       <span v-else class="group-empty-hint">尚未设置分组</span>
-      <button class="group-set-btn" @click="openGroupModal">
+      <button class="group-set-btn" title="分组设置" aria-label="分组设置" @click="openGroupModal">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
-        分组设置
       </button>
     </div>
 
@@ -2226,9 +2225,8 @@ next()
         <svg class="group-select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
       <span v-else class="group-empty-hint">尚未设置条件分组</span>
-      <button class="group-set-btn" @click="openCondGroupModal">
+      <button class="group-set-btn" title="条件分组设置" aria-label="条件分组设置" @click="openCondGroupModal">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
-        分组设置
       </button>
     </div>
 
@@ -3385,11 +3383,11 @@ next()
 .group-set-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
   border: none;
   background: #fff;
   border-radius: 10px;
-  padding: 9px 12px;
+  padding: 9px 11px;
   font-size: 13px;
   color: var(--text-main);
   cursor: pointer;
