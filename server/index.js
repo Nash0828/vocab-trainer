@@ -1041,6 +1041,33 @@ app.put('/api/settings/sentenceVoice', (req, res) => {
   res.json({ ok: true, voice: v })
 })
 
+// 背诵页当前选中的分组：存后端 settings（跨设备一致），前端不再用 localStorage 记忆
+app.get('/api/settings/selection', (req, res) => {
+  const rows = db.prepare("SELECT key, value FROM settings WHERE user_id = ? AND key IN ('practiceGroupId','practiceCondGroupId')").all(req.userId)
+  const m = {}
+  for (const r of rows) m[r.key] = r.value
+  res.json({ groupId: Number(m.practiceGroupId) || null, condGroupId: Number(m.practiceCondGroupId) || null })
+})
+
+app.put('/api/settings/selection', (req, res) => {
+  const body = req.body || {}
+  const save = (key, value) => db.prepare('INSERT OR REPLACE INTO settings (user_id, key, value) VALUES (?, ?, ?)').run(req.userId, key, String(value))
+  const clear = (key) => db.prepare('DELETE FROM settings WHERE user_id = ? AND key = ?').run(req.userId, key)
+  if (Object.prototype.hasOwnProperty.call(body, 'groupId')) {
+    const id = Number(body.groupId)
+    const ok = id && db.prepare('SELECT 1 FROM groups WHERE id = ? AND user_id = ?').get(id, req.userId)
+    if (ok) save('practiceGroupId', id)
+    else clear('practiceGroupId')
+  }
+  if (Object.prototype.hasOwnProperty.call(body, 'condGroupId')) {
+    const id = Number(body.condGroupId)
+    const ok = id && db.prepare('SELECT 1 FROM condition_groups WHERE id = ? AND user_id = ?').get(id, req.userId)
+    if (ok) save('practiceCondGroupId', id)
+    else clear('practiceCondGroupId')
+  }
+  res.json({ ok: true })
+})
+
 app.post('/api/records', (req, res) => {
   const { chinese, english, pos, correct, userAnswer, type } = req.body || {}
   const now = new Date()

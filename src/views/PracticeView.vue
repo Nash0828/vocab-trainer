@@ -22,13 +22,14 @@ const savedMode = localStorage.getItem('vt_practice_mode')
 const practiceMode = ref(savedMode === 'group' || savedMode === 'condgroup' ? savedMode : 'random')
 const groups = ref([]) // { id, name, seq, size, mastered }
 const groupTotal = ref(0) // 当前词库总词数
-const selectedGroupId = ref(Number(localStorage.getItem('vt_group_id')) || null)
+const selectedGroupId = ref(null) // 当前选中分组：从后端 settings 读取，不用前端记忆
+let selectionLoaded = false
 const showGroupModal = ref(false) // 分组设置弹框
 const draftGroups = ref([]) // 弹框编辑副本
 const groupError = ref('')
 // 条件分组：每个组 = 一组保存的筛选条件（出题来源 + 类型 + 关键字），作为题源
 const condGroups = ref([]) // { id, name, seq, sourceMode, typeFilter, keywords }
-const selectedCondGroupId = ref(Number(localStorage.getItem('vt_condgroup_id')) || null)
+const selectedCondGroupId = ref(null) // 当前选中条件分组：同样由后端记忆
 const showCondGroupModal = ref(false) // 条件分组设置弹框
 const condGroupError = ref('')
 // 条件分组设置弹框的编辑器状态：null=列表视图；对象=编辑中（id 为 null 表示新增）
@@ -36,6 +37,15 @@ const condEditing = ref(null)
 watch(practiceMode, (m) => localStorage.setItem('vt_practice_mode', m))
 // 条件分组模式下筛选面板只读（选中组后条件填充到筛选，但不能编辑）
 const isCondReadonly = computed(() => practiceMode.value === 'condgroup')
+
+// 读取后端记忆的当前分组（条件背 / 分组背）
+async function loadSelection() {
+  try {
+    const r = await api.getSelection()
+    if (r && r.groupId) selectedGroupId.value = Number(r.groupId)
+    if (r && r.condGroupId) selectedCondGroupId.value = Number(r.condGroupId)
+  } catch (e) {}
+}
 
 async function loadGroups() {
   try {
@@ -45,6 +55,7 @@ async function loadGroups() {
     if (practiceMode.value === 'group' && groups.value.length) {
       if (!selectedGroupId.value || !groups.value.some((g) => g.id === selectedGroupId.value)) {
         selectedGroupId.value = groups.value[0].id
+        api.saveSelection({ groupId: selectedGroupId.value }).catch(() => {})
       }
       if (groups.value.length && !current.value) next()
     }
@@ -65,7 +76,7 @@ async function loadCondGroups() {
       if (!selectedCondGroupId.value || !condGroups.value.some((g) => g.id === selectedCondGroupId.value)) {
         selectedCondGroupId.value = condGroups.value[0]?.id || null
       }
-      localStorage.setItem('vt_condgroup_id', String(selectedCondGroupId.value || ''))
+      api.saveSelection({ condGroupId: selectedCondGroupId.value || null }).catch(() => {})
       const g = condGroups.value.find((x) => x.id === selectedCondGroupId.value)
       if (g) applyCondGroupFilters(g)
       // 当前题不在本组出题池时强制重出：覆盖刷新/补数时序竞态——words 先到位、组条件后应用，
@@ -1590,7 +1601,7 @@ function setMode(m) {
     }
     if (!selectedCondGroupId.value || !condGroups.value.some((g) => g.id === selectedCondGroupId.value)) {
       selectedCondGroupId.value = condGroups.value[0].id
-      localStorage.setItem('vt_condgroup_id', String(condGroups.value[0].id))
+      api.saveSelection({ condGroupId: condGroups.value[0].id }).catch(() => {})
     }
     const g = condGroups.value.find((x) => x.id === selectedCondGroupId.value)
     if (g) applyCondGroupFilters(g)
@@ -1609,7 +1620,7 @@ function pickCondGroup(g) {
   showCondGroupPicker.value = false
   if (!g || g.id === selectedCondGroupId.value) return
   selectedCondGroupId.value = g.id
-  localStorage.setItem('vt_condgroup_id', String(g.id))
+  api.saveSelection({ condGroupId: g.id }).catch(() => {})
   applyCondGroupFilters(g)
   lastIndex.value = -1
   clearAutoTimer()
@@ -1639,7 +1650,7 @@ function pickGroup(g) {
   showGroupPicker.value = false
   if (!g || g.id === selectedGroupId.value) return
   selectedGroupId.value = g.id
-  localStorage.setItem('vt_group_id', String(g.id))
+  api.saveSelection({ groupId: g.id }).catch(() => {})
   lastIndex.value = -1
   clearAutoTimer()
   current.value = null
@@ -1951,13 +1962,17 @@ onMounted(() => {
   document.addEventListener('keydown', onGlobalKeydown)
   setPendingFromQuery()
   if (pendingWord.value) next()
-  loadGroups()
-  loadCondGroups()
-  // 条件组加载失败重试：iOS 首包网络不稳/后台冻结恢复时首次 loadCondGroups 可能失败，
-  // 若 words 已到位而组数据缺失，条件背会卡在"尚未设置条件分组"空状态不出题，多档延迟补拉
-  setTimeout(loadCondGroups, 800)
-  setTimeout(loadCondGroups, 2000)
-  setTimeout(loadCondGroups, 5000)
+  // 先取后端记忆的当前分组，再加载列表：避免"自动选中第一组"把后端记忆覆盖掉
+  loadSelection().finally(() => {
+    selectionLoaded = true
+    loadGroups()
+    loadCondGroups()
+    // 条件组加载失败重试：iOS 首包网络不稳/后台冻结恢复时首次 loadCondGroups 可能失败，
+    // 若 words 已到位而组数据缺失，条件背会卡在"尚未设置条件分组"空状态不出题，多档延迟补拉
+    setTimeout(loadCondGroups, 800)
+    setTimeout(loadCondGroups, 2000)
+    setTimeout(loadCondGroups, 5000)
+  })
   window.addEventListener('vt:data-refreshed', onDataRefreshed)
 })
 

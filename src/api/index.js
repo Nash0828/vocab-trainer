@@ -58,6 +58,9 @@ export const api = {
 
   // 分组
   getGroups: () => req('/api/groups'),
+  // 背诵页当前选中的分组（后端记忆）
+  getSelection: () => req('/api/settings/selection'),
+  saveSelection: (patch) => req('/api/settings/selection', { method: 'PUT', body: patch }),
   saveGroups: (groups) => req('/api/groups/save', { method: 'POST', body: { groups } }),
   reorderGroups: (ids) => req('/api/groups/reorder', { method: 'POST', body: { ids } }),
   reshuffleGroups: () => req('/api/groups/reshuffle', { method: 'POST', body: {} }),
