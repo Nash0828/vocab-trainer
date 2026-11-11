@@ -430,13 +430,16 @@ function wordify(text, hlWord, extraHl) {
     if (/\s/.test(raw)) { if (!phrases.includes(raw)) phrases.push(raw); return }
     raw.split(/[^a-z0-9']+/).forEach((t) => { if (t) extra.add(t) })
   })
+  // 短语（多词）时本地逐词匹配不可靠：the/to 这类虚词也会命中词根，导致例句前半段乱高亮
+  // 所以短语完全以 AI 返回的片段为准，本地只在单词场景兜底
+  const isPhraseWord = bases.length > 1
   // 逐词渲染（原逻辑）
   const renderWords = (segText) => {
     const esc = escapeHtml(segText)
     try {
       return esc.replace(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g, (m) => {
         const low = m.toLowerCase()
-        const hitBase = (t) => bases.some((b) => isFlection(t, b)) || extra.has(t)
+        const hitBase = (t) => (!isPhraseWord && bases.some((b) => isFlection(t, b))) || extra.has(t)
         if (hitBase(low)) {
           return `<span class="word-link sent-hl" data-word="${m}">${m}</span>`
         }
