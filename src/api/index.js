@@ -59,6 +59,7 @@ export const api = {
   // 分组
   getGroups: () => req('/api/groups'),
   saveGroups: (groups) => req('/api/groups/save', { method: 'POST', body: { groups } }),
+  reorderGroups: (ids) => req('/api/groups/reorder', { method: 'POST', body: { ids } }),
   reshuffleGroups: () => req('/api/groups/reshuffle', { method: 'POST', body: {} }),
 
   // 条件分组（保存筛选条件组合作为题源）

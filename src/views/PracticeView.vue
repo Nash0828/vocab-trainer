@@ -393,6 +393,21 @@ function moveDraftGroup(from, to) {
   arr.splice(to, 0, item)
   arr.forEach((g, i) => (g.seq = i + 1))
   draftGroups.value = arr
+  persistGroupOrder()
+}
+// 拖动后立即保存顺序：关闭面板再打开仍按新顺序（只改 seq，不动组内词与名称/数量）
+async function persistGroupOrder() {
+  const ids = draftGroups.value.map((g) => g.id).filter(Boolean)
+  if (!ids.length) return
+  try {
+    await api.reorderGroups(ids)
+    const seqOf = new Map(ids.map((id, i) => [id, i + 1]))
+    groups.value = groups.value
+      .map((g) => (seqOf.has(g.id) ? { ...g, seq: seqOf.get(g.id) } : g))
+      .sort((x, y) => (Number(x.seq) || 0) - (Number(y.seq) || 0))
+  } catch (e) {
+    showToast('排序保存失败')
+  }
 }
 function openSaveGroupDialog() {
   const ts = Date.now()
@@ -1616,7 +1631,10 @@ function pickGroup(g) {
 
 // ===== 分组设置弹框 =====
 function openGroupModal() {
-  draftGroups.value = groups.value.map((g) => ({ id: g.id, name: g.name, seq: g.seq, size: g.size, mastered: g.mastered }))
+  // 按 seq 排序后再拷贝：拖动排序保存后重开面板仍按新顺序
+  draftGroups.value = [...groups.value]
+    .sort((a, b) => (Number(a.seq) || 0) - (Number(b.seq) || 0))
+    .map((g) => ({ id: g.id, name: g.name, seq: g.seq, size: g.size, mastered: g.mastered }))
   groupError.value = ''
   showGroupModal.value = true
 }

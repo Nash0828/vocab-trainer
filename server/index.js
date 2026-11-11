@@ -571,6 +571,20 @@ app.get('/api/groups', (req, res) => {
   res.json({ groups, total, threshold })
 })
 
+// 批量调整分组顺序（长按拖动后提交，按数组顺序重排 seq；不影响组内词）
+app.post('/api/groups/reorder', (req, res) => {
+  const uid = req.userId
+  const ids = Array.isArray(req.body && req.body.ids) ? req.body.ids.map(Number).filter((n) => Number.isInteger(n) && n > 0) : []
+  if (!ids.length) return res.status(400).json({ error: '参数错误' })
+  const own = db.prepare('SELECT id FROM groups WHERE user_id = ?').all(uid).map((r) => r.id)
+  if (ids.some((id) => !own.includes(id))) return res.status(400).json({ error: '参数错误' })
+  const stmt = db.prepare('UPDATE groups SET seq = ? WHERE id = ? AND user_id = ?')
+  const tx = db.transaction((rows) => {
+    rows.forEach((id, i) => stmt.run(i + 1, id, uid))
+  })
+  tx(ids)
+  res.json({ ok: true })
+})
 // 保存分组配置：至少 1 组；Σ数量 = 当前词库总数；按目标数量随机分配（尽量保留已有归属）
 app.post('/api/groups/save', (req, res) => {
   const uid = req.userId
