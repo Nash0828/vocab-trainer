@@ -27,6 +27,7 @@ let selectionLoaded = false
 const showGroupModal = ref(false) // 分组设置弹框
 const draftGroups = ref([]) // 弹框编辑副本
 const groupError = ref('')
+const reshuffling = ref(false)
 // 条件分组：每个组 = 一组保存的筛选条件（出题来源 + 类型 + 关键字），作为题源
 const condGroups = ref([]) // { id, name, seq, sourceMode, typeFilter, keywords }
 // 条件分组可多选：出题池 = 各选中组命中的词句并集
@@ -1924,6 +1925,10 @@ async function saveGroupsDraft() {
 
 // 重新分配：保持各组数量不变，把词库词句打散随机重新分到各组（立即生效）
 async function reshuffleGroups() {
+  if (reshuffling.value) return
+  const ok = await openConfirm('会先把词库词句打散再按各组数量重新分配，各组数量不变；当前未保存的名称/数量修改会被覆盖。确定重新分配吗？')
+  if (!ok) return
+  reshuffling.value = true
   try {
     const r = await api.reshuffleGroups()
     groups.value = r.groups || []
@@ -1937,8 +1942,12 @@ async function reshuffleGroups() {
     lastIndex.value = -1
     clearAutoTimer()
     next()
+    showToast('已重新分配，出题已按新分组刷新')
   } catch (e) {
     groupError.value = e.message || '重新分配失败'
+    showToast(e.message || '重新分配失败')
+  } finally {
+    reshuffling.value = false
   }
 }
 
@@ -2808,9 +2817,9 @@ next()
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             添加一组
           </button>
-          <button v-if="draftGroups.length" class="g-reshuffle" @click="reshuffleGroups">
+          <button v-if="draftGroups.length" class="g-reshuffle" :disabled="reshuffling" @click="reshuffleGroups">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="4" x2="21" y2="21"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
-            重新分配
+            {{ reshuffling ? '分配中…' : '重新分配' }}
           </button>
           <p v-if="groupError" class="group-error">{{ groupError }}</p>
         </div>
@@ -3524,6 +3533,11 @@ next()
 
 .g-reshuffle:active {
   background: #f5f5f5;
+}
+
+.g-reshuffle[disabled] {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .group-error {
