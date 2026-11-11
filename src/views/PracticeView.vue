@@ -2879,14 +2879,13 @@ next()
                 </button>
               </div>
             </div>
+            <p v-if="condGroupError" class="group-error">{{ condGroupError }}</p>
+          </div>
+          <div class="group-modal-foot">
             <button class="g-add" @click="startCreateCondGroup">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               新增条件分组
             </button>
-            <p v-if="condGroupError" class="group-error">{{ condGroupError }}</p>
-          </div>
-          <div class="group-modal-foot">
-            <button class="btn ghost group-cancel" @click="closeCondGroupModal">关闭</button>
           </div>
         </template>
         <!-- 编辑视图：序号 + 名称 + 条件选择器（与筛选功能一致） -->
@@ -3543,6 +3542,10 @@ next()
 }
 
 .group-modal-foot .btn {
+  flex: 1;
+}
+
+.group-modal-foot .g-add {
   flex: 1;
 }
 
