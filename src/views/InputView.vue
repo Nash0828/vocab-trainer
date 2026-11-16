@@ -199,7 +199,7 @@ async function submit() {
 function resetForm() {
   form.chinese = ''
   form.english = ''
-  form.type = 'word'
+  // 保留当前录入类型：连续录入同一类型（短语/句子）时不用每次重新选
   form.pos = ''
   form.caseSensitive = false
   form.remark = ''
