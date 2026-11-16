@@ -1192,6 +1192,19 @@ function formatTime(ts) {
       <div v-for="(word, index) in pagedWords" :key="word.id" class="word-item">
         <!-- 编辑态 -->
         <div v-if="editingId === word.id" class="edit-row">
+          <div class="type-row">
+            <span class="type-label">类型</span>
+            <div class="type-seg">
+              <button
+                v-for="opt in typeOptions"
+                :key="opt.value"
+                class="type-seg-btn"
+                :class="{ active: editForm.type === opt.value, locked: editLockType }"
+                :disabled="editLockType"
+                @click="editForm.type = opt.value"
+              >{{ opt.label }}</button>
+            </div>
+          </div>
           <div class="cell-row">
             <span class="cell-label">中文</span>
             <div class="input-wrap">
@@ -1220,19 +1233,6 @@ function formatTime(ts) {
               <button v-if="editForm.remark && editRemarkFocus" class="clear-btn area-clear" type="button" @mousedown.prevent @click="editForm.remark = ''" title="清空内容" aria-label="清空备注">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
-            </div>
-          </div>
-          <div class="type-row">
-            <span class="type-label">类型</span>
-            <div class="type-seg">
-              <button
-                v-for="opt in typeOptions"
-                :key="opt.value"
-                class="type-seg-btn"
-                :class="{ active: editForm.type === opt.value, locked: editLockType }"
-                :disabled="editLockType"
-                @click="editForm.type = opt.value"
-              >{{ opt.label }}</button>
             </div>
           </div>
           <template v-if="editForm.type === 'word'">
