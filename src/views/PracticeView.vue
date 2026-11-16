@@ -1088,7 +1088,12 @@ function afterCheck(isCorrect) {
   }
 }
 
-function skip() {
+async function skip() {
+  // 未提交但输入框已有内容：先用微信风格确认框二次确认，避免误清空输入
+  if (!result.value && answer.value.trim()) {
+    const ok = await openConfirm('输入的内容还没提交，换一题会清空。确定换一题吗？')
+    if (!ok) return
+  }
   clearAutoTimer()
   next()
 }
