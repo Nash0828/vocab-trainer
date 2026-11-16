@@ -477,6 +477,8 @@ function normalizeCondGroup(body) {
     .map((k) => String(k || '').trim())
     .filter(Boolean)
     .slice(0, 20)
+  // 备注筛选：none = 仅看备注为空，any = 不限（兼容旧数据）
+  const remarkFilter = body?.remarkFilter === 'none' ? 'none' : 'any'
   const seq = Number.isFinite(Number(body?.seq)) ? Math.max(0, Math.floor(Number(body.seq))) : 0
   // 背熟次数上限：0 或正整数，NULL=不限（只出 count <= 该值的词）
   let masteryLimit = null
@@ -485,7 +487,7 @@ function normalizeCondGroup(body) {
     const n = Number(rawMastery)
     if (Number.isFinite(n) && n >= 0) masteryLimit = Math.min(999, Math.floor(n))
   }
-  return { name, sourceMode, typeFilter, keywords, seq, masteryLimit }
+  return { name, sourceMode, typeFilter, keywords, seq, masteryLimit, remarkFilter }
 }
 // 读取条件分组列表
 app.get('/api/cond-groups', (req, res) => {
@@ -504,6 +506,7 @@ app.get('/api/cond-groups', (req, res) => {
         typeFilter: g.type_filter,
         keywords: Array.isArray(keywords) ? keywords : [],
         masteryLimit: g.mastery_limit === null || g.mastery_limit === undefined ? null : Number(g.mastery_limit),
+        remarkFilter: g.remark_filter === 'none' ? 'none' : 'any',
       }
     })
   res.json({ groups })
@@ -515,9 +518,9 @@ app.post('/api/cond-groups', (req, res) => {
   if (c.error) return res.status(400).json({ error: c.error })
   const r = db
     .prepare(
-      'INSERT INTO condition_groups (user_id, name, seq, source_mode, type_filter, keywords, mastery_limit, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO condition_groups (user_id, name, seq, source_mode, type_filter, keywords, mastery_limit, remark_filter, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     )
-    .run(uid, c.name, c.seq, c.sourceMode, c.typeFilter, JSON.stringify(c.keywords), c.masteryLimit, Date.now(), Date.now())
+    .run(uid, c.name, c.seq, c.sourceMode, c.typeFilter, JSON.stringify(c.keywords), c.masteryLimit, c.remarkFilter, Date.now(), Date.now())
   res.json({ id: Number(r.lastInsertRowid), ...c })
 })
 // 修改条件分组
@@ -529,8 +532,8 @@ app.put('/api/cond-groups/:id', (req, res) => {
   const c = normalizeCondGroup(req.body)
   if (c.error) return res.status(400).json({ error: c.error })
   db.prepare(
-    'UPDATE condition_groups SET name = ?, seq = ?, source_mode = ?, type_filter = ?, keywords = ?, mastery_limit = ?, updated_at = ? WHERE id = ? AND user_id = ?'
-  ).run(c.name, c.seq, c.sourceMode, c.typeFilter, JSON.stringify(c.keywords), c.masteryLimit, Date.now(), id, uid)
+    'UPDATE condition_groups SET name = ?, seq = ?, source_mode = ?, type_filter = ?, keywords = ?, mastery_limit = ?, remark_filter = ?, updated_at = ? WHERE id = ? AND user_id = ?'
+  ).run(c.name, c.seq, c.sourceMode, c.typeFilter, JSON.stringify(c.keywords), c.masteryLimit, c.remarkFilter, Date.now(), id, uid)
   res.json({ id, ...c })
 })
 // 批量调整条件分组顺序（长按拖动后提交，按数组顺序重排 seq）

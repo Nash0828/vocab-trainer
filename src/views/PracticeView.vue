@@ -84,6 +84,7 @@ function applyCondGroupFilters(g) {
   typeFilter.value = g.typeFilter || 'all'
   masteryLimit.value = g.masteryLimit === null || g.masteryLimit === undefined ? null : Number(g.masteryLimit)
   keywordFilters.value = Array.isArray(g.keywords) ? [...g.keywords] : []
+  remarkFilter.value = g.remarkFilter === 'none' ? 'none' : 'any'
 }
 async function loadCondGroups() {
   try {
@@ -132,7 +133,8 @@ function condSummary(g) {
   const k = Array.isArray(g.keywords) && g.keywords.length ? `关键字：${g.keywords.join('、')}` : ''
   const m =
     g.masteryLimit === null || g.masteryLimit === undefined ? '' : `背熟 ${masteryText(g.masteryLimit)} 次`
-  return [s, t, m, k].filter(Boolean).join(' · ')
+  const r = g.remarkFilter === 'none' ? '备注为空' : ''
+  return [s, t, m, k, r].filter(Boolean).join(' · ')
 }
 // 条件组实际可背词句数：组条件 ∩ 未背熟（与出题池同口径）
 function condGroupPoolCount(g) {
@@ -145,7 +147,8 @@ function condGroupPoolCount(g) {
   const matchT = (w) => g.typeFilter === 'all' || (w.type || 'word') === g.typeFilter
   const mLimit = g.masteryLimit === null || g.masteryLimit === undefined ? null : Number(g.masteryLimit)
   const matchM = (w) => mLimit === null || (Number(w?.count) || 0) <= mLimit
-  let list = words.value.filter((w) => !isMastered(w) && matchT(w) && matchM(w) && matchK(w))
+  const matchR = (w) => (g.remarkFilter || 'any') !== 'none' || !String(w?.remark || '').trim()
+  let list = words.value.filter((w) => !isMastered(w) && matchT(w) && matchM(w) && matchK(w) && matchR(w))
   if (g.sourceMode === 'wrong') {
     const ids = new Set(wrongValid.value.map((w) => String(w.id)))
     list = list.filter((w) => ids.has(String(w.id)))
@@ -203,11 +206,16 @@ function validateMastery(v) {
 // 是否满足背熟次数条件
 const matchMastery = (w, limit = masteryLimit.value) =>
   limit === null || (Number(w?.count) || 0) <= limit
+// 备注筛选：none = 只看备注为空的词句（空/纯空格都算空）；any = 不限
+const matchRemark = (w, rf = remarkFilter.value) =>
+  rf !== 'none' || !String(w?.remark || '').trim()
 
 // ---- 筛选底部面板（出题来源 + 类型 + 关键字） ----
 const showFilterSheet = ref(false)
 const draftSourceMode = ref('all')
 const draftTypeFilter = ref('all')
+const remarkFilter = ref('any') // 生效备注筛选：'none' = 仅看备注为空；'any' = 不限
+const draftRemarkFilter = ref('any') // 草稿备注筛选
 const keywordFilters = ref([]) // 生效关键字（多个 = 组合搜索，命中任一即匹配）：在中文/英文/备注中过滤
 const draftKeywords = ref(['']) // 草稿关键字输入框，默认 1 个，最多 20 个
 const kwFocusIdx = ref(-1) // 关键字输入框聚焦索引（用于显示清空按钮）
@@ -238,7 +246,8 @@ const filterSummary = computed(() => {
     ? keywordFilters.value.map((x) => `"${x}"`).join('、')
     : ''
   const m = masteryLimit.value !== null ? `背熟 ${masteryText(masteryLimit.value)} 次` : ''
-  return [s, t, m, k].filter(Boolean).join(' · ')
+  const r = remarkFilter.value === 'none' ? '备注为空' : ''
+  return [s, t, m, k, r].filter(Boolean).join(' · ')
 })
 // 是否启用了非默认筛选（用于按钮绿色高亮）
 const hasFilter = computed(
@@ -246,7 +255,8 @@ const hasFilter = computed(
     sourceMode.value !== 'all' ||
     typeFilter.value !== 'all' ||
     masteryLimit.value !== null ||
-    keywordFilters.value.length > 0
+    keywordFilters.value.length > 0 ||
+    remarkFilter.value === 'none'
 )
 // 当前生效的筛选条件标签（chips）：仅错题本 / 类型 / 关键字
 const activeFilterChips = computed(() => {
@@ -258,6 +268,7 @@ const activeFilterChips = computed(() => {
   }
   if (masteryLimit.value !== null) chips.push({ key: 'mastery', label: `背熟次数 ${masteryText(masteryLimit.value)}` })
   if (keywordFilters.value.length) chips.push({ key: 'keyword', label: `关键字：${keywordFilters.value.join('、')}` })
+  if (remarkFilter.value === 'none') chips.push({ key: 'remark', label: '备注：为空' })
   return chips
 })
 // 删除单个筛选条件（微信风格：点标签上的 × 移除）
@@ -266,6 +277,7 @@ function removeFilterChip(key) {
   else if (key === 'type') typeFilter.value = 'all'
   else if (key === 'mastery') masteryLimit.value = null
   else if (key === 'keyword') keywordFilters.value = []
+  else if (key === 'remark') remarkFilter.value = 'any'
   lastIndex.value = -1
   clearAutoTimer()
   next()
@@ -286,6 +298,7 @@ function openFilterSheet() {
   draftTypeFilter.value = typeFilter.value
   draftMasteryLimit.value = masteryLimit.value === null ? '' : String(masteryLimit.value)
   draftKeywords.value = keywordFilters.value.length ? [...keywordFilters.value] : ['']
+  draftRemarkFilter.value = remarkFilter.value
   showFilterSheet.value = true
 }
 // 微信风格确认框（替代 window.confirm）
@@ -543,6 +556,7 @@ async function submitSaveGroup() {
     typeFilter: draftTypeFilter.value,
     masteryLimit: mv.value,
     keywords: draftKeywords.value.map((k) => (k || '').trim()).filter(Boolean),
+    remarkFilter: draftRemarkFilter.value,
   }
   try {
     await api.createCondGroup(payload)
@@ -578,10 +592,12 @@ async function resetFilterSheet() {
   draftTypeFilter.value = 'all'
   draftMasteryLimit.value = ''
   draftKeywords.value = ['']
+  draftRemarkFilter.value = 'any'
   sourceMode.value = 'all'
   typeFilter.value = 'all'
   masteryLimit.value = null
   keywordFilters.value = []
+  remarkFilter.value = 'any'
   showFilterSheet.value = false
   lastIndex.value = -1
   clearAutoTimer()
@@ -601,6 +617,7 @@ async function persistCondGroupFromFilters() {
       typeFilter: typeFilter.value,
       masteryLimit: masteryLimit.value,
       keywords: keywordFilters.value,
+      remarkFilter: remarkFilter.value,
     })
     await loadCondGroups()
     return true
@@ -625,6 +642,7 @@ async function applyFilterSheet() {
   typeFilter.value = draftTypeFilter.value
   masteryLimit.value = mv.value
   keywordFilters.value = draftKeywords.value.map((t) => String(t || '').trim()).filter(Boolean)
+  remarkFilter.value = draftRemarkFilter.value
   showFilterSheet.value = false
   lastIndex.value = -1
   clearAutoTimer()
@@ -660,7 +678,7 @@ const filteredTotal = computed(() => {
     return groupStats.value.reduce((sum, g) => sum + (g.size || 0), 0)
   }
   const matchType = (w) => typeFilter.value === 'all' || (w.type || 'word') === typeFilter.value
-  let list = words.value.filter((w) => matchType(w) && matchMastery(w) && matchKeyword(w))
+  let list = words.value.filter((w) => matchType(w) && matchMastery(w) && matchKeyword(w) && matchRemark(w))
   if (sourceMode.value === 'wrong') {
     const ids = new Set(wrongValid.value.map((w) => String(w.id)))
     list = list.filter((w) => ids.has(String(w.id)))
@@ -770,6 +788,7 @@ function condGroupMatches(g, w, wrongIds) {
     if (!kw.some((k) => fields.some((f) => String(f || '').toLowerCase().includes(k.toLowerCase())))) return false
   }
   if (g.masteryLimit !== null && g.masteryLimit !== undefined && Number(w.count || 0) > Number(g.masteryLimit)) return false
+  if ((g.remarkFilter || 'any') === 'none' && String(w.remark || '').trim()) return false
   return true
 }
 // 多选条件组：各组的「条件命中 ∩ 未背熟」并集
@@ -806,9 +825,9 @@ const available = computed(() => {
     const ids = new Set(base.map((w) => String(w.id)))
     return wrongValid.value
       .map((item) => resolveWord(item))
-      .filter((w) => w && !isMastered(w) && matchType(w) && matchMastery(w) && matchKeyword(w) && ids.has(String(w.id)))
+      .filter((w) => w && !isMastered(w) && matchType(w) && matchMastery(w) && matchKeyword(w) && matchRemark(w) && ids.has(String(w.id)))
   }
-  return base.filter((w) => !isMastered(w) && matchType(w) && matchMastery(w) && matchKeyword(w))
+  return base.filter((w) => !isMastered(w) && matchType(w) && matchMastery(w) && matchKeyword(w) && matchRemark(w))
 })
 const allMastered = computed(() => hasWords.value && available.value.length === 0)
 // 分组模式：尚未设置任何分组
@@ -820,7 +839,7 @@ const groupEmpty = computed(
 // 筛选条件下无可用词句：筛选生效且出题池为空
 const filterEmpty = computed(
   () =>
-    (typeFilter.value !== 'all' || masteryLimit.value !== null || keywordFilters.value.length > 0) &&
+    (typeFilter.value !== 'all' || masteryLimit.value !== null || keywordFilters.value.length > 0 || remarkFilter.value === 'none') &&
     available.value.length === 0
 )
 // 错题本模式空状态：'empty'=错题本为空；'all-mastered'=错题本单词已全部背熟；null=正常
@@ -1802,7 +1821,7 @@ const groupStats = computed(() => {
     sourceMode.value === 'wrong' ? new Set(wrongValid.value.map((w) => String(w.id))) : null
   return groups.value.map((g) => {
     let list = words.value.filter(
-      (w) => String(w.groupId || '') === String(g.id) && matchType(w) && matchKeyword(w)
+      (w) => String(w.groupId || '') === String(g.id) && matchType(w) && matchKeyword(w) && matchRemark(w)
     )
     if (wrongIds) list = list.filter((w) => wrongIds.has(String(w.id)))
     return { ...g, size: list.length, mastered: list.filter((w) => isMastered(w)).length }
@@ -1854,6 +1873,7 @@ function startCreateCondGroup() {
     typeFilter: 'all',
     masteryLimit: null,
     keywords: [''],
+    remarkFilter: 'any',
   }
   condGroupError.value = ''
 }
@@ -1866,6 +1886,7 @@ function startEditCondGroup(g) {
     typeFilter: g.typeFilter,
     masteryLimit: g.masteryLimit === null || g.masteryLimit === undefined ? null : Number(g.masteryLimit),
     keywords: Array.isArray(g.keywords) && g.keywords.length ? [...g.keywords] : [''],
+    remarkFilter: g.remarkFilter === 'none' ? 'none' : 'any',
   }
   condGroupError.value = ''
 }
@@ -1902,6 +1923,7 @@ async function saveCondGroup() {
     typeFilter: e.typeFilter,
     masteryLimit: mv.value,
     keywords: e.keywords.map((k) => (k || '').trim()).filter(Boolean),
+    remarkFilter: e.remarkFilter === 'none' ? 'none' : 'any',
   }
   if (!payload.name) {
     condGroupError.value = '请填写分组名称'
@@ -2592,6 +2614,18 @@ next()
                 </button>
               </div>
               <button v-if="draftKeywords.length < 20" type="button" class="kw-add" @click="addKeywordRow">+ 添加关键字</button>
+              <button
+                type="button"
+                class="kw-note-toggle"
+                :class="{ on: draftRemarkFilter === 'none' }"
+                @click="draftRemarkFilter = draftRemarkFilter === 'none' ? 'any' : 'none'"
+              >
+                <span class="kw-note-box">
+                  <svg v-if="draftRemarkFilter === 'none'" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </span>
+                <span>仅看备注为空</span>
+              </button>
+              <p v-if="draftRemarkFilter === 'none'" class="kw-note-tip">只显示没有备注的词句；关键字仍按中文/英文搜索</p>
             </div>
           </div>
           <div class="sheet-foot">
@@ -3103,6 +3137,18 @@ next()
                 </button>
               </div>
               <button v-if="condEditing.keywords.length < 20" type="button" class="kw-add" @click="addCondKwRow">+ 添加关键字</button>
+              <button
+                type="button"
+                class="kw-note-toggle"
+                :class="{ on: condEditing.remarkFilter === 'none' }"
+                @click="condEditing.remarkFilter = condEditing.remarkFilter === 'none' ? 'any' : 'none'"
+              >
+                <span class="kw-note-box">
+                  <svg v-if="condEditing.remarkFilter === 'none'" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </span>
+                <span>仅看备注为空</span>
+              </button>
+              <p v-if="condEditing.remarkFilter === 'none'" class="kw-note-tip">只显示没有备注的词句；关键字仍按中文/英文搜索</p>
             </div>
             <p v-if="condGroupError" class="group-error">{{ condGroupError }}</p>
           </div>
@@ -4033,6 +4079,46 @@ next()
 }
 .kw-add:active {
   opacity: 0.7;
+}
+/* 关键字备注为空勾选（自定义方框，避免 iOS 原生 checkbox 样式不一致） */
+.kw-note-toggle {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 7px;
+  margin-top: 2px;
+  padding: 6px 2px;
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 13px;
+  cursor: pointer;
+}
+.kw-note-toggle:active {
+  opacity: 0.7;
+}
+.kw-note-box {
+  width: 17px;
+  height: 17px;
+  border-radius: 4px;
+  border: 1px solid #c9c9c9;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex: none;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.kw-note-toggle.on .kw-note-box {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+.kw-note-tip {
+  margin: 0 0 2px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-sub);
 }
 .sheet-foot {
   display: flex;
