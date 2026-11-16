@@ -206,6 +206,18 @@ function validateMastery(v) {
 // 是否满足背熟次数条件
 const matchMastery = (w, limit = masteryLimit.value) =>
   limit === null || (Number(w?.count) || 0) <= limit
+// 备注勾选框：输入框聚焦时第一次点按会被软键盘收起吃掉，改由 touchend 直接处理
+let noteTouchStart = null
+function onNoteTouchStart(e) {
+  const t = e.touches && e.touches[0]
+  noteTouchStart = t ? { x: t.clientX, y: t.clientY } : null
+}
+function onNoteTouchEnd(e, toggle) {
+  const t = e && e.changedTouches && e.changedTouches[0]
+  const moved = noteTouchStart && t ? Math.hypot(t.clientX - noteTouchStart.x, t.clientY - noteTouchStart.y) : 99
+  noteTouchStart = null
+  if (moved < 12) toggle()
+}
 // 备注筛选：none = 只看备注为空的词句（空/纯空格都算空）；any = 不限
 const matchRemark = (w, rf = remarkFilter.value) =>
   rf !== 'none' || !String(w?.remark || '').trim()
@@ -638,6 +650,22 @@ async function applyFilterSheet() {
     return
   }
   filterError.value = ''
+  const draftKw = draftKeywords.value.map((t) => String(t || '').trim()).filter(Boolean)
+  // 条件背：这里的改动会写回当前条件组，先说明并让用户确认
+  const dirty =
+    draftSourceMode.value !== sourceMode.value ||
+    draftTypeFilter.value !== typeFilter.value ||
+    mv.value !== masteryLimit.value ||
+    draftKw.join('|') !== keywordFilters.value.join('|') ||
+    (draftRemarkFilter.value === 'none' ? 'none' : 'any') !== remarkFilter.value
+  if (practiceMode.value === 'condgroup' && selectedCondGroup.value && dirty) {
+    const gname = selectedCondGroup.value.name || '当前条件分组'
+    const ok = await openConfirm(`保存后会修改条件组「${gname}」的出题条件，确定保存吗？`)
+    if (!ok) {
+      lastApplyAt = 0 // 取消不算一次提交，允许立刻再次点确定
+      return
+    }
+  }
   sourceMode.value = draftSourceMode.value
   typeFilter.value = draftTypeFilter.value
   masteryLimit.value = mv.value
@@ -1732,6 +1760,8 @@ function setMode(m) {
     masteryLimit.value = null
     draftMasteryLimit.value = ''
     keywordFilters.value = []
+    remarkFilter.value = 'any'
+    draftRemarkFilter.value = 'any'
   }
   if (m === 'group') {
     if (!groups.value.length) {
@@ -2618,7 +2648,9 @@ next()
                 type="button"
                 class="kw-note-toggle"
                 :class="{ on: draftRemarkFilter === 'none' }"
-                @click="draftRemarkFilter = draftRemarkFilter === 'none' ? 'any' : 'none'"
+                @touchstart.prevent="onNoteTouchStart"
+                @touchend="onNoteTouchEnd($event, () => (draftRemarkFilter = draftRemarkFilter === 'none' ? 'any' : 'none'))"
+                @mousedown.prevent="draftRemarkFilter = draftRemarkFilter === 'none' ? 'any' : 'none'"
               >
                 <span class="kw-note-box">
                   <svg v-if="draftRemarkFilter === 'none'" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -3141,7 +3173,9 @@ next()
                 type="button"
                 class="kw-note-toggle"
                 :class="{ on: condEditing.remarkFilter === 'none' }"
-                @click="condEditing.remarkFilter = condEditing.remarkFilter === 'none' ? 'any' : 'none'"
+                @touchstart.prevent="onNoteTouchStart"
+                @touchend="onNoteTouchEnd($event, () => (condEditing.remarkFilter = condEditing.remarkFilter === 'none' ? 'any' : 'none'))"
+                @mousedown.prevent="condEditing.remarkFilter = condEditing.remarkFilter === 'none' ? 'any' : 'none'"
               >
                 <span class="kw-note-box">
                   <svg v-if="condEditing.remarkFilter === 'none'" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
