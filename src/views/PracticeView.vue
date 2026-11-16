@@ -293,6 +293,9 @@ const confirmDialog = ref(null)
 let confirmResolver = null
 function openConfirm(text) {
   if (confirmDialog.value) return Promise.resolve(false)
+  // 先收起输入框焦点与软键盘：避免光标穿透弹框，也避免第一次点击被"收键盘"吃掉
+  const active = document.activeElement
+  if (active && typeof active.blur === 'function') { try { active.blur() } catch (e) {} }
   confirmDialog.value = { text }
   return new Promise((resolve) => { confirmResolver = resolve })
 }
@@ -1092,7 +1095,7 @@ async function skip() {
   // 未提交但输入框已有内容：先用微信风格确认框二次确认，避免误清空输入
   if (!result.value && answer.value.trim()) {
     const ok = await openConfirm('输入的内容还没提交，换一题会清空。确定换一题吗？')
-    if (!ok) return
+    if (!ok) { refocusInput(); return }
   }
   clearAutoTimer()
   next()
@@ -2652,8 +2655,8 @@ next()
       <div class="wx-confirm">
         <div class="wx-confirm-text">{{ confirmDialog.text }}</div>
         <div class="wx-confirm-actions">
-          <button class="wx-confirm-btn" type="button" @click="answerConfirm(false)">取消</button>
-          <button class="wx-confirm-btn primary" type="button" @click="answerConfirm(true)">确定</button>
+          <button class="wx-confirm-btn" type="button" @touchstart.prevent="answerConfirm(false)" @mousedown.prevent @click="answerConfirm(false)">取消</button>
+          <button class="wx-confirm-btn primary" type="button" @touchstart.prevent="answerConfirm(true)" @mousedown.prevent @click="answerConfirm(true)">确定</button>
         </div>
       </div>
     </div>
