@@ -949,6 +949,22 @@ function focusInput(force = false) {
   })
 }
 
+// 句子答案的多行文本框：随内容自动增高，长句不再被挤成内部滚动导致首行看不到
+function autoGrowAnswer(e) {
+  const el = (e && e.target) || answerInput.value
+  if (!el || el.tagName !== 'TEXTAREA') return
+  el.style.height = 'auto'
+  const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight || 600
+  const max = Math.max(96, Math.round(vh * 0.34))
+  const borderY = el.offsetHeight - el.clientHeight // box-sizing: border-box 下补上上下边框
+  const full = el.scrollHeight + borderY
+  el.style.height = Math.min(full, max) + 'px'
+  el.style.overflowY = full > max ? 'auto' : 'hidden'
+}
+
+// 清空按钮、换题、更正等通过代码改 answer 时，同样重算高度（切题时缩回初始两行）
+watch(answer, () => nextTick(() => autoGrowAnswer()))
+
 function next() {
   // 普通换题受语音锁限制；指定词跳转（pendingWord）优先放行——用户明确要从详情弹框背诵该词，必须出题
   if (answeredLock.value && !pendingWord.value) return
@@ -2477,6 +2493,7 @@ next()
             rows="2"
             autocorrect="off"
             placeholder="输入英文"
+            @input="autoGrowAnswer"
             :disabled="inputDisabled"
             @focus="focusEnabled = true; answerFocus = true"
             @blur="answerFocus = false"
@@ -4558,6 +4575,9 @@ next()
   resize: none;
   line-height: 1.5;
   font-family: inherit;
+  min-height: 78px;
+  overflow-y: hidden;
+  transition: height 0.12s ease;
 }
 
 .quiz-input input:focus,
