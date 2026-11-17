@@ -472,11 +472,11 @@ function normalizeCondGroup(body) {
   const sourceMode = body?.sourceMode === 'wrong' ? 'wrong' : 'all'
   const typeFilter = ['all', 'word', 'phrase', 'sentence'].includes(body?.typeFilter) ? body.typeFilter : 'all'
   const rawKeywords = Array.isArray(body?.keywords) ? body.keywords : []
-  if (rawKeywords.length > 20) return { error: '关键字最多20个' }
+  if (rawKeywords.length > 50) return { error: '关键字最多50个' }
   const keywords = rawKeywords
     .map((k) => String(k || '').trim())
     .filter(Boolean)
-    .slice(0, 20)
+    .slice(0, 50)
   // 备注筛选：none = 仅看备注为空，any = 不限（兼容旧数据）
   const remarkFilter = body?.remarkFilter === 'none' ? 'none' : 'any'
   const seq = Number.isFinite(Number(body?.seq)) ? Math.max(0, Math.floor(Number(body.seq))) : 0

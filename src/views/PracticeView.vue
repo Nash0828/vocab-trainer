@@ -266,7 +266,7 @@ const draftTypeFilter = ref('all')
 const remarkFilter = ref('any') // 生效备注筛选：'none' = 仅看备注为空；'any' = 不限
 const draftRemarkFilter = ref('any') // 草稿备注筛选
 const keywordFilters = ref([]) // 生效关键字（多个 = 组合搜索，命中任一即匹配）：在中文/英文/备注中过滤
-const draftKeywords = ref(['']) // 草稿关键字输入框，默认 1 个，最多 20 个
+const draftKeywords = ref(['']) // 草稿关键字输入框，默认 1 个，最多 50 个
 const kwFocusIdx = ref(-1) // 关键字输入框聚焦索引（用于显示清空按钮）
 const masteryFocus = ref(false) // 背熟次数输入框聚焦态（用于显示清空按钮）
 const filterError = ref('') // 筛选面板背熟次数校验提示
@@ -276,7 +276,7 @@ const sourceOptions = [
   { value: 'wrong', label: '仅错题本' },
 ]
 function addKeywordRow() {
-  if (draftKeywords.value.length >= 20) return
+  if (draftKeywords.value.length >= 50) return
   draftKeywords.value.push('')
 }
 function removeKeywordRow(i) {
@@ -1980,7 +1980,7 @@ function onCondMasteryInput(v) {
   condGroupError.value = ''
 }
 function addCondKwRow() {
-  if (condEditing.value.keywords.length >= 20) return
+  if (condEditing.value.keywords.length >= 50) return
   condEditing.value.keywords.push('')
 }
 function removeCondKwRow(i) {
@@ -2664,7 +2664,7 @@ next()
             <div class="sheet-group">
               <div class="sheet-group-title">
                 关键字
-                <span class="kw-count">{{ draftKeywords.length }}/20</span>
+                <span class="kw-count">{{ draftKeywords.length }}/50</span>
               </div>
               <div v-for="(k, i) in draftKeywords" :key="'kw' + i" class="kw-row">
                 <div class="kw-input-wrap">
@@ -2701,7 +2701,7 @@ next()
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                 </button>
               </div>
-              <button v-if="draftKeywords.length < 20" type="button" class="kw-add" @click="addKeywordRow">+ 添加关键字</button>
+              <button v-if="draftKeywords.length < 50" type="button" class="kw-add" @click="addKeywordRow">+ 添加关键字</button>
               <button
                 type="button"
                 class="kw-note-toggle"
@@ -3190,7 +3190,7 @@ next()
             <div class="ce-group">
               <div class="ce-group-title">
                 关键字
-                <span class="kw-count">{{ condEditing.keywords.length }}/20</span>
+                <span class="kw-count">{{ condEditing.keywords.length }}/50</span>
               </div>
               <div v-for="(k, i) in condEditing.keywords" :key="'cekw' + i" class="kw-row">
                 <div class="kw-input-wrap">
@@ -3226,7 +3226,7 @@ next()
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                 </button>
               </div>
-              <button v-if="condEditing.keywords.length < 20" type="button" class="kw-add" @click="addCondKwRow">+ 添加关键字</button>
+              <button v-if="condEditing.keywords.length < 50" type="button" class="kw-add" @click="addCondKwRow">+ 添加关键字</button>
               <button
                 type="button"
                 class="kw-note-toggle"
