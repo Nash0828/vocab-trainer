@@ -24,6 +24,25 @@ const groups = ref([]) // { id, name, seq, size, mastered }
 const groupTotal = ref(0) // 当前词库总词数
 const selectedGroupId = ref(null) // 当前选中分组：从后端 settings 读取，不用前端记忆
 let selectionLoaded = false
+let selectionKnown = false // 后端记忆是否已成功取到（取不到时不能用"第一组"覆盖）
+// 条件背选中组的本地缓存：iOS 后台冻结后重载、首包网络抖动时后端记忆可能读不到，
+// 先用本地缓存兜底，避免选中组被"默认第一组"顶替
+const COND_CACHE_KEY = 'vt_cond_group_ids'
+function readCondCache() {
+  try {
+    const a = JSON.parse(localStorage.getItem(COND_CACHE_KEY) || '[]')
+    return Array.isArray(a) ? a.map((x) => Number(x)).filter((n) => n > 0) : []
+  } catch (e) {
+    return []
+  }
+}
+function cacheCondSelection(ids) {
+  try { localStorage.setItem(COND_CACHE_KEY, JSON.stringify(ids || [])) } catch (e) {}
+}
+function saveCondSelection() {
+  cacheCondSelection(selectedCondGroupIds.value)
+  api.saveSelection({ condGroupIds: selectedCondGroupIds.value }).catch(() => {})
+}
 const showGroupModal = ref(false) // 分组设置弹框
 const draftGroups = ref([]) // 弹框编辑副本
 const groupError = ref('')
@@ -39,7 +58,7 @@ function flashReshuffled() {
 // 条件分组：每个组 = 一组保存的筛选条件（出题来源 + 类型 + 关键字），作为题源
 const condGroups = ref([]) // { id, name, seq, sourceMode, typeFilter, keywords }
 // 条件分组可多选：出题池 = 各选中组命中的词句并集
-const selectedCondGroupIds = ref([])
+const selectedCondGroupIds = ref(readCondCache())
 const draftCondIds = ref([]) // 选择弹层的草稿（点完成后才生效）
 const selectedCondGroupId = computed(() => (selectedCondGroupIds.value.length === 1 ? selectedCondGroupIds.value[0] : null))
 const isMultiCond = computed(() => selectedCondGroupIds.value.length > 1)
@@ -53,15 +72,25 @@ const isCondReadonly = computed(() => practiceMode.value === 'condgroup')
 
 // 读取后端记忆的当前分组（条件背 / 分组背）
 async function loadSelection() {
-  try {
-    const r = await api.getSelection()
-    if (r && r.groupId) selectedGroupId.value = Number(r.groupId)
-    if (r && Array.isArray(r.condGroupIds) && r.condGroupIds.length) {
-      selectedCondGroupIds.value = r.condGroupIds.map((x) => Number(x)).filter((n) => n > 0)
-    } else if (r && r.condGroupId) {
-      selectedCondGroupIds.value = [Number(r.condGroupId)]
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const r = await api.getSelection()
+      if (r && r.groupId) selectedGroupId.value = Number(r.groupId)
+      if (r && Array.isArray(r.condGroupIds) && r.condGroupIds.length) {
+        selectedCondGroupIds.value = r.condGroupIds.map((x) => Number(x)).filter((n) => n > 0)
+      } else if (r && r.condGroupId) {
+        selectedCondGroupIds.value = [Number(r.condGroupId)]
+      }
+      // 取到响应即视为已确认（后端确实没有记忆时为空数组，交给 loadCondGroups 兜底第一组）
+      selectionKnown = true
+      cacheCondSelection(selectedCondGroupIds.value)
+      return true
+    } catch (e) {
+      // iOS 后台冻结恢复时首包常失败：退避重试，失败期间绝不用第一组覆盖后端记忆
+      if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)))
     }
-  } catch (e) {}
+  }
+  return false
 }
 
 async function loadGroups() {
@@ -92,8 +121,16 @@ async function loadCondGroups() {
     condGroups.value = r.groups || []
     if (practiceMode.value === 'condgroup') {
       const validIds = selectedCondGroupIds.value.filter((id) => condGroups.value.some((g) => Number(g.id) === Number(id)))
-      selectedCondGroupIds.value = validIds.length ? validIds : (condGroups.value[0] ? [condGroups.value[0].id] : [])
-      api.saveSelection({ condGroupIds: selectedCondGroupIds.value }).catch(() => {})
+      if (validIds.length) {
+        selectedCondGroupIds.value = validIds
+      } else if (selectionKnown) {
+        // 记忆已确认（含后端确实没选过）：才允许兜底第一组
+        selectedCondGroupIds.value = condGroups.value[0] ? [condGroups.value[0].id] : []
+      } else {
+        // 记忆还没取到（后台冻结/网络未恢复）：保持现状等待重试，避免把第一组写回后端
+        return
+      }
+      saveCondSelection()
       if (selectedCondGroupIds.value.length === 1) {
         const g = condGroups.value.find((x) => Number(x.id) === Number(selectedCondGroupIds.value[0]))
         if (g) applyCondGroupFilters(g)
@@ -1799,7 +1836,7 @@ function setMode(m) {
     }
     if (!selectedCondGroupIds.value.length || !selectedCondGroupIds.value.some((id) => condGroups.value.some((g) => Number(g.id) === Number(id)))) {
       selectedCondGroupIds.value = [condGroups.value[0].id]
-      api.saveSelection({ condGroupIds: selectedCondGroupIds.value }).catch(() => {})
+      saveCondSelection()
     }
     if (selectedCondGroupIds.value.length === 1) {
       const g = condGroups.value.find((x) => Number(x.id) === Number(selectedCondGroupIds.value[0]))
@@ -1841,7 +1878,7 @@ function confirmCondPick() {
   if (!draftCondIds.value.length) return
   showCondGroupPicker.value = false
   selectedCondGroupIds.value = [...draftCondIds.value]
-  api.saveSelection({ condGroupIds: selectedCondGroupIds.value }).catch(() => {})
+  saveCondSelection()
   if (selectedCondGroupIds.value.length === 1) {
     const g = condGroups.value.find((x) => Number(x.id) === Number(selectedCondGroupIds.value[0]))
     if (g) applyCondGroupFilters(g)
@@ -2002,7 +2039,7 @@ async function deleteCondGroup(g) {
     await loadCondGroups()
     selectedCondGroupIds.value = selectedCondGroupIds.value.filter((id) => String(id) !== String(g.id))
     if (!selectedCondGroupIds.value.length) selectedCondGroupIds.value = condGroups.value[0] ? [condGroups.value[0].id] : []
-    api.saveSelection({ condGroupIds: selectedCondGroupIds.value }).catch(() => {})
+    saveCondSelection()
     if (selectedCondGroupIds.value.length === 1) {
       applyCondGroupFilters(condGroups.value[0])
     } else {
@@ -2209,6 +2246,8 @@ onMounted(() => {
     selectionLoaded = true
     loadGroups()
     loadCondGroups()
+    // 三次都失败（长时间后台后首包未恢复）：2 秒后再补取一次，成功后才允许兜底第一组
+    if (!selectionKnown) setTimeout(() => loadSelection().finally(loadCondGroups), 2000)
     // 条件组加载失败重试：iOS 首包网络不稳/后台冻结恢复时首次 loadCondGroups 可能失败，
     // 若 words 已到位而组数据缺失，条件背会卡在"尚未设置条件分组"空状态不出题，多档延迟补拉
     setTimeout(loadCondGroups, 800)
@@ -2219,9 +2258,11 @@ onMounted(() => {
 })
 
 onActivated(() => {
-  // KeepAlive 切回：静默刷新分组与今日统计（不打断当前题目，保留答题现场）
-  loadGroups()
-  loadCondGroups()
+  // KeepAlive 切回：先对齐后端记忆，再静默刷新分组与今日统计（不打断当前题目，保留答题现场）
+  loadSelection().finally(() => {
+    loadGroups()
+    loadCondGroups()
+  })
   refreshToday()
   // 指定词跳转场景（词句库/详情弹框点背诵）：强制重设并出指定词，覆盖缓存残留/筛选状态/旧题占用等一切情况
   if (route.query.word) {
