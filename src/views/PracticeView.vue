@@ -123,14 +123,15 @@ async function loadCondGroups() {
       const validIds = selectedCondGroupIds.value.filter((id) => condGroups.value.some((g) => Number(g.id) === Number(id)))
       if (validIds.length) {
         selectedCondGroupIds.value = validIds
-      } else if (selectionKnown) {
-        // 记忆已确认（含后端确实没选过）：才允许兜底第一组
-        selectedCondGroupIds.value = condGroups.value[0] ? [condGroups.value[0].id] : []
+      } else if (selectionKnown && condGroups.value.length) {
+        // 记忆已确认且确实没有可用选择：只在界面兜底第一组，不回写后端
+        selectedCondGroupIds.value = [condGroups.value[0].id]
       } else {
-        // 记忆还没取到（后台冻结/网络未恢复）：保持现状等待重试，避免把第一组写回后端
+        // 记忆未取到或分组列表异常为空：保持现状等待重试，绝不把"第一组"写回后端
         return
       }
-      saveCondSelection()
+      // 载入路径只同步本地缓存、不写后端：后端记忆只由用户显式选择/删除改写
+      cacheCondSelection(selectedCondGroupIds.value)
       if (selectedCondGroupIds.value.length === 1) {
         const g = condGroups.value.find((x) => Number(x.id) === Number(selectedCondGroupIds.value[0]))
         if (g) applyCondGroupFilters(g)
@@ -1834,10 +1835,18 @@ function setMode(m) {
       openCondGroupModal()
       return
     }
-    if (!selectedCondGroupIds.value.length || !selectedCondGroupIds.value.some((id) => condGroups.value.some((g) => Number(g.id) === Number(id)))) {
-      selectedCondGroupIds.value = [condGroups.value[0].id]
-      saveCondSelection()
+    const validCondIds = selectedCondGroupIds.value.filter((id) => condGroups.value.some((g) => Number(g.id) === Number(id)))
+    if (!validCondIds.length && !selectionKnown) {
+      // 后台恢复首包还没回来：记忆未确认时先不兜底，等记忆回包后再决定，避免"第一组"覆盖后端记忆
+      current.value = null
+      result.value = null
+      loadSelection().finally(async () => {
+        await loadCondGroups()
+        if (!current.value) next()
+      })
+      return
     }
+    selectedCondGroupIds.value = validCondIds.length ? validCondIds : [condGroups.value[0].id]
     if (selectedCondGroupIds.value.length === 1) {
       const g = condGroups.value.find((x) => Number(x.id) === Number(selectedCondGroupIds.value[0]))
       if (g) applyCondGroupFilters(g)
@@ -2237,7 +2246,23 @@ todayInterval = setInterval(() => {
   todayTick.value += 1
 }, 30000)
 
+// 页面从后台恢复（iOS 冻结恢复不重载页面，onActivated 不会触发）：重新对齐后端记忆
+let lastResumeSync = 0
+function onPageVisible() {
+  if (document.visibilityState !== 'visible') return
+  if (practiceMode.value !== 'condgroup') return
+  const now = Date.now()
+  if (now - lastResumeSync < 3000) return
+  lastResumeSync = now
+  loadSelection().finally(loadCondGroups)
+}
+function onPageShow(e) {
+  if (e && e.persisted) onPageVisible()
+}
+
 onMounted(() => {
+  document.addEventListener('visibilitychange', onPageVisible)
+  window.addEventListener('pageshow', onPageShow)
   document.addEventListener('keydown', onGlobalKeydown)
   setPendingFromQuery()
   if (pendingWord.value) next()
@@ -2309,6 +2334,8 @@ watch(words, () => {
 })
 
 onBeforeUnmount(() => {
+  document.removeEventListener('visibilitychange', onPageVisible)
+  window.removeEventListener('pageshow', onPageShow)
   document.removeEventListener('keydown', onGlobalKeydown)
   document.removeEventListener('click', closeWordBubble)
   window.removeEventListener('vt:data-refreshed', onDataRefreshed)
