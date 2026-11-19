@@ -112,6 +112,14 @@ function goPractice(word) {
 function isWordRecord(r) {
   return !r.english || !r.english.trim().includes(' ')
 }
+
+// 答对但答案与参考答案措辞不同（仅忽略大小写与多余空格），历史里要原样回显用户输入
+function normAnswer(s) {
+  return (s || '').trim().toLowerCase().replace(/\s+/g, ' ')
+}
+function answerDiffers(r) {
+  return !!r.userAnswer && normAnswer(r.userAnswer) !== normAnswer(r.english)
+}
 </script>
 
 <template>
@@ -199,6 +207,10 @@ function isWordRecord(r) {
                     <div class="rec-line2">
                       <span class="rec-zh">{{ r.chinese }}</span>
                       <span class="rec-time">{{ new Date(r.ts).toTimeString().slice(0, 5) }}</span>
+                    </div>
+                    <div v-if="r.correct && answerDiffers(r)" class="rec-mine">
+                      <span class="rec-mine-label">你答：</span>
+                      <span class="rec-mine-text">{{ r.userAnswer }}</span>
                     </div>
                     <div v-if="!r.correct && r.userAnswer" class="rec-wrong">
                       <span class="rec-wrong-label">你答：</span>
@@ -552,6 +564,18 @@ function isWordRecord(r) {
 }
 .diff-bad {
   color: var(--danger);
+}
+
+/* 答对但措辞与参考答案不同：原样回显用户输入 */
+.rec-mine {
+  font-size: 12px;
+  color: #333;
+  margin-top: 2px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+.rec-mine-label {
+  color: var(--text-sub);
 }
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.25s; }
