@@ -1100,6 +1100,33 @@ function refocusInput() {
     try { el.focus() } catch (e) {}
   }
 }
+
+// 软键盘弹起时会把聚焦的输入框滚进可视区，题目（在输入框上方）常被顶出屏幕。
+// 聚焦后趁键盘动画结束把答题卡顶部带回可视区，保证题目和输入框同时可见。
+let quizFixTimers = []
+// 键盘弹起后页面往往没有多余可滚动空间，即使调用 scrollBy 也滚不动；
+// 聚焦期间给答题页补一段底部留白，页面才能把答题卡顶回可视区。
+function releaseQuizPadding() {
+  const page = document.querySelector('.practice')
+  if (page) page.classList.remove('kb-open')
+}
+function keepQuizVisible() {
+  const page = document.querySelector('.practice')
+  if (page) page.classList.add('kb-open')
+  if (quizFixTimers.length) {
+    quizFixTimers.forEach(clearTimeout)
+    quizFixTimers = []
+  }
+  const fix = () => {
+    const card = document.querySelector('.quiz-card')
+    if (!card) return
+    const vv = window.visualViewport
+    const top = card.getBoundingClientRect().top - (vv ? vv.offsetTop : 0)
+    if (Math.abs(top - 8) > 4) window.scrollBy(0, top - 8)
+  }
+  quizFixTimers.push(setTimeout(fix, 300))
+  quizFixTimers.push(setTimeout(fix, 700))
+}
 function speakKeepFocus(word, type = 0, onDone = null, key = '') {
   speak(word, type, onDone, key)
   refocusInput()
@@ -2334,6 +2361,7 @@ watch(words, () => {
 })
 
 onBeforeUnmount(() => {
+  if (quizFixTimers.length) quizFixTimers.forEach(clearTimeout)
   document.removeEventListener('visibilitychange', onPageVisible)
   window.removeEventListener('pageshow', onPageShow)
   document.removeEventListener('keydown', onGlobalKeydown)
@@ -2545,8 +2573,8 @@ next()
             autocorrect="off"
             placeholder="输入英文"
             :disabled="inputDisabled"
-            @focus="focusEnabled = true; answerFocus = true"
-            @blur="answerFocus = false"
+            @focus="focusEnabled = true; answerFocus = true; keepQuizVisible()"
+            @blur="answerFocus = false; releaseQuizPadding()"
             @keyup.enter="submit"
             autocomplete="off"
             autocapitalize="off"
@@ -2563,8 +2591,8 @@ next()
             placeholder="输入英文"
             @input="autoGrowAnswer"
             :disabled="inputDisabled"
-            @focus="focusEnabled = true; answerFocus = true"
-            @blur="answerFocus = false"
+            @focus="focusEnabled = true; answerFocus = true; keepQuizVisible()"
+            @blur="answerFocus = false; releaseQuizPadding()"
             autocomplete="off"
             autocapitalize="off"
             spellcheck="false"
@@ -3283,6 +3311,11 @@ next()
 <style scoped>
 .practice {
   padding: 8px 0 16px;
+}
+
+/* 输入框聚焦（软键盘弹起）期间补足底部留白，让页面能把答题卡滚回可视区 */
+.practice.kb-open {
+  padding-bottom: 60vh;
 }
 
 .empty-state {
