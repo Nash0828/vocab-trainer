@@ -609,7 +609,8 @@ async function submitSaveGroup() {
     remarkFilter: draftRemarkFilter.value,
   }
   try {
-    await api.createCondGroup(payload)
+    const created = await api.createCondGroup(payload)
+    await pinNewCondGroupTop(created && created.id)
     await loadCondGroups()
     if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur()
     saveGroupDialog.value = null
@@ -1997,6 +1998,19 @@ function removeCondKwRow(i) {
   if (!condEditing.value.keywords.length) condEditing.value.keywords = ['']
 }
 let lastCondSaveAt = 0
+// 新建条件分组后置顶：把新组排到第 1 位，其余组保持原有相对顺序
+async function pinNewCondGroupTop(newId) {
+  if (!newId) return
+  const others = condGroups.value
+    .filter((g) => Number(g.id) !== Number(newId))
+    .slice()
+    .sort((a, b) => (Number(a.seq) || 0) - (Number(b.seq) || 0) || Number(a.id) - Number(b.id))
+    .map((g) => Number(g.id))
+  try {
+    await api.reorderCondGroups([Number(newId), ...others])
+  } catch (e) {}
+}
+
 async function saveCondGroup() {
   const now = Date.now()
   if (now - lastCondSaveAt < 400) return
@@ -2025,7 +2039,8 @@ async function saveCondGroup() {
     if (e.id) {
       await api.updateCondGroup(e.id, payload)
     } else {
-      await api.createCondGroup(payload)
+      const created = await api.createCondGroup(payload)
+      await pinNewCondGroupTop(created && created.id)
     }
     await loadCondGroups()
     // 编辑的是当前选中组：同步应用新条件
