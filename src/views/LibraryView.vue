@@ -706,10 +706,21 @@ const filteredWords = computed(() => {
       (statusFilter.value === 'notMastered' && !mastered)
     return matchKw && matchType && matchStatus
   })
-  // 搜索结果（有关键词时）：单词优先排在前面，短语/句子在后，各组内保持原有相对顺序
+  // 搜索结果（有关键词时）：英文完全匹配 > 英文前缀匹配 > 英文包含 > 仅中文/备注命中；
+  // 同档内单词优先于短语、句子，各组内保持原有相对顺序（稳定排序）
   if (kw) {
     const rank = { word: 0, phrase: 1, sentence: 2 }
-    list.sort((a, b) => (rank[a.type || 'word'] ?? 0) - (rank[b.type || 'word'] ?? 0))
+    const score = (w) => {
+      const en = String(w.english || '').trim().toLowerCase()
+      if (en === kw) return 0
+      if (en.startsWith(kw)) return 1
+      if (en.includes(kw)) return 2
+      return 3
+    }
+    list.sort(
+      (a, b) =>
+        score(a) - score(b) || (rank[a.type || 'word'] ?? 0) - (rank[b.type || 'word'] ?? 0)
+    )
   }
   return list
 })
