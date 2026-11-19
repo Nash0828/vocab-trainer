@@ -1110,23 +1110,31 @@ function releaseQuizPadding() {
   const page = document.querySelector('.practice')
   if (page) page.classList.remove('kb-open')
 }
+function fixQuizVisible() {
+  const card = document.querySelector('.quiz-card')
+  if (!card) return
+  const vv = window.visualViewport
+  const top = card.getBoundingClientRect().top - (vv ? vv.offsetTop : 0)
+  // 已经贴近顶部就不再动，避免无意义的二次位移
+  if (Math.abs(top - 8) > 12) window.scrollBy(0, top - 8)
+}
+// 触摸输入框的瞬间（软键盘还没弹起）就先把答题卡顶到可视区顶部，
+// 这样 iOS 弹键盘时输入框已经在视野里，不会再自己滚一次，避免"跳两下"。
+function prepareQuizFocus() {
+  const page = document.querySelector('.practice')
+  if (page) page.classList.add('kb-open')
+  fixQuizVisible()
+  if (quizFixTimers.length) quizFixTimers.forEach(clearTimeout)
+  quizFixTimers = []
+}
+// 兜底：个别机型键盘动画结束仍会挤走题目，仅在没有对齐时补一次
 function keepQuizVisible() {
   const page = document.querySelector('.practice')
   if (page) page.classList.add('kb-open')
-  if (quizFixTimers.length) {
-    quizFixTimers.forEach(clearTimeout)
-    quizFixTimers = []
-  }
-  const fix = () => {
-    const card = document.querySelector('.quiz-card')
-    if (!card) return
-    const vv = window.visualViewport
-    const top = card.getBoundingClientRect().top - (vv ? vv.offsetTop : 0)
-    if (Math.abs(top - 8) > 4) window.scrollBy(0, top - 8)
-  }
-  quizFixTimers.push(setTimeout(fix, 300))
-  quizFixTimers.push(setTimeout(fix, 700))
+  if (quizFixTimers.length) quizFixTimers.forEach(clearTimeout)
+  quizFixTimers = [setTimeout(fixQuizVisible, 420)]
 }
+
 function speakKeepFocus(word, type = 0, onDone = null, key = '') {
   speak(word, type, onDone, key)
   refocusInput()
@@ -2573,6 +2581,8 @@ next()
             autocorrect="off"
             placeholder="输入英文"
             :disabled="inputDisabled"
+            @touchstart="prepareQuizFocus"
+            @mousedown="prepareQuizFocus"
             @focus="focusEnabled = true; answerFocus = true; keepQuizVisible()"
             @blur="answerFocus = false; releaseQuizPadding()"
             @keyup.enter="submit"
@@ -2591,6 +2601,8 @@ next()
             placeholder="输入英文"
             @input="autoGrowAnswer"
             :disabled="inputDisabled"
+            @touchstart="prepareQuizFocus"
+            @mousedown="prepareQuizFocus"
             @focus="focusEnabled = true; answerFocus = true; keepQuizVisible()"
             @blur="answerFocus = false; releaseQuizPadding()"
             autocomplete="off"
