@@ -1118,21 +1118,18 @@ function fixQuizVisible() {
   // 已经贴近顶部就不再动，避免无意义的二次位移
   if (Math.abs(top - 8) > 12) window.scrollBy(0, top - 8)
 }
-// 触摸输入框的瞬间（软键盘还没弹起）就先把答题卡顶到可视区顶部，
-// 这样 iOS 弹键盘时输入框已经在视野里，不会再自己滚一次，避免"跳两下"。
+// 触摸输入框时只补底部留白，不做任何滚动：
+// touchstart 阶段移动页面会让手指抬起后的点击落空，导致要点两次才能聚焦。
 function prepareQuizFocus() {
   const page = document.querySelector('.practice')
   if (page) page.classList.add('kb-open')
-  fixQuizVisible()
-  if (quizFixTimers.length) quizFixTimers.forEach(clearTimeout)
-  quizFixTimers = []
 }
-// 兜底：个别机型键盘动画结束仍会挤走题目，仅在没有对齐时补一次
+// 聚焦事件在手势结束后触发，这时再对齐才不会打断焦点；只滚一次，已对齐则不滚。
 function keepQuizVisible() {
-  const page = document.querySelector('.practice')
-  if (page) page.classList.add('kb-open')
+  prepareQuizFocus()
   if (quizFixTimers.length) quizFixTimers.forEach(clearTimeout)
-  quizFixTimers = [setTimeout(fixQuizVisible, 420)]
+  fixQuizVisible()
+  quizFixTimers = [setTimeout(fixQuizVisible, 460)]
 }
 
 function speakKeepFocus(word, type = 0, onDone = null, key = '') {
