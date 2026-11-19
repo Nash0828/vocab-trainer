@@ -1103,7 +1103,8 @@ function refocusInput() {
 
 // 软键盘弹起时会把聚焦的输入框滚进可视区，题目（在输入框上方）常被顶出屏幕。
 // 聚焦后趁键盘动画结束把答题卡顶部带回可视区，保证题目和输入框同时可见。
-let quizFixTimers = []
+let quizAlignRaf = 0
+let quizAlignTimer = null
 // 键盘弹起后页面往往没有多余可滚动空间，即使调用 scrollBy 也滚不动；
 // 聚焦期间给答题页补一段底部留白，页面才能把答题卡顶回可视区。
 function releaseQuizPadding() {
@@ -1115,8 +1116,7 @@ function fixQuizVisible() {
   if (!card) return
   const vv = window.visualViewport
   const top = card.getBoundingClientRect().top - (vv ? vv.offsetTop : 0)
-  // 已经贴近顶部就不再动，避免无意义的二次位移
-  if (Math.abs(top - 8) > 12) window.scrollBy(0, top - 8)
+  if (Math.abs(top - 8) > 6) window.scrollBy(0, top - 8)
 }
 // 触摸输入框时只补底部留白，不做任何滚动：
 // touchstart 阶段移动页面会让手指抬起后的点击落空，导致要点两次才能聚焦。
@@ -1124,12 +1124,32 @@ function prepareQuizFocus() {
   const page = document.querySelector('.practice')
   if (page) page.classList.add('kb-open')
 }
-// 聚焦事件在手势结束后触发，这时再对齐才不会打断焦点；只滚一次，已对齐则不滚。
+function isAnswerFocused() {
+  const el = answerInput.value
+  return !!el && document.activeElement === el
+}
+// 键盘高度变化时逐帧跟随（每帧最多修正一次），让答题卡随键盘连续上移到贴顶，
+// 而不是先被浏览器推下去、再被我们拉回来，避免页面来回跳。停稳后再补一次收尾。
+function scheduleQuizAlign() {
+  if (!quizAlignRaf) {
+    quizAlignRaf = requestAnimationFrame(() => {
+      quizAlignRaf = 0
+      fixQuizVisible()
+    })
+  }
+  if (quizAlignTimer) clearTimeout(quizAlignTimer)
+  quizAlignTimer = setTimeout(() => {
+    quizAlignTimer = null
+    fixQuizVisible()
+  }, 160)
+}
+function onViewportResize() {
+  if (!isAnswerFocused()) return
+  scheduleQuizAlign()
+}
 function keepQuizVisible() {
   prepareQuizFocus()
-  if (quizFixTimers.length) quizFixTimers.forEach(clearTimeout)
-  fixQuizVisible()
-  quizFixTimers = [setTimeout(fixQuizVisible, 460)]
+  scheduleQuizAlign()
 }
 
 function speakKeepFocus(word, type = 0, onDone = null, key = '') {
@@ -2293,6 +2313,7 @@ function onPageShow(e) {
 }
 
 onMounted(() => {
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', onViewportResize)
   document.addEventListener('visibilitychange', onPageVisible)
   window.addEventListener('pageshow', onPageShow)
   document.addEventListener('keydown', onGlobalKeydown)
@@ -2366,7 +2387,9 @@ watch(words, () => {
 })
 
 onBeforeUnmount(() => {
-  if (quizFixTimers.length) quizFixTimers.forEach(clearTimeout)
+  if (quizAlignRaf) cancelAnimationFrame(quizAlignRaf)
+  if (quizAlignTimer) clearTimeout(quizAlignTimer)
+  if (window.visualViewport) window.visualViewport.removeEventListener('resize', onViewportResize)
   document.removeEventListener('visibilitychange', onPageVisible)
   window.removeEventListener('pageshow', onPageShow)
   document.removeEventListener('keydown', onGlobalKeydown)
