@@ -15,8 +15,8 @@ const icons = {
 const allNavItems = [
   { to: '/input', label: '录入', icon: 'input' },
   { to: '/practice', label: '背诵', icon: 'practice' },
-  { to: '/library', label: '词句库', icon: 'library' },
   { to: '/history', label: '历史', icon: 'history' },
+  { to: '/library', label: '词句库', icon: 'library' },
   { to: '/wrongbook', label: '错题本', icon: 'wrongbook' },
   { to: '/profile', label: '我的', icon: 'profile' },
 ]
