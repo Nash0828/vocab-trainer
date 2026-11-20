@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useWords, refreshAll } from '../composables/useWords'
 import { api } from '../api/index.js'
 import { defineOptions } from 'vue'
@@ -56,7 +56,20 @@ function pickType(t) {
   form.linkWords = []
   form.linkPhrases = []
   showTypePicker.value = false
+  nextTick(autoSizePhraseEn)
 }
+
+// 短语的英文用多行文本框：默认一行（高度与中文输入框一致），折行时自动增高
+const phraseEnRef = ref(null)
+function autoSizePhraseEn() {
+  const el = phraseEnRef.value
+  if (!el) return
+  el.style.height = 'auto'
+  el.style.height = el.scrollHeight + 'px'
+}
+watch(() => form.english, () => nextTick(autoSizePhraseEn))
+watch(() => form.type, () => nextTick(autoSizePhraseEn))
+onMounted(() => nextTick(autoSizePhraseEn))
 
 const posOptions = ['n.', 'v.', 'adj.', 'adv.', 'prep.', 'pron.', 'conj.', 'num.', 'art.']
 const showPosPicker = ref(false)
@@ -302,7 +315,7 @@ function removeLinkPhrase(i) {
           <label><em class="req">*</em>英文</label>
           <div class="input-wrap">
             <input
-              v-if="form.type !== 'sentence'"
+              v-if="form.type === 'word'"
               v-model="form.english"
               type="text"
               placeholder="请输入英文"
@@ -312,6 +325,21 @@ function removeLinkPhrase(i) {
               @keydown.ctrl.enter.prevent="submit"
               @keydown.meta.enter.prevent="submit"
             />
+            <textarea
+              v-else-if="form.type === 'phrase'"
+              ref="phraseEnRef"
+              v-model="form.english"
+              class="phrase-en"
+              rows="1"
+              placeholder="请输入英文"
+              autocomplete="off"
+              @focus="focusEnglish = true"
+              @blur="focusEnglish = false"
+              @input="autoSizePhraseEn"
+              @keydown.enter.prevent="submit"
+              @keydown.ctrl.enter.prevent="submit"
+              @keydown.meta.enter.prevent="submit"
+            ></textarea>
             <textarea
               v-else
               v-model="form.english"
@@ -682,6 +710,20 @@ function removeLinkPhrase(i) {
 /* 句子类型的中文/英文是多行 textarea：清除按钮同样贴右上角（不再垂直居中） */
 .input-wrap textarea ~ .clear-btn {
   top: 8px;
+  transform: none;
+}
+/* 短语的英文多行文本框：默认一行，高度与中文输入框一致（15px 字号 + 4px 上下内边距 + 17px 行高 = 25px），折行自动增高；清除按钮对齐首行 */
+.input-wrap textarea.phrase-en {
+  min-height: 0;
+  height: 25px;
+  line-height: 17px;
+  padding: 4px 30px 4px 0;
+  display: block;
+  overflow-y: hidden;
+  max-height: 160px;
+}
+.input-wrap textarea.phrase-en ~ .clear-btn {
+  top: 4px;
   transform: none;
 }
 /* 例句行内的清除按钮：位于删除按钮左侧 */
