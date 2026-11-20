@@ -995,6 +995,22 @@ function cancelEdit() {
   editingId.value = null
 }
 
+// 短语编辑：英文用多行文本框，默认一行（高度与中文框一致），折行时自动增高
+const editPhraseEnRef = ref(null)
+function autoSizeEditPhraseEn() {
+  const raw = editPhraseEnRef.value
+  // ref 处于 v-for 内，可能是数组：取当前正在编辑的那个
+  const el = Array.isArray(raw) ? raw.filter(Boolean)[0] : raw
+  if (!el) return
+  const cs = getComputedStyle(el)
+  const extra = (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0)
+  el.style.height = 'auto'
+  el.style.height = el.scrollHeight + extra + 'px'
+}
+watch(() => editForm.english, () => nextTick(autoSizeEditPhraseEn))
+watch(() => editForm.type, () => nextTick(autoSizeEditPhraseEn))
+watch(editingId, () => nextTick(autoSizeEditPhraseEn))
+
 async function saveEdit(word) {
   if (!editForm.chinese.trim() || !editForm.english.trim()) {
     showTip('中文和英文不能为空', 'warn')
@@ -1229,7 +1245,8 @@ function formatTime(ts) {
           <div class="cell-row">
             <span class="cell-label">英文</span>
             <div class="input-wrap">
-              <input v-if="editForm.type !== 'sentence'" v-model="editForm.english" class="cell-input" type="text" placeholder="请输入英文" autocomplete="off" @focus="editFocusEnglish = true" @blur="editFocusEnglish = false" />
+              <input v-if="editForm.type === 'word'" v-model="editForm.english" class="cell-input" type="text" placeholder="请输入英文" autocomplete="off" @focus="editFocusEnglish = true" @blur="editFocusEnglish = false" />
+              <textarea v-else-if="editForm.type === 'phrase'" ref="editPhraseEnRef" v-model="editForm.english" class="cell-input phrase-en-edit" rows="1" placeholder="请输入英文" autocomplete="off" @focus="editFocusEnglish = true" @blur="editFocusEnglish = false" @input="autoSizeEditPhraseEn"></textarea>
               <textarea v-else v-model="editForm.english" class="cell-input area" placeholder="请输入英文" @focus="editFocusEnglish = true" @blur="editFocusEnglish = false"></textarea>
               <button v-if="editForm.english && editFocusEnglish" class="clear-btn" type="button" @mousedown.prevent @click="editForm.english = ''" title="清空内容" aria-label="清空英文">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -2353,6 +2370,23 @@ function formatTime(ts) {
   line-height: 1.5;
   font-family: inherit;
   box-sizing: border-box;
+}
+/* 短语编辑的英文多行框：默认一行、与中文框等高，折行自动增高 */
+.cell-input.phrase-en-edit {
+  min-height: 0;
+  height: 32px;
+  line-height: 16px;
+  padding: 7px 30px 7px 10px;
+  resize: none;
+  display: block;
+  overflow-y: hidden;
+  max-height: 160px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.input-wrap .cell-input.phrase-en-edit ~ .clear-btn {
+  top: 7px;
+  transform: none;
 }
 /* 编辑卡片：多条例句 */
 .edit-ex-wrap {
