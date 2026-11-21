@@ -208,6 +208,8 @@ onBeforeUnmount(() => {
 })
 
 // 从答题页"更正当前词句"跳转的处理：筛选出目标词句并进入编辑态，类型锁定
+// 保存成功或点取消后自动跳回答题页（返回答题现场）
+const returnToPractice = ref(false)
 function handleEditEntry() {
   const qWord = String(route.query.editWord || '').trim()
   if (!qWord) return
@@ -219,6 +221,14 @@ function handleEditEntry() {
   statusFilter.value = 'all'
   const w = words.value.find((x) => String(x.english || '').trim().toLowerCase() === qWord.toLowerCase())
   if (w) startEdit(w, { lockType: true })
+}
+
+// 更正结束后回到答题页：还原本次更正临时加的搜索条件，避免下次进入词句库仍被筛住
+function backToPractice() {
+  if (!returnToPractice.value) return
+  returnToPractice.value = false
+  keyword.value = ''
+  router.push('/practice')
 }
 
 // 播放发音：有道优先，失败回退百度 TTS，再失败回退系统 TTS
@@ -970,6 +980,7 @@ function pct(word) {
 // 例句是否包含当前录入的单词/短语（单词按词边界匹配，短语忽略大小写包含）
 function startEdit(word, opts = {}) {
   editLockType.value = !!opts.lockType // 从答题页进入的更正：类型锁定，防止分组内类型被改乱
+  returnToPractice.value = !!opts.lockType // 仅从答题页进入的更正，结束后返回答题页
   editingId.value = word.id
   confirmDeleteId.value = null
   confirmResetId.value = null
@@ -993,6 +1004,7 @@ function startEdit(word, opts = {}) {
 
 function cancelEdit() {
   editingId.value = null
+  backToPractice()
 }
 
 // 短语编辑：英文用多行文本框，默认一行（高度与中文框一致），折行时自动增高
@@ -1048,9 +1060,15 @@ async function saveEdit(word) {
       linkWords: editForm.type === 'word' ? [] : editForm.linkWords.map((x) => String(x || '').trim()).filter(Boolean),
       linkPhrases: editForm.type === 'sentence' ? editForm.linkPhrases.map((x) => String(x || '').trim()).filter(Boolean) : [],
     })
-    showTip(`已保存修改：${editForm.english}`, 'ok')
+    if (returnToPractice.value) {
+      // 更正完成：先把最新数据同步到共享词库，再回答题页（背诵页激活时会据此刷新当前题）
+      await refreshAll()
+    } else {
+      showTip(`已保存修改：${editForm.english}`, 'ok')
+      refreshAll() // 刷新关联词句的反向可见性
+    }
     editingId.value = null
-    refreshAll() // 刷新关联词句的反向可见性
+    backToPractice()
   } catch (err) {
     const msg = err.code === 'TRANSLATE_FAIL' ? '翻译失败，请稍后重试'
       : err.code === 'EXAMPLE_NOT_CONTAIN' ? '相关短语/例句需包含当前单词（含变形形式）'
