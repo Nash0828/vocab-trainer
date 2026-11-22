@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useWords, refreshAll } from '../composables/useWords'
 import { api } from '../api/index.js'
 import AiUsageCard from '../components/AiUsageCard.vue'
+import { isValidEnglish } from '../utils/englishValidate.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -1028,7 +1029,7 @@ async function saveEdit(word) {
     showTip('中文和英文不能为空', 'warn')
     return
   }
-  if (!/^[A-Za-z0-9][A-Za-z0-9\s.,!?;:'"()\-’'']*$/.test(editForm.english.trim())) {
+  if (!isValidEnglish(editForm.english)) {
     showTip('英文只允许字母、数字、空格和常见标点', 'warn')
     return
   }

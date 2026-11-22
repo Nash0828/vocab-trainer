@@ -2,6 +2,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useWords, refreshAll } from '../composables/useWords'
 import { api } from '../api/index.js'
+import { isValidEnglish } from '../utils/englishValidate.js'
 import { defineOptions } from 'vue'
 
 defineOptions({ name: 'InputView' })
@@ -142,7 +143,7 @@ function validate() {
     showTip('请填写英文')
     return false
   }
-  if (!/^[A-Za-z0-9][A-Za-z0-9\s.,!?;:'"()\-’'']*$/.test(form.english.trim())) {
+  if (!isValidEnglish(form.english)) {
     showTip('英文只允许字母、数字、空格和常见标点')
     return false
   }
