@@ -2395,24 +2395,56 @@ next()
       </button>
     </div>
 
-    <!-- 背诵模式切换 + 筛选入口（一行） -->
-    <div class="mode-row">
-      <div class="mode-tabs">
-        <button class="mode-tab" :class="{ active: practiceMode === 'random' }" @click="setMode('random')">随机背</button>
-        <button class="mode-tab" :class="{ active: practiceMode === 'condgroup' }" @click="setMode('condgroup')">条件背</button>
-        <button class="mode-tab" :class="{ active: practiceMode === 'group' }" @click="setMode('group')">分组背</button>
+    <!-- 背诵模式 + 题源（一个父卡：上半切模式，下半是当前模式的题源；功能与点击行为完全沿用原实现） -->
+    <div class="mode-card">
+      <div class="mode-row">
+        <div class="mode-tabs">
+          <button class="mode-tab" :class="{ active: practiceMode === 'random' }" @click="setMode('random')">随机背</button>
+          <button class="mode-tab" :class="{ active: practiceMode === 'condgroup' }" @click="setMode('condgroup')">条件背</button>
+          <button class="mode-tab" :class="{ active: practiceMode === 'group' }" @click="setMode('group')">分组背</button>
+        </div>
+        <button
+          v-if="hasWords"
+          class="filter-icon-btn"
+          :class="{ active: hasFilter }"
+          title="筛选"
+          @touchstart.prevent="openFilterSheet"
+          @mousedown.prevent
+          @click="openFilterSheet"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        </button>
       </div>
-      <button
-        v-if="hasWords"
-        class="filter-icon-btn"
-        :class="{ active: hasFilter }"
-        title="筛选"
-        @touchstart.prevent="openFilterSheet"
-        @mousedown.prevent
-        @click="openFilterSheet"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-      </button>
+
+      <!-- 简易分组模式：题源行 -->
+      <div v-if="practiceMode === 'group'" class="group-row">
+        <span class="src-bar"></span>
+        <span class="src-label">题源</span>
+        <button v-if="groups.length" class="group-select" @click="showGroupPicker = true">
+          <span class="group-select-name">{{ selectedGroup?.name }}</span>
+          <span class="group-select-progress">{{ selectedGroupStats?.size }} 条</span>
+          <svg class="group-select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <span v-else class="group-empty-hint">尚未设置分组</span>
+        <button class="group-set-btn" title="分组设置" aria-label="分组设置" @click="openGroupModal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
+
+      <!-- 条件分组模式：题源行 -->
+      <div v-if="practiceMode === 'condgroup'" class="group-row">
+        <span class="src-bar"></span>
+        <span class="src-label">题源</span>
+        <button v-if="condGroups.length" class="group-select" @click="openCondGroupPicker">
+          <span class="group-select-name">{{ isMultiCond ? (selectedCondGroups[0]?.name + ' 等 ' + selectedCondGroups.length + ' 组') : selectedCondGroup?.name }}</span>
+          <span class="group-select-progress">{{ isMultiCond ? selectedCondPoolCount + ' 条' : (selectedCondGroup ? condGroupPoolCount(selectedCondGroup) + ' 条' : '') }}</span>
+          <svg class="group-select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <span v-else class="group-empty-hint">尚未设置条件分组</span>
+        <button class="group-set-btn" title="条件分组设置" aria-label="条件分组设置" @click="openCondGroupModal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
     </div>
 
     <!-- 当前筛选条件标签（微信风格，可单独删除；条件分组模式不回显条件） -->
@@ -2424,32 +2456,6 @@ next()
         </button>
       </span>
       <span class="filter-total">共 {{ filteredTotal }} 条</span>
-    </div>
-
-    <!-- 简易分组模式：组下拉选框 + 分组设置 -->
-    <div v-if="practiceMode === 'group'" class="group-row">
-      <button v-if="groups.length" class="group-select" @click="showGroupPicker = true">
-        <span class="group-select-name">{{ selectedGroup?.name }}</span>
-        <span class="group-select-progress">{{ selectedGroupStats?.size }} 条</span>
-        <svg class="group-select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-      </button>
-      <span v-else class="group-empty-hint">尚未设置分组</span>
-      <button class="group-set-btn" title="分组设置" aria-label="分组设置" @click="openGroupModal">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
-      </button>
-    </div>
-
-    <!-- 条件分组模式：组下拉选框 + 条件分组设置 -->
-    <div v-if="practiceMode === 'condgroup'" class="group-row">
-      <button v-if="condGroups.length" class="group-select" @click="openCondGroupPicker">
-        <span class="group-select-name">{{ isMultiCond ? (selectedCondGroups[0]?.name + ' 等 ' + selectedCondGroups.length + ' 组') : selectedCondGroup?.name }}</span>
-        <span class="group-select-progress">{{ isMultiCond ? selectedCondPoolCount + ' 条' : (selectedCondGroup ? condGroupPoolCount(selectedCondGroup) + ' 条' : '') }}</span>
-        <svg class="group-select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-      </button>
-      <span v-else class="group-empty-hint">尚未设置条件分组</span>
-      <button class="group-set-btn" title="条件分组设置" aria-label="条件分组设置" @click="openCondGroupModal">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
-      </button>
     </div>
 
     <!-- 空词库 -->
@@ -3333,21 +3339,29 @@ next()
   cursor: pointer;
 }
 
-/* 背诵模式切换 + 筛选图标（一行，微信风格） */
+/* 背诵模式 + 题源：一个父卡（上半模式切换，下半题源行），用分隔线与绿竖条表达父子层级 */
+.mode-card {
+  margin: 0 16px 8px;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
 .mode-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0 16px 10px;
+  padding: 8px 8px 8px 8px;
 }
 
+/* 灰度轨道 + 白滑块选中：选中态不再用整块实心绿，主色只留给“下一题” */
 .mode-tabs {
   display: flex;
   flex: 1;
-  background: #fff;
-  border-radius: 10px;
-  padding: 3px;
-  gap: 3px;
+  background: #f2f2f2;
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
   min-width: 0;
 }
 
@@ -3355,25 +3369,26 @@ next()
   flex: 1;
   border: none;
   background: transparent;
-  padding: 8px 0;
+  padding: 7px 0;
   font-size: 14px;
-  color: var(--text-sub);
-  border-radius: 8px;
+  color: #666;
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s, color 0.2s;
 }
 
 .mode-tab.active {
-  background: var(--primary);
-  color: #fff;
+  background: #fff;
+  color: var(--primary);
   font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
-/* 筛选图标按钮：白底圆角，与模式条同高；有筛选时绿色 */
+/* 筛选图标：仍在模式行右侧、位置与行为不变；白底方块改为卡内浅底图标（次级操作感） */
 .filter-icon-btn {
   flex-shrink: 0;
-  width: 40px;
-  height: 38px;
+  width: 34px;
+  height: 32px;
   touch-action: manipulation;
   position: relative;
   z-index: 2;
@@ -3381,11 +3396,11 @@ next()
   align-items: center;
   justify-content: center;
   border: none;
-  background: #fff;
-  border-radius: 10px;
+  background: transparent;
+  border-radius: 8px;
   color: var(--text-sub);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s, color 0.2s;
 }
 
 .filter-icon-btn:active {
@@ -3448,53 +3463,72 @@ next()
   color: #888;
 }
 
-/* 分组模式：组下拉 + 分组设置按钮 */
+/* 题源行：位于模式父卡下半部，靠 1px 分隔线 + 缩进 + 绿竖条 +「题源」标签表达“属于上面的模式” */
 .group-row {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0 16px 8px;
+  gap: 6px;
+  height: 46px;
+  padding: 0 12px;
+  border-top: 1px solid #f2f2f2;
 }
 
+.src-bar {
+  flex: none;
+  width: 3px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--primary);
+}
+
+.src-label {
+  flex: none;
+  font-size: 12px;
+  color: #999;
+  margin-right: 2px;
+}
+
+/* 整行可点开原选择器：去掉白底块，只作为卡内的一行 */
 .group-select {
   flex: 1;
+  min-width: 0;
+  height: 100%;
   border: none;
-  background: #fff;
-  border-radius: 10px;
-  padding: 9px 12px;
+  background: transparent;
+  padding: 0;
   font-size: 14px;
   color: var(--text-main);
   appearance: none;
   -webkit-appearance: none;
   outline: none;
-  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
   text-align: left;
 }
 
 .group-select-name {
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 40%;
+  min-width: 0;
 }
 
 .group-select-progress {
-  flex: 1;
-  text-align: right;
-  font-size: 13px;
-  color: #999;
+  margin-left: auto;
+  flex: none;
+  font-size: 12px;
+  color: #b2b2b2;
   white-space: nowrap;
 }
 
 .group-select-arrow {
   flex: none;
-  color: #999;
+  color: #c0c0c0;
 }
 
 /* 选择分组：微信风格底部弹层 */
@@ -3637,23 +3671,26 @@ next()
 
 .group-empty-hint {
   flex: 1;
-  background: #fff;
-  border-radius: 10px;
-  padding: 9px 12px;
+  min-width: 0;
+  padding: 0;
   font-size: 14px;
   color: var(--text-sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+/* 齿轮：行内次级入口，不再独立成白块 */
 .group-set-btn {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 30px;
+  height: 46px;
   border: none;
-  background: #fff;
-  border-radius: 10px;
-  padding: 9px 11px;
-  font-size: 13px;
-  color: var(--text-main);
+  background: transparent;
+  border-radius: 8px;
+  color: #999;
   cursor: pointer;
   flex-shrink: 0;
 }
