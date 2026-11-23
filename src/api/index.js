@@ -77,8 +77,8 @@ export const api = {
   clearDay: (date) => req(`/api/records/${date}`, { method: 'DELETE' }),
   clearAllRecords: () => req('/api/records', { method: 'DELETE' }),
 
-  // 句子答题 AI 判定（缩写/全写、标点、空格差异忽略）
-  checkSentence: (input, answer) => req('/api/check-sentence', { method: 'POST', body: { input, answer } }),
+  // 句子答题 AI 判定（结合中文题意判语义，忽略缩写/全写、标点、空格等差异）
+  checkSentence: (input, answer, chinese) => req('/api/check-sentence', { method: 'POST', body: { input, answer, chinese } }),
 
   // AI 词形匹配：例句中本地规则未命中时，判断哪些词是给定单词的变形
   matchFlection: (word, sentence) => req('/api/match-flection', { method: 'POST', body: { word, sentence } }),

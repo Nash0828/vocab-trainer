@@ -1123,7 +1123,7 @@ function submit() {
     const handle = async () => {
       aiChecking.value = true
       try {
-        const r = await api.checkSentence(answer.value, current.value.english)
+        const r = await api.checkSentence(answer.value, current.value.english, current.value.chinese)
         if (r && typeof r.correct === 'boolean') isCorrect = r.correct
       } catch (e) {
         // AI 失败：保留本地判定结果

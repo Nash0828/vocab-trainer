@@ -877,10 +877,50 @@ async function translateText(text) {
   return content
 }
 
-// AI 判断句子答题是否正确：忽略缩写/全写、大小写、标点、空格差异；失败返回 null 由前端回退本地判定
+// AI 判断句子答题是否正确（仅句子类型走这里，单词/短语仍用本地逐词比对）
+// 判分口径：中文题意 + 语法成立，而不是与参考答案逐字一致
+const SENTENCE_CHECK_PROMPT = [
+  '你是资深英语教师和答题判分员。你的任务是依据中文题干，判断用户的英文译文是否与参考答案意思相同，并且英文本身语法成立。',
+  '',
+  '核心原则：判“意思对且句子成立”，不判“和参考答案逐字一致”。参考答案只是其中一种正确写法，不是唯一标准答案。',
+  '',
+  '一、以下情况判为正确',
+  '1. 同义替换：意思相同的不同措辞都算对。例如 this / that / the 指代同一件物品时等价；as well / too / also 等价；shop / store、film / movie、kids / children 等常见同义词等价。',
+  '2. 语序调整：状语、时间、地点位置变化不影响意思时算对，如 “for me as well” 与 “as well for me”。',
+  '3. 形式差异：缩写与全写（I\'m = I am、don\'t = do not 等）、大小写、标点、撇号、连字符、数字写法差异一律忽略。',
+  '4. 拼写变体：英美拼写差异算对（colour / color、realise / realize、centre / center、travelling / traveling）。',
+  '5. 可选虚词：不影响意思的 that 省略、多余的冠词、可省略的介词等，只要句子仍然自然成立就算对。',
+  '6. 同一中文的不同自然表达：只要信息量一致、指代一致，即使句式结构不同也算对。',
+  '7. 中文里有“这件/那件/这个/那个”时，this / that / the 均可接受，前提是指代同一对象。',
+  '',
+  '二、以下情况判为错误',
+  '1. 时态、体、情态意义改变（如 took 与 has taken、must have done 与 did 不等价）。',
+  '2. 单复数或数量改变（dress 与 dresses、much 与 many）。',
+  '3. 主语、宾语、对象、代词指代改变。',
+  '4. 否定与肯定改变，或逻辑关系改变（and / but / so / although）。',
+  '5. 比较级、程度改变（too small 与 small、a little too small 与 too small 不等价）。',
+  '6. 漏译或添加实质信息（漏掉 as well、for me 等改变原意的成分）。',
+  '7. 明显语法错误：缺谓语或 be 动词、时态形式错误、词性误用、搭配错误、句子不成立。',
+  '8. 拼写错误（英美变体除外）、中式英语导致原意不清。',
+  '',
+  '三、边界处理',
+  '1. 用户句子语法正确、意思与中文题干一致，只是措辞或结构与参考答案不同 → 判正确。',
+  '2. 用户句子能看懂但存在明显语法或拼写错误 → 判错误。',
+  '3. 拿不准是否改变原意时，按“没有改变”处理，判为正确（本工具用于背诵自测，优先避免误杀）。',
+  '',
+  '参考示例',
+  '中文题干：恐怕这件绿色连衣裙对我来说也太小了。',
+  '参考答案：I\'m afraid the green dress is too small for me as well.',
+  '用户作答：I\'m afraid this green dress is too small for me as well.',
+  '判定：{"correct": true}',
+  '理由：this / the 均指同一件连衣裙，中文“这件”用 this 更贴合，其余完全一致。',
+  '',
+  '只输出 JSON：{"correct": true} 或 {"correct": false}，不要输出任何其他文字、解释或 Markdown。',
+].join('\n')
+
 const sentenceCheckCache = new Map()
-async function aiCheckSentence(answer, input) {
-  const key = `${String(answer).trim().toLowerCase()}|${String(input).trim().toLowerCase()}`
+async function aiCheckSentence(answer, input, chinese) {
+  const key = `${String(chinese || '').trim()}|${String(answer).trim().toLowerCase()}|${String(input).trim().toLowerCase()}`
   if (sentenceCheckCache.has(key)) return sentenceCheckCache.get(key)
   let ok = null
   try {
@@ -890,13 +930,13 @@ async function aiCheckSentence(answer, input) {
       body: JSON.stringify({
         model: 'deepseek-chat',
         messages: [
-          { role: 'system', content: '你是英语答题判分助手。比较参考答案与用户作答是否为同一句话，忽略不影响意思的形式差异。缩写与全写等价（don\'t=do not、can\'t=cannot、I\'m=I am、it\'s=it is、won\'t=will not、isn\'t=is not、aren\'t=are not、haven\'t=have not、hasn\'t=has not、doesn\'t=does not、didn\'t=did not、wouldn\'t=would not、couldn\'t=could not、shouldn\'t=should not、mustn\'t=must not、we\'re=we are、they\'re=they are、you\'re=you are、I\'ve=I have、I\'ll=I will、let\'s=let us 等）；忽略大小写、标点差异、多余空格及中文空格。由 that 引导的宾语从句、或 that 作宾语可省略的定语从句中，省略 that 与写出 that 视为等价（如 She said that she was tired 与 She said she was tired 都正确）；必须使用 that 的从句类型不适用此规则。单词拼写错误、漏词、多词、顺序不同，或单复数、时态不同，均判为错误。只输出 JSON：{"correct": true} 或 {"correct": false}，不要输出任何其他内容。' },
-          { role: 'user', content: `参考答案：${answer}\n用户作答：${input}` },
+          { role: 'system', content: SENTENCE_CHECK_PROMPT },
+          { role: 'user', content: `中文题干：${String(chinese || '（未提供）').trim()}\n参考答案：${answer}\n用户作答：${input}` },
         ],
         temperature: 0,
         max_tokens: 5,
       }),
-      signal: AbortSignal.timeout(4000),
+      signal: AbortSignal.timeout(6000),
     })
     if (!r.ok) throw new Error('check http ' + r.status)
     const j = await r.json()
@@ -911,10 +951,10 @@ async function aiCheckSentence(answer, input) {
 }
 
 app.post('/api/check-sentence', async (req, res) => {
-  const { answer, input } = req.body || {}
+  const { answer, input, chinese } = req.body || {}
   if (!answer || !input) return res.status(400).json({ error: '参数缺失' })
   try {
-    const correct = await aiCheckSentence(String(answer), String(input))
+    const correct = await aiCheckSentence(String(answer), String(input), String(chinese || ''))
     res.json({ correct }) // null 表示 AI 不可用，前端回退本地逐词判定
   } catch (err) {
     res.status(500).json({ error: 'AI 判定失败' })
