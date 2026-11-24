@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useWords, refreshAll } from '../composables/useWords'
 import { api } from '../api/index.js'
 import AiUsageCard from '../components/AiUsageCard.vue'
+import AnswerHistorySheet from '../components/AnswerHistorySheet.vue'
 import { isValidEnglish } from '../utils/englishValidate.js'
 
 const router = useRouter()
@@ -942,6 +943,17 @@ function showTip(text, kind = 'ok') {
   tipTimer = setTimeout(() => (tip.value = ''), 2800)
 }
 
+// 答题历史弹层（与背诵页共用 AnswerHistorySheet 组件）
+const showAnswerHistory = ref(false)
+const historyWord = ref(null)
+function openAnswerHistory(word) {
+  historyWord.value = word
+  showAnswerHistory.value = true
+}
+function closeAnswerHistory() {
+  showAnswerHistory.value = false
+}
+
 // 复制词句英文到剪贴板（优先 Clipboard API，失败降级隐藏 textarea + execCommand，兼容 iOS）
 function copyWord(word) {
   const text = word.english || ''
@@ -1438,6 +1450,9 @@ function formatTime(ts) {
               <button class="op-btn" title="复制" @click="copyWord(word)">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
               </button>
+              <button class="op-btn" title="答题历史" @click="openAnswerHistory(word)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/></svg>
+              </button>
             </template>
           </div>
         </template>
@@ -1601,6 +1616,13 @@ function formatTime(ts) {
         </div>
       </div>
     </div>
+
+    <AnswerHistorySheet
+      :show="showAnswerHistory"
+      :chinese="historyWord?.chinese || ''"
+      :english="historyWord?.english || ''"
+      @close="closeAnswerHistory"
+    />
   </div>
 </template>
 
