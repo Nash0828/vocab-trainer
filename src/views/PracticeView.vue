@@ -12,7 +12,7 @@ const router = useRouter()
 const route = useRoute()
 const pendingWord = ref(null) // 从词句库/今日记录跳转来的指定背诵词
 const { words, settings, incrementCount, isMastered } = useWords()
-const { getTodayStats, getTodayRecords, getTodayUniqueStats, addRecord } = useHistory()
+const { history, getTodayStats, getTodayRecords, getTodayUniqueStats, addRecord } = useHistory()
 const { addWrong, removeWrong, getValidWrongWords } = useWrongBook()
 
 // 出题来源：'all' = 全部未背熟词库；'wrong' = 仅错题本
@@ -797,6 +797,49 @@ function onLayerMaskTouchmove(e) {
 }
 
 const current = ref(null)
+
+// ===== 当前题目的答题历史（微信风格底部弹层）=====
+const showHistorySheet = ref(false)
+const currentHistory = computed(() => {
+  const c = current.value
+  if (!c) return []
+  const en = String(c.english || '').trim().toLowerCase()
+  const cn = String(c.chinese || '').trim()
+  return (history.value || [])
+    .filter((r) => {
+      const re = String(r.english || '').trim().toLowerCase()
+      if (en) return re === en
+      return String(r.chinese || '').trim() === cn
+    })
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0))
+})
+const currentHistoryStats = computed(() => {
+  const list = currentHistory.value
+  return { total: list.length, correct: list.filter((r) => r.correct).length }
+})
+function openHistorySheet() {
+  const active = document.activeElement
+  if (active && typeof active.blur === 'function') { try { active.blur() } catch (e) {} }
+  showHistorySheet.value = true
+}
+function closeHistorySheet() {
+  showHistorySheet.value = false
+}
+function fmtHistoryTime(ts) {
+  if (!ts) return ''
+  const d = new Date(ts)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n) => String(n).padStart(2, '0')
+  const now = new Date()
+  const hm = `${pad(d.getHours())}:${pad(d.getMinutes())}`
+  const sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+  if (sameDay) return `今天 ${hm}`
+  const y = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)
+  if (d.getFullYear() === y.getFullYear() && d.getMonth() === y.getMonth() && d.getDate() === y.getDate()) return `昨天 ${hm}`
+  if (d.getFullYear() === now.getFullYear()) return `${d.getMonth() + 1}月${d.getDate()}日 ${hm}`
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`
+}
+
 // 中文释义显示/隐藏（仅当前页面会话内跨题保持，刷新页面恢复显示）
 const showChinese = ref(true)
 function toggleChinese() {
@@ -2523,6 +2566,9 @@ next()
 
       <!-- 答题区（current 为空时不渲染，避免空指针崩溃） -->
       <div v-if="current" class="quiz-card">
+        <button class="quiz-history-btn" title="答题历史" aria-label="答题历史" @click="openHistorySheet">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/></svg>
+        </button>
         <button class="quiz-eye-btn" :title="showChinese ? '隐藏中文释义' : '显示中文释义'" :aria-label="showChinese ? '隐藏中文释义' : '显示中文释义'" @click="toggleChinese">
           <svg v-if="showChinese" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
@@ -2782,7 +2828,40 @@ next()
       </div>
     </transition>
 
-    <!-- 保存为条件组：名称输入弹框 -->
+    <!-- 当前题目的答题历史：微信风格底部弹层 -->
+    <transition name="sheet">
+      <div v-if="showHistorySheet" class="sheet-mask" @click.self="closeHistorySheet" @touchstart="onLayerTouchStart" @touchmove="onLayerMaskTouchmove">
+        <div class="sheet history-sheet">
+          <div class="sheet-title">
+            <span>答题历史</span>
+            <button class="sheet-close" type="button" aria-label="关闭答题历史" @mousedown.prevent @click="closeHistorySheet">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <div class="history-summary">
+            <div class="history-question">{{ current?.chinese }}</div>
+            <div class="history-count">共 {{ currentHistoryStats.total }} 次 · 答对 {{ currentHistoryStats.correct }} 次</div>
+          </div>
+          <div class="history-body">
+            <div v-if="currentHistory.length" class="history-list">
+              <div v-for="(r, i) in currentHistory" :key="r.id || i" class="history-item">
+                <div class="history-top">
+                  <span class="history-time">{{ fmtHistoryTime(r.ts) }}</span>
+                  <span class="history-badge" :class="r.correct ? 'ok' : 'bad'">{{ r.correct ? '正确' : '错误' }}</span>
+                </div>
+                <div class="history-answer">{{ r.userAnswer || (r.correct ? '（显示答案）' : '（未记录作答）') }}</div>
+                <div v-if="!r.correct && current" class="history-correct">正确：{{ current.english }}</div>
+              </div>
+            </div>
+            <div v-else class="history-empty">
+              <div class="history-empty-title">暂无答题记录</div>
+              <div class="history-empty-sub">答完这一题后，记录会出现在这里</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
+
     <div
       v-if="saveGroupDialog"
       class="wx-confirm-mask"
@@ -4571,6 +4650,120 @@ next()
 }
 .quiz-eye-btn:active {
   background: rgba(0, 0, 0, 0.06);
+}
+
+/* 答题历史：位于眼睛图标左侧 */
+.quiz-history-btn {
+  position: absolute;
+  top: 12px;
+  right: 72px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-sub);
+  border-radius: 50%;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.quiz-history-btn:active {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* 答题历史底部弹层（微信风格） */
+.history-summary {
+  background: #fff;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid #f2f2f2;
+  text-align: left;
+}
+.history-question {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.history-count {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #999;
+}
+.history-body {
+  background: #fff;
+  max-height: 56vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+.history-list {
+  padding: 0 16px;
+}
+.history-item {
+  padding: 12px 0;
+  border-bottom: 1px solid #f2f2f2;
+  text-align: left;
+}
+.history-item:last-child {
+  border-bottom: none;
+}
+.history-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.history-time {
+  font-size: 12px;
+  color: #999;
+}
+.history-badge {
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+.history-badge.ok {
+  color: var(--primary);
+  background: rgba(7, 193, 96, 0.1);
+}
+.history-badge.bad {
+  color: #fa5151;
+  background: rgba(250, 81, 81, 0.1);
+}
+.history-answer {
+  margin-top: 6px;
+  font-size: 14px;
+  color: #333;
+  line-height: 1.5;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+.history-correct {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #999;
+  line-height: 1.5;
+  word-break: break-word;
+}
+.history-empty {
+  padding: 48px 16px 56px;
+  text-align: center;
+}
+.history-empty-title {
+  font-size: 14px;
+  color: #999;
+}
+.history-empty-sub {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #bfbfbf;
 }
 
 /* 更正当前词句：铅笔图标绝对定位在卡片右上角（不占文档流，不影响"中文"居中） */
