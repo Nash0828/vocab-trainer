@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import fs from 'fs'
 import crypto from 'crypto'
+import zlib from 'zlib'
 import bcrypt from 'bcryptjs'
 import cookieParser from 'cookie-parser'
 import { createRequire } from 'module'
@@ -13,11 +14,47 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const req = createRequire(import.meta.url)
 const { moderateUsername } = req('./moderation.cjs')
+const etag = req('etag')
 const DIST_DIR = join(__dirname, '..', 'dist')
 
 const app = express()
 app.use(express.json())
 app.use(cookieParser())
+
+// ============ 响应压缩协商 ============
+// 客户端支持 br 时，大于 1KB 的 JSON 直接以 Brotli(q5) 输出；不支持的客户端保持原流程，由 nginx 做 gzip。
+// 只改变传输编码，不改任何接口结构；同时保留 ETag，刷新命中时仍返回 304（0 字节）。
+const BROTLI_MIN_BYTES = 1024
+app.use((req, res, next) => {
+  res.setHeader('Vary', 'Accept-Encoding')
+  const ae = String(req.headers['accept-encoding'] || '')
+  if (!/\bbr\b/i.test(ae)) return next()
+  const json = res.json.bind(res)
+  res.json = (body) => {
+    if (res.headersSent) return json(body)
+    let buf
+    let out
+    try {
+      buf = Buffer.from(JSON.stringify(body))
+      if (buf.length < BROTLI_MIN_BYTES) return json(body)
+      out = zlib.brotliCompressSync(buf, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 5 } })
+    } catch (err) {
+      return json(body)
+    }
+    res.setHeader('ETag', etag(buf, { weak: true }))
+    if (req.fresh) {
+      res.statusCode = 304
+      res.end()
+      return res
+    }
+    res.setHeader('Content-Type', 'application/json; charset=utf-8')
+    res.setHeader('Content-Encoding', 'br')
+    res.setHeader('Content-Length', out.length)
+    res.end(out)
+    return res
+  }
+  next()
+})
 
 // ============ 初始化管理员 ============
 const ADMIN_USER = 'Nash0828'
