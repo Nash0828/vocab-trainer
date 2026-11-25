@@ -23,7 +23,11 @@ const list = computed(() => {
     })
     .sort((a, b) => (b.ts || 0) - (a.ts || 0))
 })
-const stats = computed(() => ({ total: list.value.length, correct: list.value.filter((r) => r.correct).length }))
+const stats = computed(() => ({
+  total: list.value.length,
+  correct: list.value.filter((r) => r.correct).length,
+  redo: list.value.filter((r) => r.redo).length,
+}))
 
 function fmtTime(ts) {
   if (!ts) return ''
@@ -80,14 +84,17 @@ function onMaskTouchmove(e) {
         </div>
         <div class="history-summary">
           <div class="history-question">{{ chinese }}</div>
-          <div class="history-count">共 {{ stats.total }} 次 · 答对 {{ stats.correct }} 次</div>
+          <div class="history-count">共 {{ stats.total }} 次 · 答对 {{ stats.correct }} 次<span v-if="stats.redo"> · 其中重做 {{ stats.redo }} 次</span></div>
         </div>
         <div class="history-body">
           <div v-if="list.length" class="history-list">
             <div v-for="(r, i) in list" :key="r.id || i" class="history-item">
               <div class="history-top">
                 <span class="history-time">{{ fmtTime(r.ts) }}</span>
-                <span class="history-badge" :class="r.correct ? 'ok' : 'bad'">{{ r.correct ? '正确' : '错误' }}</span>
+                <span class="history-tags">
+                  <span v-if="r.redo" class="history-badge redo">重做</span>
+                  <span class="history-badge" :class="r.correct ? 'ok' : 'bad'">{{ r.correct ? '正确' : '错误' }}</span>
+                </span>
               </div>
               <div class="history-answer">{{ r.userAnswer || (r.correct ? '（显示答案）' : '（未记录作答）') }}</div>
               <div v-if="!r.correct && english" class="history-correct">正确：{{ english }}</div>
@@ -193,6 +200,15 @@ function onMaskTouchmove(e) {
 .history-time {
   font-size: 12px;
   color: #999;
+}
+.history-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.history-badge.redo {
+  color: #999;
+  background: #f2f2f2;
 }
 .history-badge {
   font-size: 11px;

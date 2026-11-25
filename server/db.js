@@ -158,6 +158,7 @@ tryMigrate("UPDATE word_examples SET link_type = 'example' WHERE link_type IS NU
 tryMigrate("ALTER TABLE records ADD COLUMN user_id INTEGER DEFAULT 0")
 tryMigrate("ALTER TABLE records ADD COLUMN user_answer TEXT DEFAULT ''")
 tryMigrate("ALTER TABLE records ADD COLUMN type TEXT DEFAULT 'word'")
+tryMigrate("ALTER TABLE records ADD COLUMN redo INTEGER DEFAULT 0") // 重做作答：只进答题历史，不计正式统计、不动错题本
 tryMigrate("ALTER TABLE wrongbook ADD COLUMN user_id INTEGER DEFAULT 0")
 tryMigrate("ALTER TABLE wrongbook ADD COLUMN word_id TEXT DEFAULT ''")
 tryMigrate("ALTER TABLE users ADD COLUMN is_disabled INTEGER DEFAULT 0")

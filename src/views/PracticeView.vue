@@ -825,7 +825,7 @@ const quizWordClass = computed(() => {
 const answer = ref('')
 const result = ref(null) // null | 'correct' | 'wrong'
 const revealed = ref(false) // 是否通过"显示答案"按钮作答
-const isRedo = ref(false) // 是否处于重做模式（重做答对不算答对、不移除错题本）
+const isRedo = ref(false) // 是否处于重做模式（重做只记入答题历史：不算正式答对、不动错题本与背熟次数）
 const answeredLock = ref(false) // 答对后等待发音播报期间锁定输入框
 const aiChecking = ref(false) // 句子 AI 判定进行中，防重复提交
 const lastIndex = ref(-1)
@@ -1153,8 +1153,17 @@ function submit() {
 
 function afterCheck(isCorrect) {
   if (isRedo.value) {
-    // 重做模式：无论对错都不算正式作答，只显示反馈，不更新 count、不移除/加入错题本
+    // 重做模式：不动 count、不移除/加入错题本；作答只写入答题历史（带 redo 标记，不计正式统计）
     result.value = isCorrect ? 'correct' : 'wrong'
+    addRecord({
+      chinese: current.value.chinese,
+      english: current.value.english,
+      pos: current.value.pos || '',
+      type: current.value.type || 'word',
+      correct: isCorrect,
+      userAnswer: answer.value,
+      redo: true,
+    })
     // 语音播报期间锁定操作按钮（下一题/重做/提交等），播完再解锁
     answeredLock.value = true
     speak(current.value.english, current.value.type || 'word', () => {

@@ -29,8 +29,8 @@ function uid() {
 }
 
 export function useHistory() {
-  /** 写入一条当天背诵记录 */
-  function addRecord({ chinese, english, pos, correct, userAnswer, type }) {
+  /** 写入一条当天背诵记录（redo=true 时只写入答题历史，不计入正式统计） */
+  function addRecord({ chinese, english, pos, correct, userAnswer, type, redo }) {
     const rec = {
       id: uid(),
       date: todayStr(),
@@ -42,8 +42,9 @@ export function useHistory() {
       userAnswer: (userAnswer || '').trim(),
       ts: Date.now(),
     }
+    if (redo) rec.redo = true
     history.value.push(rec)
-    api.addRecord({ chinese: rec.chinese, english: rec.english, pos: rec.pos, correct: rec.correct, userAnswer: rec.userAnswer, type: rec.type })
+    api.addRecord({ chinese: rec.chinese, english: rec.english, pos: rec.pos, correct: rec.correct, userAnswer: rec.userAnswer, type: rec.type, ...(rec.redo ? { redo: true } : {}) })
       .catch((err) => {
         console.error('addRecord 同步失败', err)
         const idx = history.value.findIndex((r) => r.id === rec.id)
@@ -52,11 +53,11 @@ export function useHistory() {
     return true
   }
 
-  /** 当天记录（按时间倒序） */
+  /** 当天记录（按时间倒序；重做作答不纳入正式记录） */
   function getTodayRecords() {
     const t = todayStr()
     return history.value
-      .filter((r) => r.date === t)
+      .filter((r) => r.date === t && !r.redo)
       .sort((a, b) => (b.ts || 0) - (a.ts || 0))
   }
 
@@ -91,6 +92,7 @@ export function useHistory() {
   function getHistoryByDay() {
     const map = new Map()
     for (const r of history.value) {
+      if (r.redo) continue // 重做作答只出现在单题答题历史里，不计入按天统计
       if (!map.has(r.date)) {
         map.set(r.date, {
           date: r.date,
