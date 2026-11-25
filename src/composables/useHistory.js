@@ -92,7 +92,6 @@ export function useHistory() {
   function getHistoryByDay() {
     const map = new Map()
     for (const r of history.value) {
-      if (r.redo) continue // 重做作答只出现在单题答题历史里，不计入按天统计
       if (!map.has(r.date)) {
         map.set(r.date, {
           date: r.date,
@@ -106,6 +105,7 @@ export function useHistory() {
       }
       const day = map.get(r.date)
       day.records.push(r)
+      if (r.redo) continue // 重做作答在明细里展示，但不计入当天正确/错误与去重词句统计
       const key = r.english.trim().toLowerCase()
       if (!key) continue
       day.allWords.add(key)

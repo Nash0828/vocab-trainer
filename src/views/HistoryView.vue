@@ -199,6 +199,7 @@ function answerDiffers(r) {
                   <div class="rec-body">
                     <div class="rec-line1">
                       <span class="rec-en">{{ r.english }}</span>
+                      <span v-if="r.redo" class="rec-redo">重做</span>
                       <span v-if="r.pos" class="rec-pos">{{ r.pos }}</span>
                       <button class="study-btn" @click="goPractice(r.english)" title="背诵">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
@@ -518,6 +519,15 @@ function answerDiffers(r) {
   font-size: 15px;
   font-weight: 600;
   color: var(--text-main);
+}
+
+.rec-redo {
+  font-size: 11px;
+  color: #999;
+  background: #f2f2f2;
+  padding: 1px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
 }
 
 .rec-pos {
