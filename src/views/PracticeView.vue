@@ -12,6 +12,8 @@ import AnswerHistorySheet from '../components/AnswerHistorySheet.vue'
 const router = useRouter()
 const route = useRoute()
 const pendingWord = ref(null) // 从词句库/今日记录跳转来的指定背诵词
+// 最近一次"跳转背诵"指定的词句 id：条件背会按组条件把不在池内的题换掉，跳转来的题必须豁免这一次
+const jumpedWordId = ref(null)
 const { words, settings, incrementCount, isMastered } = useWords()
 const { getTodayStats, getTodayRecords, getTodayUniqueStats, addRecord } = useHistory()
 const { addWrong, removeWrong, getValidWrongWords } = useWrongBook()
@@ -41,6 +43,8 @@ function cacheCondSelection(ids) {
   try { localStorage.setItem(COND_CACHE_KEY, JSON.stringify(ids || [])) } catch (e) {}
 }
 function saveCondSelection() {
+  // 用户主动换组：跳转指定词的豁免失效（否则新组池里的题一直被压着）
+  jumpedWordId.value = null
   cacheCondSelection(selectedCondGroupIds.value)
   api.saveSelection({ condGroupIds: selectedCondGroupIds.value }).catch(() => {})
 }
@@ -145,8 +149,10 @@ async function loadCondGroups() {
       }
       // 当前题不在本组出题池时强制重出：覆盖刷新/补数时序竞态——words 先到位、组条件后应用，
       // 期间自动出题 watch 可能先按未过滤的全库抽了题（如 festival），组条件应用后旧题不在池内必须换掉
+      const isJumped = jumpedWordId.value && current.value && String(current.value.id) === String(jumpedWordId.value)
       if (
         condGroups.value.length &&
+        !isJumped &&
         (!current.value || !available.value.some((w) => String(w.id) === String(current.value.id)))
       ) {
         answeredLock.value = false
@@ -1026,11 +1032,14 @@ function next() {
   if (pendingWord.value) {
     const w = pendingWord.value
     pendingWord.value = null
+    jumpedWordId.value = String(w.id)
     current.value = w
     answer.value = ''
     result.value = null
     revealed.value = false
     isRedo.value = false
+    // 用过即清 query：避免之后从其他页面切回、或词库数据刷新时又被这条 query 重新出题，覆盖当前作答
+    if (route.query.word || route.query.zh) router.replace({ path: '/practice' })
     // 跳转背诵不自动弹键盘：用户先看题，点击输入框或直接打字再聚焦（避免键盘弹出遮挡题目/打断布局）
     // 指定词跳转场景：出题后滚动到顶部看到题目（避免保留词句库/答题页旧滚动位置造成"空白"假象）
     requestAnimationFrame(() => {
@@ -1056,6 +1065,8 @@ function next() {
     requestAnimationFrame(() => requestAnimationFrame(ensureRenderVisible))
     return
   }
+  // 普通换题：跳转指定词的豁免结束，恢复按筛选/分组池出题
+  jumpedWordId.value = null
   if (!available.value.length) {
     // 分组模式：当前组背完自动切到下一组（一组一组来背）
     if (practiceMode.value === 'group' && groups.value.length) {
@@ -2201,22 +2212,92 @@ const modalRecords = computed(() => {
 })
 
 // 跳转背诵指定单词（来自词句库/今日背诵记录的"背诵"按钮）
-function goPractice(word) {
+// 带上中文/类型：词句库里的英文可能被改过，仅按英文精确匹配会失败并退化成随机出题
+function goPractice(r) {
+  const word = typeof r === 'string' ? r : (r && r.english)
   if (!word) return
   closeRecords()
-  router.push({ path: '/practice', query: { word } })
+  const query = { word }
+  if (r && typeof r === 'object') {
+    if (r.chinese) query.zh = r.chinese
+    if (r.type) query.type = r.type
+  }
+  router.push({ path: '/practice', query })
+}
+
+// 英文/中文比较用的归一化：全角弯引号统一成直引号、合并空白、忽略大小写
+function normEnText(s) {
+  return String(s || '')
+    .replace(/[\u2018\u2019\u02bc`\u00b4]/g, "'")
+    .replace(/[\u201c\u201d]/g, '"')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+}
+function normZhText(s) {
+  return String(s || '').replace(/[\s\u3000]+/g, '').trim()
+}
+function stripEndPunct(s) {
+  return s.replace(/[.?!,;:\u3002\uff1f\uff01\uff0c\uff1b\uff1a]+$/g, '')
+}
+
+// 从路由 query 定位要背诵的词句：
+// ① 英文精确匹配（同英文多条时优先中文/类型一致的）② 英文未命中则退到中文精确匹配
+// ③ 再去掉句末标点比较一次（词句库编辑时只改了结尾符号的情况）
+function findWordForJump(q, qz, qt) {
+  const list = words.value || []
+  if (!list.length) return null
+  const typeKey = qt ? String(qt) : ''
+  const en = normEnText(q)
+  const nz = normZhText(qz)
+
+  let cands = list.filter((x) => normEnText(x.english) === en)
+  if (cands.length) {
+    if (nz) {
+      const sameZh = cands.filter((x) => normZhText(x.chinese) === nz)
+      if (sameZh.length) return sameZh[0]
+    }
+    if (typeKey) {
+      const sameType = cands.find((x) => String(x.type || 'word') === typeKey)
+      if (sameType) return sameType
+    }
+    return cands[0]
+  }
+
+  if (nz) {
+    const byZh = list.filter((x) => normZhText(x.chinese) === nz)
+    if (byZh.length) {
+      if (typeKey) {
+        const sameType = byZh.find((x) => String(x.type || 'word') === typeKey)
+        if (sameType) return sameType
+      }
+      return byZh[0]
+    }
+  }
+
+  const bare = stripEndPunct(en)
+  if (bare) {
+    cands = list.filter((x) => {
+      const e = normEnText(x.english)
+      return stripEndPunct(e) === bare && (!nz || normZhText(x.chinese) === nz)
+    })
+    if (cands.length) return cands[0]
+  }
+  return null
 }
 
 // 从路由 query 解析指定背诵词
 function setPendingFromQuery() {
   const q = route.query.word
-  if (!q) return
+  const qz = route.query.zh
+  if (!q && !qz) return
   // 跳转背诵指定词：清空筛选条件（类型/来源/关键字），分组模式与所选组保留
   typeFilter.value = 'all'
   sourceMode.value = 'all'
   keywordFilters.value = []
-  const w = words.value.find((x) => x.english.trim().toLowerCase() === String(q).trim().toLowerCase())
+  const w = findWordForJump(q, qz, route.query.type)
   if (w) pendingWord.value = w
+  else showToast('原词句在词句库中已改动，没找到对应条目')
 }
 
 // 全局键盘：Ctrl+P 朗读 / Ctrl+N 下一题 / Ctrl+A 显示答案 / Ctrl+Q 查词详情；答错/重做答对后回车进入下一题
@@ -2327,7 +2408,7 @@ onActivated(() => {
   })
   refreshToday()
   // 指定词跳转场景（词句库/详情弹框点背诵）：强制重设并出指定词，覆盖缓存残留/筛选状态/旧题占用等一切情况
-  if (route.query.word) {
+  if (route.query.word || route.query.zh) {
     setPendingFromQuery()
     if (pendingWord.value) {
       next()
@@ -2350,8 +2431,10 @@ onActivated(() => {
 })
 
 watch(
-  () => route.query.word,
-  () => {
+  () => [route.query.word, route.query.zh],
+  (v) => {
+    // query 被清空（跳转已消费）时不动作，避免把刚跳到的题又换掉
+    if (!v || (!v[0] && !v[1])) return
     setPendingFromQuery()
     next()
   }
@@ -2360,7 +2443,7 @@ watch(
 // 词库异步加载完成兜底：词库加载完成后若路由带指定词（跳转背诵场景），
 // 无论当前是否有题都强制重设并出指定词；否则仅当前无题时补出题（避免答题区空白）
 watch(words, () => {
-  if (route.query.word) {
+  if (route.query.word || route.query.zh) {
     setPendingFromQuery()
     if (pendingWord.value) {
       next()
@@ -2531,7 +2614,7 @@ next()
     </div>
 
     <!-- 筛选下没有可练习词句 -->
-    <div v-else-if="filterEmpty" class="empty-state">
+    <div v-else-if="filterEmpty && !current" class="empty-state">
       <div class="empty-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c8c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </div>
@@ -2893,7 +2976,7 @@ next()
               <div class="m-main">
                 <span class="m-en">{{ r.english }}</span>
                 <span v-if="r.pos" class="m-pos">{{ r.pos }}</span>
-                <button class="study-btn" @click="goPractice(r.english)" title="背诵">
+                <button class="study-btn" @click="goPractice(r)" title="背诵">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
                 </button>
               </div>

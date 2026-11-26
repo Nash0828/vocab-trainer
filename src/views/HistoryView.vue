@@ -103,9 +103,14 @@ function formatDate(dateStr) {
 }
 
 // 跳转背诵页并直接背诵该词句
-function goPractice(word) {
-  if (!word) return
-  router.push({ path: '/practice', query: { word } })
+// 带上中文和类型：词句库里的英文可能被改过（如 three o'clock → 3 o'clock），
+// 只传英文会在背诵页按英文精确匹配失败，退化成随机出题，出现"跳过去的题不是点的这条"
+function goPractice(r) {
+  if (!r || !r.english) return
+  const query = { word: r.english }
+  if (r.chinese) query.zh = r.chinese
+  if (r.type) query.type = r.type
+  router.push({ path: '/practice', query })
 }
 
 // 判断历史记录是否为单词（单词必无空格、短语/句子必有空格，旧数据无 type 也能准确判断）
@@ -201,7 +206,7 @@ function answerDiffers(r) {
                       <span class="rec-en">{{ r.english }}</span>
                       <span v-if="r.redo" class="rec-redo">重做</span>
                       <span v-if="r.pos" class="rec-pos">{{ r.pos }}</span>
-                      <button class="study-btn" @click="goPractice(r.english)" title="背诵">
+                      <button class="study-btn" @click="goPractice(r)" title="背诵">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
                       </button>
                     </div>
